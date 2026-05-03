@@ -1,0 +1,146 @@
+{% load static i18n %}
+<form id="loginForm" method="post">
+    {% csrf_token %}
+    <h4 id="loginFormTitle">{% trans "With an email" %}</h4>
+    <div class="form-floating mb-3">
+        <input type="email" class="form-control" id="loginEmail" placeholder="mon@email.fr" name="email" required>
+        <label for="loginEmail">{% trans "Email address" %}</label>
+    </div>
+
+    <div id="registerFields" style="display:none;">
+        <div class="form-floating mb-3">
+            <input type="text" class="form-control" id="loginLastName" placeholder="Nom" name="last_name">
+            <label for="loginLastName">Nom</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="text" class="form-control" id="loginFirstName" placeholder="Prénom" name="first_name">
+            <label for="loginFirstName">Prénom</label>
+        </div>
+    </div>
+
+    <p id="loginHint" class="mt-3">
+        {% trans "No need for a password, a login link will be sent by email." %}
+    </p>
+    <button id="loginSubmitBtn" type="submit" class="btn btn-primary d-block w-100">Connexion/Inscription</button>
+    <p id="loginFeedback" class="mt-3 mb-0" style="display:none;font-weight:600;"></p>
+</form>
+
+<script>
+    (function () {
+        const form = document.getElementById('loginForm');
+        const emailInput = document.getElementById('loginEmail');
+        const firstNameInput = document.getElementById('loginFirstName');
+        const lastNameInput = document.getElementById('loginLastName');
+        const registerFields = document.getElementById('registerFields');
+        const submitBtn = document.getElementById('loginSubmitBtn');
+        const hint = document.getElementById('loginHint');
+        const feedback = document.getElementById('loginFeedback');
+        const formTitle = document.getElementById('loginFormTitle');
+        const panelTitle = document.getElementById('loginPanelLabel');
+
+        if (!form || !emailInput || !feedback) return;
+
+        let mode = 'login';
+        const emailRe = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        function showFeedback(message, isSuccess) {
+            feedback.style.display = 'block';
+            feedback.textContent = message;
+            feedback.style.color = isSuccess ? '#16a34a' : '#dc2626';
+        }
+
+        function switchToRegister() {
+            mode = 'register';
+            registerFields.style.display = 'block';
+            formTitle.textContent = 'Inscription';
+            if (panelTitle) panelTitle.textContent = 'Inscription';
+            hint.textContent = 'Complétez votre inscription pour recevoir votre lien de connexion.';
+            submitBtn.textContent = "Finaliser l'inscription";
+        }
+
+        function validateEmail(value) {
+            return emailRe.test((value || '').trim());
+        }
+
+        function validateNames() {
+            return !!(firstNameInput.value || '').trim() && !!(lastNameInput.value || '').trim();
+        }
+
+        async function submitStep(step) {
+            const body = new URLSearchParams();
+            body.set('email', emailInput.value.trim());
+            body.set('step', step);
+            if (step === 'finalize') {
+                body.set('first_name', (firstNameInput.value || '').trim());
+                body.set('last_name', (lastNameInput.value || '').trim());
+            }
+
+            const response = await fetch('/connexion/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: body.toString(),
+                credentials: 'same-origin'
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.message || 'Erreur serveur');
+            }
+            return payload;
+        }
+
+        form.addEventListener('submit', async function (evt) {
+            evt.preventDefault();
+
+            if (!validateEmail(emailInput.value)) {
+                showFeedback('Adresse mail invalide', false);
+                emailInput.focus();
+                return;
+            }
+
+            try {
+                if (mode === 'login') {
+                    const payload = await submitStep('check');
+                    if (payload.exists) {
+                        showFeedback('Mail envoye. Verifiez votre boite de reception.', true);
+                        return;
+                    }
+                    switchToRegister();
+                    showFeedback('Adresse inconnue. Veuillez finaliser votre inscription.', false);
+                    if (lastNameInput) lastNameInput.focus();
+                    return;
+                }
+
+                if (!validateNames()) {
+                    showFeedback('Nom et prenom requis pour finaliser l inscription.', false);
+                    return;
+                }
+
+                await submitStep('finalize');
+                showFeedback('Inscription finalisee. Mail envoye.', true);
+            } catch (error) {
+                showFeedback(error.message || 'Erreur serveur: envoi impossible.', false);
+            }
+        });
+    })();
+
+    function closePanel(id, delay) {
+        const element = document.querySelector(id)
+        const panel = bootstrap.Offcanvas.getInstance(element)
+
+        window.setTimeout(() => {
+            panel.hide()
+        }, delay)
+    }
+</script>
