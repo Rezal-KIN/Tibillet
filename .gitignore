@@ -109,7 +109,10 @@ venv.bak/
 **/*secret*
 
 # Runtime data
-Laboutik_*/www/
+Laboutik_*/
+Fedow/www/
+Laboutik/www/
+Lespass/www/
 **/database/
 **/database_prewipe_*/
 **/logs/
@@ -166,3 +169,4 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+.infisical.json
