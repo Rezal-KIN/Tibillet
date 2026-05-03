@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} py-2 mb-2">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card p-3 mb-3">
+        <h5 class="mb-3">Lieu Actif</h5>
+        <form method="post" action="/dashboard/active-context/set/">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label for="active_place_uuid" class="form-label mb-1">Lieu Fedow actif</label>
+                    <select id="active_place_uuid" name="active_place_uuid" class="form-select">
+                        {% for p in places %}
+                            <option value="{{ p.uuid }}" {% if active_place_uuid == p.uuid|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="active_asset_uuid" class="form-label mb-1">Monnaie active (rechargement Lesspass)</label>
+                    <select id="active_asset_uuid" name="active_asset_uuid" class="form-select">
+                        {% for a in monetary_assets %}
+                            <option value="{{ a.uuid }}" {% if active_asset_uuid == a.uuid|stringformat:"s" %}selected{% endif %}>{{ a.name }} ({{ a.category }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="freeze_others" name="freeze_others" {% if active_context.freeze_others %}checked{% endif %}>
+                        <label class="form-check-label" for="freeze_others">Geler autres galas</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100" type="submit">Appliquer</button>
+                </div>
+            </div>
+        </form>
+        <div class="mt-3">
+            <div><strong>Lieu actif actuel :</strong> {{ active_context.active_place_name|default:"-" }}</div>
+            <div><strong>Monnaie active actuelle :</strong> {{ active_context.active_asset_name|default:"-" }}</div>
+            <div><strong>Laboutik cible :</strong> {{ active_context.active_place_cashless_url|default:"-" }}</div>
+            <div><strong>Freeze autres :</strong> {% if active_context.freeze_others %}oui{% else %}non{% endif %}</div>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <h5 class="mb-3">Nouveau Gala</h5>
+        <form method="post" action="/dashboard/gala/create/">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label for="event_type" class="form-label mb-1">Événement</label>
+                    <select id="event_type" name="event_type" class="form-select">
+                        <option value="BAPTS">Bapts</option>
+                        <option value="508">508</option>
+                        <option value="100_JOURS">100 jours</option>
+                        <option value="custom">Autre</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="custom_event" class="form-label mb-1">Autre nom (si besoin)</label>
+                    <input id="custom_event" name="custom_event" class="form-control" placeholder="Ex: Soirée X">
+                </div>
+                <div class="col-md-2">
+                    <label for="school_code" class="form-label mb-1">Année scolaire</label>
+                    <input id="school_code" name="school_code" class="form-control" value="{{ suggested_school_code }}" placeholder="225">
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="set_active" name="set_active" checked>
+                        <label class="form-check-label" for="set_active">Activer ce gala</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Créer</button>
+                </div>
+            </div>
+        </form>
+        <div class="text-xs text-secondary mt-2">
+            Crée la monnaie gala dans Fedow et prépare la commande de provision d’une nouvelle instance LaBoutik.
+        </div>
+
+        {% if provision_requests %}
+            <hr class="my-3">
+            <h6 class="mb-2">Dernières demandes</h6>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                    <tr>
+                        <th>Gala</th>
+                        <th>Monnaie</th>
+                        <th>Domaine suggéré</th>
+                        <th>Commande provision</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in provision_requests %}
+                        <tr>
+                            <td>{{ r.gala_id }}</td>
+                            <td>{{ r.asset_name }}</td>
+                            <td>{{ r.suggested_domain }}</td>
+                            <td><code>{{ r.command }}</code></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <a class="btn btn-primary btn-sm" href="/dashboard/suivi/">Suivi</a>
+    </div>
+    <hr class="dark horizontal my-3">
+    <p>{{ wallets.count }} portefeuilles en circulation pour {{ cards.count }} cartes de paiements en circulation</p>
+    <hr class="dark horizontal my-3">
+
+    <p>{{ assets.count }} monnaie(s) en circulation</p>
+    <div class="row">
+        {% for asset in assets %}
+            {% include 'asset/asset_card.html' %}
+        {% endfor %}
+    </div>
+
+    <hr class="dark horizontal my-3">
+    <p>{{ assets.count }} monnaie(s) en circulation dans {{ federations.count }} fédérations pour {{ places.count }}
+        lieu(x).</p>
+    <div class="card-group">
+        <ul>
+            {% for federation in federations %}
+                <li>{{ federation.name | upper }}</li>
+                <p>Assets : {{ federation.get_assets_names }}</p>
+                <p>Lieux : {{ federation.get_places_names }}</p>
+            {% endfor %}
+        </ul>
+    </div>
+
+{% endblock content %}
