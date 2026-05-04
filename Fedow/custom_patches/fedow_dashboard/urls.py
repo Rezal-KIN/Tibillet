@@ -17,5 +17,6 @@ urlpatterns = [
     path('suivi/', dashboard_views.suivi, name='suivi'),
     path('place/<uuid:pk>/', dashboard_views.place_view, name='place'),
     path('asset/<uuid:pk>/', dashboard_views.asset_view, name='asset'),
+    path('laboutik/delete/', dashboard_views.laboutik_delete, name='laboutik_delete'),
     path('', dashboard_views.index, name='index'),
 ]

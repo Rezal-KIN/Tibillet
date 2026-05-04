@@ -3,6 +3,7 @@ import json
 import base64
 import os
 import re
+
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -32,6 +33,51 @@ ACTIVE_GALA_CONTEXT_PATH = "/home/fedow/Fedow/www/active_gala_context.json"
 GALA_PROVISION_REQUESTS_PATH = "/home/fedow/Fedow/www/gala_provision_requests.json"
 MONETARY_CATEGORIES = [Asset.STRIPE_FED_FIAT, Asset.TOKEN_LOCAL_FIAT, Asset.TOKEN_LOCAL_NOT_FIAT]
 SPEND_ACTIONS = [Transaction.SALE, Transaction.QRCODE_SALE]
+LABOUTIK_ROOT = "/home/ubuntu/TiBillet"
+LABOUTIK_DELETE_REQUESTS_PATH = "/home/fedow/Fedow/www/laboutik_delete_requests.json"
+
+
+def _read_delete_requests():
+    try:
+        if not os.path.exists(LABOUTIK_DELETE_REQUESTS_PATH):
+            return []
+        raw = open(LABOUTIK_DELETE_REQUESTS_PATH, "r", encoding="utf-8").read().strip()
+        return json.loads(raw) if raw else []
+    except Exception:
+        return []
+
+
+def _append_delete_request(item):
+    items = _read_delete_requests()
+    items.append(item)
+    os.makedirs(os.path.dirname(LABOUTIK_DELETE_REQUESTS_PATH), exist_ok=True)
+    with open(LABOUTIK_DELETE_REQUESTS_PATH, "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+
+
+def _list_laboutik_instances():
+    pending_deletions = {r["instance_name"] for r in _read_delete_requests()
+                         if r.get("status") in ("pending", "processing")}
+    instances = []
+    try:
+        for entry in os.scandir(LABOUTIK_ROOT):
+            if not entry.is_dir():
+                continue
+            if not re.fullmatch(r"Laboutik_[a-z0-9\-]+", entry.name):
+                continue
+            slug = entry.name[len("Laboutik_"):]
+            project_name = f"laboutik_{slug}"
+            deletion_pending = entry.name in pending_deletions
+            instances.append({
+                "name": entry.name,
+                "slug": slug,
+                "project_name": project_name,
+                "path": entry.path,
+                "deletion_pending": deletion_pending,
+            })
+    except Exception:
+        pass
+    return sorted(instances, key=lambda x: x["name"])
 
 
 def _default_active_context():
@@ -374,6 +420,7 @@ def index(request):
         'active_asset_uuid': active_asset_uuid,
         'suggested_school_code': _current_school_code(),
         'provision_requests': list(reversed(_read_provision_requests()))[:10],
+        'laboutik_instances': _list_laboutik_instances(),
     }
     logger.info(f"Index page rendered")
     return render(request, 'index/index.html', context=context)
@@ -1073,3 +1120,53 @@ def guest_retrieve_refill_checkout(request, pk=None):
         "card_number": card.number_printed,
         "is_ephemere": card.is_wallet_ephemere(),
     }, status=200)
+
+
+def laboutik_delete(request):
+    if request.method != "POST":
+        return redirect("/dashboard/")
+
+    instance_name = (request.POST.get("instance_name") or "").strip()
+    confirm_name = (request.POST.get("confirm_name") or "").strip()
+    admin_password = request.POST.get("admin_password") or ""
+
+    if not request.user.check_password(admin_password):
+        messages.error(request, "Mot de passe administrateur incorrect.")
+        return redirect("/dashboard/")
+
+    if instance_name != confirm_name:
+        messages.error(request, "Le nom de confirmation ne correspond pas au nom de l'instance.")
+        return redirect("/dashboard/")
+
+    if not re.fullmatch(r"Laboutik_[a-z0-9\-]+", instance_name):
+        messages.error(request, f"Nom d'instance invalide : {instance_name}")
+        return redirect("/dashboard/")
+
+    instance_path = os.path.join(LABOUTIK_ROOT, instance_name)
+    if not os.path.isdir(instance_path):
+        messages.error(request, f"Instance introuvable : {instance_name}")
+        return redirect("/dashboard/")
+
+    existing = [r for r in _read_delete_requests()
+                if r.get("instance_name") == instance_name and r.get("status") in ("pending", "processing")]
+    if existing:
+        messages.warning(request, f"Suppression de {instance_name} déjà en cours.")
+        return redirect("/dashboard/")
+
+    slug = instance_name[len("Laboutik_"):]
+    req = {
+        "instance_name": instance_name,
+        "slug": slug,
+        "project_name": f"laboutik_{slug}",
+        "requested_at": timezone.localtime(timezone.now(), PARIS_TZ).isoformat(),
+        "requested_by": str(request.user),
+        "status": "pending",
+    }
+    _append_delete_request(req)
+    logger.info(f"laboutik_delete: suppression demandée pour {instance_name} par {request.user}")
+    messages.success(
+        request,
+        f"Suppression de {instance_name} en attente de traitement (< 1 min). "
+        f"Rafraîchissez la page pour voir le résultat."
+    )
+    return redirect("/dashboard/")
