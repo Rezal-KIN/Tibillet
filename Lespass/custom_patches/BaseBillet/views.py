@@ -3753,6 +3753,10 @@ class GuestRefillViewSet(viewsets.ViewSet):
             context["error"] = "Impossible de créer le lien de paiement."
             return render(request, "reunion/views/guest_refill.html", context=context)
 
+        # Sauvegarder l'email en session pour le récupérer au retour Stripe
+        if email:
+            request.session[f"guest_refill_email_{qrcode_uuid}"] = email
+
         return redirect(checkout_url)
 
     @action(detail=True, methods=["GET"], url_path=r"return/(?P<checkout_uuid>[0-9a-f-]+)", url_name="return")
@@ -3778,6 +3782,24 @@ class GuestRefillViewSet(viewsets.ViewSet):
             context["balance_eur"] = balance_eur
             context["card_number"] = data.get("card_number", "")
             context["is_ephemere"] = data.get("is_ephemere", True)
+
+            # Si l'utilisateur avait fourni un email, on crée/trouve son compte
+            # et on envoie un magic link pointant vers l'association de carte
+            email = request.session.pop(f"guest_refill_email_{qrcode_uuid}", None)
+            if email and data.get("is_ephemere", True):
+                try:
+                    signed_next = signing.dumps(f"/qr/{qrcode_uuid}/")
+                    user = get_or_create_user(
+                        email=email,
+                        send_mail=True,
+                        force_mail=True,
+                        next_url=signed_next,
+                    )
+                    if user:
+                        context["account_email"] = email
+                        context["account_created"] = True
+                except Exception as e:
+                    logger.warning(f"guest_refill account creation error for {email}: {e}")
         else:
             body = {}
             try:
