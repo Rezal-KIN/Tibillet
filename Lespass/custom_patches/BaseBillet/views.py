@@ -3712,7 +3712,7 @@ class GuestRefillViewSet(viewsets.ViewSet):
 
         email = (request.POST.get("email") or "").strip().lower()
         lespass_domain = FedowConfig.get_solo().lespass_domain()
-        start_return_url = f"https://{lespass_domain}/recharge/{qrcode_uuid}/return/"
+        start_return_url = f"https://{lespass_domain}/recharge/{qrcode_uuid}/return"
 
         try:
             response = self._call_fedow("POST", "guest/refill_checkout/", {
