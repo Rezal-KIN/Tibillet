@@ -114,6 +114,103 @@
         {% endif %}
     </div>
 
+    <div class="card p-3 mb-3">
+        <h5 class="mb-3">Instances LaBoutik</h5>
+        {% if laboutik_instances %}
+            <div class="table-responsive mb-2">
+                <table class="table table-sm align-middle">
+                    <thead>
+                    <tr>
+                        <th>Instance</th>
+                        <th>Projet Docker</th>
+                        <th>État</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for inst in laboutik_instances %}
+                        <tr>
+                            <td><code>{{ inst.name }}</code></td>
+                            <td><code>{{ inst.project_name }}</code></td>
+                            <td>
+                                {% if inst.deletion_pending %}
+                                    <span class="badge bg-warning text-dark">suppression en cours…</span>
+                                {% else %}
+                                    <span class="badge bg-success">actif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not inst.deletion_pending %}
+                                    <button type="button"
+                                            class="btn btn-danger btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteModal"
+                                            data-instance="{{ inst.name }}">
+                                        Supprimer
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted small mb-0">Aucune instance LaBoutik secondaire trouvée.</p>
+        {% endif %}
+    </div>
+
+    <!-- Modal de confirmation de suppression -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteModalLabel">Supprimer une instance LaBoutik</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" action="/dashboard/laboutik/delete/">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <strong>Action irréversible.</strong> Les conteneurs Docker et toutes les données de l'instance seront définitivement supprimés.
+                        </div>
+                        <input type="hidden" name="instance_name" id="modal_instance_name" value="">
+                        <p>Instance à supprimer : <strong id="modal_instance_label"></strong></p>
+                        <div class="mb-3">
+                            <label for="confirm_name" class="form-label">Tapez le nom de l'instance pour confirmer</label>
+                            <input type="text" class="form-control" name="confirm_name" id="confirm_name"
+                                   placeholder="Ex: Laboutik_bapts-225" autocomplete="off" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="admin_password" class="form-label">Mot de passe administrateur</label>
+                            <input type="password" class="form-control" name="admin_password" id="admin_password"
+                                   autocomplete="current-password" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('deleteModal');
+            if (!modal) return;
+            modal.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                var name = btn.getAttribute('data-instance');
+                modal.querySelector('#modal_instance_name').value = name;
+                modal.querySelector('#modal_instance_label').textContent = name;
+                modal.querySelector('#confirm_name').value = '';
+                modal.querySelector('#admin_password').value = '';
+            });
+        })();
+    </script>
+
     <div class="mb-3">
         <a class="btn btn-primary btn-sm" href="/dashboard/suivi/">Suivi</a>
     </div>
