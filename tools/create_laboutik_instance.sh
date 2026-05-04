@@ -121,6 +121,8 @@ fi
 
 sed -i '/container_name:/d;/hostname:/d' "$INSTANCE_DIR/docker-compose.yml"
 sed -i "s/traefik\\.http\\.routers\\.laboutik_nginx/traefik.http.routers.${ROUTER_NAME}/g" "$INSTANCE_DIR/docker-compose.yml"
+# Template uses restart: "no" to avoid auto-starting; real instances should always restart
+sed -i 's/restart: "no"/restart: always/g' "$INSTANCE_DIR/docker-compose.yml"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "Dry-run done. No containers started."

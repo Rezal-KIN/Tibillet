@@ -1,7 +1,7 @@
 services:
   laboutik_postgres:
     image: postgres:11.5-alpine
-    restart: always
+    restart: "no"
     env_file: .env
     container_name: laboutik_postgres
     hostname: laboutik_postgres
@@ -14,13 +14,13 @@ services:
     image: memcached:1.6
     container_name: laboutik_memcached
     hostname: laboutik_memcached
-    restart: always
+    restart: "no"
     networks:
       - laboutik_backend
 
   laboutik_redis:
     image: redis:6-alpine
-    restart: always
+    restart: "no"
     env_file: .env
     container_name: laboutik_redis
     hostname: laboutik_redis
@@ -29,7 +29,7 @@ services:
 
   laboutik_django:
     image: tibillet/laboutik:${LABOUTIK_VERSION:-latest}
-    restart: always
+    restart: "no"
     env_file: .env
     container_name: laboutik_django
     hostname: laboutik_django
@@ -64,7 +64,7 @@ services:
 
   laboutik_nginx:
     image: nginx
-    restart: always
+    restart: "no"
     container_name: laboutik_nginx
     hostname: laboutik_nginx
     depends_on:
