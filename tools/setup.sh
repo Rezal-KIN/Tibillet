@@ -10,13 +10,18 @@ cd "$REPO_ROOT"
 echo "=== Setup TiBillet ==="
 echo ""
 
-# --- Prérequis ---
-for cmd in docker infisical; do
-  if ! command -v "$cmd" &>/dev/null; then
-    echo "ERREUR : '$cmd' n'est pas installé." >&2
-    exit 1
-  fi
-done
+# --- Prérequis : docker ---
+if ! command -v docker &>/dev/null; then
+  echo "ERREUR : Docker n'est pas installé." >&2
+  exit 1
+fi
+
+# --- Prérequis : infisical (installation auto si absent) ---
+if ! command -v infisical &>/dev/null; then
+  echo "Infisical CLI non trouvé — installation en cours..."
+  curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo bash
+  sudo apt install -y infisical
+fi
 
 # --- Réseau Docker frontend ---
 if ! docker network inspect frontend &>/dev/null; then
