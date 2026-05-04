@@ -3672,3 +3672,122 @@ class Tenant(viewsets.ViewSet):
 
         #     _("Your Stripe account does not seem to be valid. "
         #       "\nPlease complete your Stripe.com registration before creating a new TiBillet space.")
+
+
+class GuestRefillViewSet(viewsets.ViewSet):
+    """Recharge de carte cashless sans compte utilisateur (scan QR → Stripe → succès)."""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def _call_fedow(self, method, path, payload):
+        fedow_domain = FedowConfig.get_solo().fedow_domain()
+        token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
+        url = f"https://{fedow_domain}/dashboard/{path}"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Active-Gala-Token": token,
+        }
+        return requests.post(url, headers=headers, data=json.dumps(payload), timeout=20, verify=bool(not settings.DEBUG))
+
+    @action(detail=True, methods=["GET", "POST"], url_path="recharge", url_name="recharge")
+    def recharge(self, request, pk=None):
+        qrcode_uuid = pk
+        context = get_context(request)
+
+        try:
+            fedow_api = FedowAPI()
+            card_data = fedow_api.NFCcard.qr_retrieve(qrcode_uuid)
+        except Exception as e:
+            logger.warning(f"guest_refill qr_retrieve error: {e}")
+            card_data = None
+
+        if not card_data:
+            context["error"] = "Carte introuvable ou QR code invalide."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        if request.method == "GET":
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        email = (request.POST.get("email") or "").strip().lower()
+        lespass_domain = FedowConfig.get_solo().lespass_domain()
+        start_return_url = f"https://{lespass_domain}/recharge/{qrcode_uuid}/return/"
+
+        try:
+            response = self._call_fedow("POST", "guest/refill_checkout/", {
+                "qrcode_uuid": qrcode_uuid,
+                "email": email,
+                "start_return_url": start_return_url,
+            })
+        except Exception as e:
+            logger.error(f"guest_refill call_fedow error: {e}")
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            context["error"] = "Erreur de connexion au serveur de paiement. Réessaie dans un instant."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        if response.status_code == 409:
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            context["error"] = "Aucun gala actif en ce moment. La recharge en ligne n'est pas disponible."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        if response.status_code == 417:
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            context["error"] = "Le paiement en ligne n'est pas configuré. Contacte un organisateur."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        if response.status_code != 202:
+            logger.error(f"guest_refill_checkout unexpected status {response.status_code}: {response.text[:300]}")
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            context["error"] = "Erreur lors de la création du paiement. Réessaie."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        checkout_url = response.json().get("checkout_url")
+        if not checkout_url:
+            context["card_data"] = card_data
+            context["qrcode_uuid"] = qrcode_uuid
+            context["error"] = "Impossible de créer le lien de paiement."
+            return render(request, "reunion/views/guest_refill.html", context=context)
+
+        return redirect(checkout_url)
+
+    @action(detail=True, methods=["GET"], url_path=r"return/(?P<checkout_uuid>[0-9a-f-]+)", url_name="return")
+    def return_recharge(self, request, pk=None, checkout_uuid=None):
+        qrcode_uuid = pk
+        context = get_context(request)
+        context["qrcode_uuid"] = qrcode_uuid
+
+        try:
+            response = self._call_fedow("POST", f"guest/retrieve_refill_checkout/{checkout_uuid}/", {
+                "qrcode_uuid": qrcode_uuid,
+            })
+        except Exception as e:
+            logger.error(f"guest return_recharge call_fedow error: {e}")
+            context["error"] = "Impossible de vérifier le paiement. Contacte un organisateur."
+            return render(request, "reunion/views/guest_refill_success.html", context=context)
+
+        if response.status_code == 200:
+            data = response.json()
+            balance_eur = round(data.get("asset_balance_cents", 0) / 100, 2)
+            context["success"] = True
+            context["asset_name"] = data.get("asset_name", "")
+            context["balance_eur"] = balance_eur
+            context["card_number"] = data.get("card_number", "")
+            context["is_ephemere"] = data.get("is_ephemere", True)
+        else:
+            body = {}
+            try:
+                body = response.json()
+            except Exception:
+                pass
+            err = body.get("error", "")
+            if err == "payment_validation_failed":
+                context["error"] = "Le paiement n'a pas pu être validé. Si tu as été débité, contacte un organisateur."
+            else:
+                context["error"] = "Statut de paiement inconnu. Contacte un organisateur si tu as été débité."
+
+        return render(request, "reunion/views/guest_refill_success.html", context=context)

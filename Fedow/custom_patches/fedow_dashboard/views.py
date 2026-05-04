@@ -888,3 +888,188 @@ def suivi_data(request):
         bar_name=f["bar_name"],
     )
     return JsonResponse(data)
+
+
+def _create_stripe_checkout_for_wallet(wallet, email, asset, place, add_metadata=None, start_return_url=None):
+    """Like _create_stripe_checkout_for_selected_asset but works with an ephemeral wallet (no Django user)."""
+    config = Configuration.get_solo()
+    if not config.get_stripe_api():
+        return None
+
+    stripe.api_key = config.get_stripe_api()
+    source_wallet = config.primary_wallet if asset.category == Asset.STRIPE_FED_FIAT else asset.wallet_origin
+    if not source_wallet:
+        raise ValueError(f"Source wallet missing for asset {asset.uuid}")
+    id_price_stripe = asset.get_id_price_stripe()
+    if not id_price_stripe:
+        raise ValueError(f"Stripe price missing for asset {asset.uuid}")
+
+    primary_token, _ = Token.objects.get_or_create(wallet=source_wallet, asset=asset)
+    user_token, _ = Token.objects.get_or_create(wallet=wallet, asset=asset)
+
+    metadata = {
+        "primary_token": f"{primary_token.uuid}",
+        "user_token": f"{user_token.uuid}",
+    }
+    if add_metadata:
+        metadata.update(add_metadata)
+
+    signer = Signer()
+    signed_data = signer.sign(dict_to_b64_utf8(metadata))
+    checkout_db = CheckoutStripe.objects.create(asset=user_token.asset, user=None, metadata=signed_data)
+
+    if not start_return_url:
+        return_url = f"https://{place.lespass_domain}/recharge/{add_metadata.get('qrcode_uuid', '')}/return/{checkout_db.uuid}/"
+    else:
+        if not start_return_url.endswith("/"):
+            start_return_url += "/"
+        return_url = f"{start_return_url}{checkout_db.uuid}/"
+
+    data_checkout = {
+        "success_url": return_url,
+        "cancel_url": return_url,
+        "payment_method_types": ["card"],
+        "line_items": [{"price": f"{id_price_stripe}", "quantity": 1}],
+        "mode": "payment",
+        "metadata": {"signed_data": f"{signed_data}"},
+    }
+    if email:
+        data_checkout["customer_email"] = email
+
+    checkout_session = stripe.checkout.Session.create(**data_checkout)
+    checkout_db.checkout_session_id_stripe = checkout_session.id
+    checkout_db.save(update_fields=["checkout_session_id_stripe"])
+    return checkout_session
+
+
+@csrf_exempt
+def guest_refill_checkout(request):
+    """Crée un checkout Stripe pour une carte par son qrcode_uuid, sans compte utilisateur."""
+    if request.method != "POST":
+        return JsonResponse({"error": "method_not_allowed"}, status=405)
+
+    expected_token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
+    provided_token = (request.headers.get("X-Active-Gala-Token") or "").strip()
+    if not expected_token or provided_token != expected_token:
+        return JsonResponse({"error": "forbidden"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+
+    qrcode_uuid = (payload.get("qrcode_uuid") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+    start_return_url = (payload.get("start_return_url") or "").strip() or None
+
+    if not qrcode_uuid:
+        return JsonResponse({"error": "qrcode_uuid_required"}, status=400)
+
+    try:
+        card = Card.objects.filter(qrcode_uuid=qrcode_uuid).first()
+    except Exception:
+        return JsonResponse({"error": "invalid_qrcode_uuid"}, status=400)
+
+    if not card:
+        return JsonResponse({"error": "card_not_found"}, status=404)
+
+    wallet = card.get_wallet()
+    if not wallet:
+        return JsonResponse({"error": "wallet_unavailable"}, status=503)
+
+    context = _active_context_with_labels()
+    place = Place.objects.filter(uuid=context.get("active_place_uuid")).first()
+    asset = Asset.objects.filter(
+        uuid=context.get("active_asset_uuid"),
+        archive=False,
+        category__in=MONETARY_CATEGORIES,
+    ).first()
+    if not place or not asset:
+        return JsonResponse({"error": "active_context_invalid"}, status=409)
+
+    try:
+        add_metadata = {
+            "active_place_uuid": str(place.uuid),
+            "active_asset_uuid": str(asset.uuid),
+            "qrcode_uuid": str(qrcode_uuid),
+        }
+        checkout_session = _create_stripe_checkout_for_wallet(
+            wallet=wallet,
+            email=email,
+            asset=asset,
+            place=place,
+            add_metadata=add_metadata,
+            start_return_url=start_return_url,
+        )
+        if not checkout_session:
+            return JsonResponse({"error": "stripe_not_configured"}, status=417)
+    except Exception as e:
+        logger.exception("guest_refill_checkout error")
+        return JsonResponse({"error": "checkout_creation_failed", "detail": str(e)}, status=500)
+
+    return JsonResponse({
+        "checkout_url": checkout_session.url,
+        "active_place_uuid": str(place.uuid),
+        "active_place_name": place.name,
+        "active_asset_uuid": str(asset.uuid),
+        "active_asset_name": asset.name,
+        "card_number": card.number_printed,
+        "is_ephemere": card.is_wallet_ephemere(),
+    }, status=202)
+
+
+@csrf_exempt
+def guest_retrieve_refill_checkout(request, pk=None):
+    """Valide le paiement Stripe pour un recharge guest (sans compte utilisateur)."""
+    if request.method != "POST":
+        return JsonResponse({"error": "method_not_allowed"}, status=405)
+
+    expected_token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
+    provided_token = (request.headers.get("X-Active-Gala-Token") or "").strip()
+    if not expected_token or provided_token != expected_token:
+        return JsonResponse({"error": "forbidden"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+
+    qrcode_uuid = (payload.get("qrcode_uuid") or "").strip()
+    if not qrcode_uuid:
+        return JsonResponse({"error": "qrcode_uuid_required"}, status=400)
+
+    try:
+        card = Card.objects.filter(qrcode_uuid=qrcode_uuid).first()
+    except Exception:
+        return JsonResponse({"error": "invalid_qrcode_uuid"}, status=400)
+
+    if not card:
+        return JsonResponse({"error": "card_not_found"}, status=404)
+
+    wallet = card.get_wallet()
+    if not wallet:
+        return JsonResponse({"error": "wallet_unavailable"}, status=503)
+
+    checkout_db = CheckoutStripe.objects.filter(pk=pk).select_related("asset").first()
+    if not checkout_db:
+        return JsonResponse({"error": "checkout_not_found"}, status=404)
+    if checkout_db.user:
+        return JsonResponse({"error": "checkout_belongs_to_user"}, status=403)
+
+    try:
+        _validate_selected_asset_checkout_and_make_transaction(checkout_db, wallet)
+    except Exception as e:
+        logger.exception("guest_retrieve_refill_checkout error")
+        return JsonResponse({"error": "payment_validation_failed", "detail": str(e)}, status=400)
+
+    user_token = Token.objects.filter(wallet=wallet, asset=checkout_db.asset).first()
+    return JsonResponse({
+        "status": "paid",
+        "checkout_uuid": str(checkout_db.uuid),
+        "wallet_uuid": str(wallet.uuid),
+        "asset_uuid": str(checkout_db.asset.uuid),
+        "asset_name": checkout_db.asset.name,
+        "asset_balance_cents": int(user_token.value if user_token else 0),
+        "card_number": card.number_printed,
+        "is_ephemere": card.is_wallet_ephemere(),
+    }, status=200)

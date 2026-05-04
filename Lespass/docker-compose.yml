@@ -52,6 +52,9 @@ services:
       - ./custom_patches/BaseBillet/templates/reunion/partials/account/transaction_history.html:/DjangoFiles/BaseBillet/templates/reunion/partials/account/transaction_history.html
       - ./custom_patches/ApiBillet/urls.py:/DjangoFiles/ApiBillet/urls.py
       - ./custom_patches/ApiBillet/cashless_onboarding.py:/DjangoFiles/ApiBillet/cashless_onboarding.py
+      - ./custom_patches/BaseBillet/urls.py:/DjangoFiles/BaseBillet/urls.py
+      - ./custom_patches/BaseBillet/templates/reunion/views/guest_refill.html:/DjangoFiles/BaseBillet/templates/reunion/views/guest_refill.html
+      - ./custom_patches/BaseBillet/templates/reunion/views/guest_refill_success.html:/DjangoFiles/BaseBillet/templates/reunion/views/guest_refill_success.html
     env_file: .env
     depends_on:
       - lespass_postgres
