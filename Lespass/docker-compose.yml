@@ -55,6 +55,7 @@ services:
       - ./custom_patches/BaseBillet/urls.py:/DjangoFiles/BaseBillet/urls.py
       - ./custom_patches/BaseBillet/templates/reunion/views/guest_refill.html:/DjangoFiles/BaseBillet/templates/reunion/views/guest_refill.html
       - ./custom_patches/BaseBillet/templates/reunion/views/guest_refill_success.html:/DjangoFiles/BaseBillet/templates/reunion/views/guest_refill_success.html
+      - ./custom_patches/BaseBillet/templates/reunion/views/register.html:/DjangoFiles/BaseBillet/templates/reunion/views/register.html
     env_file: .env
     depends_on:
       - lespass_postgres
