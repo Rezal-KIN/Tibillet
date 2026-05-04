@@ -18,7 +18,6 @@ router.register(r'event', base_view.EventMVT, basename='event')
 router.register(r'home', base_view.HomeViewset, basename='home')
 router.register(r'login', base_view.TiBilletLogin, basename='login-viewset')
 router.register(r'specialadminaction', base_view.SpecialAdminAction, basename='specialadminaction')
-router.register(r'recharge', base_view.GuestRefillViewSet, basename='guest_refill')
 
 urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
@@ -45,6 +44,14 @@ urlpatterns = [
     path('infos-pratiques/', base_view.infos_pratiques, name='infos_pratiques'),
 
     path('', base_view.index, name="index"),
+
+    # Guest recharge — URL imprimée sur les cartes
+    path('recharge/<str:pk>/',
+         base_view.GuestRefillViewSet.as_view({'get': 'recharge', 'post': 'recharge'}),
+         name='guest_refill'),
+    path('recharge/<str:pk>/return/<str:checkout_uuid>/',
+         base_view.GuestRefillViewSet.as_view({'get': 'return_recharge'}),
+         name='guest_refill_return'),
 ]
 
 urlpatterns += router.urls
