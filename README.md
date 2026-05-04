@@ -92,7 +92,7 @@ Patches concernés : [`Lespass/custom_patches/BaseBillet/templates/`](Lespass/cu
 ### Prérequis
 
 - Docker + Docker Compose v2
-- Traefik déjà déployé avec un réseau Docker externe nommé `frontend` et un `certresolver` TLS configuré
+- CLI Infisical installé (voir [tools/INFISICAL.md](tools/INFISICAL.md))
 - Un domaine avec les entrées DNS pointant vers le serveur
 
 ### 1. Cloner le repo
@@ -102,19 +102,19 @@ git clone <url-du-repo> /home/ubuntu/TiBillet
 cd /home/ubuntu/TiBillet
 ```
 
-### 2. Créer les fichiers `.env`
-
-Pour chaque service, copier l'exemple et remplir les valeurs :
+### 2. Lancer le script de setup
 
 ```bash
-cp Fedow/.env.example    Fedow/.env
-cp Lespass/.env.example  Lespass/.env
-cp Laboutik/.env.example Laboutik/.env
+bash tools/setup.sh
 ```
 
-> Les secrets (`DJANGO_SECRET`, `FERNET_KEY`) doivent être générés — les commandes sont indiquées en commentaire dans chaque `.env.example`.
+Ce script :
+- Crée le réseau Docker `frontend`
+- Initialise `traefik/acme.json` (vide, chmod 600) et démarre Traefik
+- Configure les credentials Infisical (`~/.infisical-credentials`)
+- Exporte les `.env` depuis Infisical pour Fedow, Lespass et Laboutik
 
-> `ACTIVE_GALA_API_TOKEN` doit être **identique** dans `Fedow/.env` et `Lespass/.env`.
+> Les certificats TLS sont générés automatiquement par Traefik au premier accès à chaque domaine — pas besoin de les transférer d'une VM à l'autre.
 
 ### 3. Démarrer les services
 
