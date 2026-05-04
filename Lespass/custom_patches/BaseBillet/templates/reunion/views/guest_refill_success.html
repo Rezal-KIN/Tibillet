@@ -26,7 +26,19 @@
           </div>
         {% endif %}
 
-        {% if is_ephemere %}
+        {% if account_created %}
+          <div class="card border-success rounded-3 mb-3">
+            <div class="card-body py-3">
+              <h6 class="card-title mb-1 text-success">
+                <i class="bi bi-envelope-check me-1"></i>Un email t'a été envoyé
+              </h6>
+              <p class="card-text small text-muted mb-0">
+                Consulte ta boîte <strong>{{ account_email }}</strong> et clique sur le lien
+                pour créer ton compte et associer automatiquement ta carte. Ton solde sera sécurisé.
+              </p>
+            </div>
+          </div>
+        {% elif is_ephemere %}
           <div class="card border-warning rounded-3 mb-3">
             <div class="card-body py-3">
               <h6 class="card-title mb-1">
