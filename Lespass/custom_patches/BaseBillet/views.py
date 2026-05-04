@@ -3711,7 +3711,7 @@ class GuestRefillViewSet(viewsets.ViewSet):
             return render(request, "reunion/views/guest_refill.html", context=context)
 
         email = (request.POST.get("email") or "").strip().lower()
-        lespass_domain = FedowConfig.get_solo().lespass_domain()
+        lespass_domain = connection.tenant.get_primary_domain().domain
         start_return_url = f"https://{lespass_domain}/recharge/{qrcode_uuid}/return"
 
         try:
