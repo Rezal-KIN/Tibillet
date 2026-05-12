@@ -57,7 +57,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=frontend
       - traefik.http.routers.fedow_nginx.tls.certresolver=myresolver
-      - traefik.http.routers.fedow_nginx.rule=Host(`fedow.galas-am-aix.fr`)
+      - traefik.http.routers.fedow_nginx.rule=Host(`fedow.galas-am-aix.rezal.fr`)
     networks:
       - frontend
       - fedow_backend
