@@ -4,6 +4,7 @@ from BaseBillet import views as base_view
 from BaseBillet.views_robots import robots_txt
 from BaseBillet.test_error_views import test_404, test_500
 import BaseBillet.views_scan as views_scan
+from BaseBillet.views_balance_total import balance_total, balance_tokens_rows
 
 router = routers.DefaultRouter()
 router.register(r'memberships', base_view.MembershipMVT, basename='membership_mvt')
@@ -44,6 +45,8 @@ urlpatterns = [
     path('infos-pratiques/', base_view.infos_pratiques, name='infos_pratiques'),
 
     path('', base_view.index, name="index"),
+    path('my_account/balance_total/', balance_total, name='balance_total'),
+    path('my_account/balance_tokens_rows/', balance_tokens_rows, name='balance_tokens_rows'),
 ]
 
 urlpatterns += router.urls

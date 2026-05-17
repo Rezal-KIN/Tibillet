@@ -10,6 +10,10 @@
         <th>Montant</th>
         <th>Date / Infos</th>
         </thead>
+        <tbody id="balance-rows-target"
+               hx-get="/my_account/balance_tokens_rows/"
+               hx-trigger="load"
+               hx-swap="afterbegin">
         <tbody>
         {% for token in tokens %}
             <tr>

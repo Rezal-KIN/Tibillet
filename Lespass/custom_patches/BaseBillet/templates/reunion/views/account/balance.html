@@ -61,9 +61,11 @@
                         </div>
 
                         <div class="p-3">
-{# <div class="alert  alert-warning" role="alert">
-                                <p>{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named ‘TiBillet’. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
-                            </div> #}
+                            {% comment %}
+                            <div class="alert alert-warning" role="alert">
+                                <p>{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named 'TiBillet'. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
+                            </div>
+                            {% endcomment %}
                             <p class="lead">
                                 {# TODO: montant remboursement #}
                                 {% trans "Confirm the refund request?" %}
@@ -181,29 +183,13 @@
 
 <script>
 (function () {
-    fetch('/my_account/tokens_table/', {credentials: 'same-origin'})
-        .then(function (r) {
-            console.log('[balance] tokens_table status:', r.status);
-            return r.text();
-        })
-        .then(function (html) {
-            console.log('[balance] html preview:', html.substring(0, 800));
-            var tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            var strongs = tmp.querySelectorAll('tbody strong');
-            console.log('[balance] strongs found:', strongs.length);
-            strongs.forEach(function (s) { console.log('[balance] value:', JSON.stringify(s.textContent)); });
-            var total = 0;
-            strongs.forEach(function (s) {
-                var val = parseFloat(s.textContent.trim().replace(',', '.'));
-                if (!isNaN(val)) total += val;
-            });
-            console.log('[balance] total:', total);
+    fetch('/my_account/balance_total/', {credentials: 'same-origin'})
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
             var display = document.getElementById('total-balance-display');
-            if (display) display.textContent = total.toFixed(2) + ' €';
+            if (display) display.textContent = data.total.toFixed(2) + ' €';
         })
-        .catch(function (err) {
-            console.error('[balance] error:', err);
+        .catch(function () {
             var display = document.getElementById('total-balance-display');
             if (display) display.textContent = '—';
         });
