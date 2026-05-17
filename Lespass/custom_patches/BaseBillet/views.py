@@ -11,11 +11,9 @@ from io import BytesIO
 
 import segno
 import stripe
-import requests
 from django.contrib import messages
 from django.contrib.auth import logout, login
 from django.contrib.messages import MessageFailure
-from django.core import signing
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
@@ -212,52 +210,6 @@ def get_context(request):
 
     # cache.set(f'get_context_{connection.tenant.uuid}', context, 10)
     return context
-
-
-def get_active_gala_refill_checkout_url(user):
-    """
-    Demande à Fedow un checkout Stripe basé sur le "Lieu actif" / "Monnaie active".
-    Fallback automatique sur la route historique fédérée si indisponible.
-    """
-    fedow_api = FedowAPI()
-    if not user.wallet:
-        fedow_api.wallet.get_or_create_wallet(user)
-        user.refresh_from_db()
-
-    token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
-    fedow_domain = FedowConfig.get_solo().fedow_domain()
-    if not token or not fedow_domain or not user.wallet:
-        return fedow_api.wallet.get_federated_token_refill_checkout(user)
-
-    endpoint = f"https://{fedow_domain}/dashboard/active-context/refill_checkout/"
-    payload = {
-        "wallet_uuid": str(user.wallet.uuid),
-        "email": (user.email or "").lower(),
-    }
-
-    try:
-        response = requests.post(
-            endpoint,
-            headers={
-                "Content-Type": "application/json",
-                "X-Active-Gala-Token": token,
-            },
-            data=json.dumps(payload),
-            timeout=15,
-            verify=bool(not settings.DEBUG),
-        )
-    except Exception as e:
-        logger.warning(f"Active gala refill endpoint error, fallback federated checkout: {e}")
-        return fedow_api.wallet.get_federated_token_refill_checkout(user)
-
-    if response.status_code == 202:
-        body = response.json() if response.content else {}
-        return body.get("checkout_url")
-    if response.status_code == 417:
-        return None
-
-    logger.warning(f"Active gala refill endpoint refused ({response.status_code}), fallback federated checkout")
-    return fedow_api.wallet.get_federated_token_refill_checkout(user)
 
 
 # S'execute juste après un retour Webhook ou redirection une fois le paiement stripe effectué.
@@ -1318,59 +1270,26 @@ class MyAccount(viewsets.ViewSet):
     @action(detail=False, methods=['GET'])
     def refill_wallet(self, request):
         user = request.user
-        # C'est Fedow qui génère la demande de paiement à Stripe.
-        # Le dashboard Fedow peut choisir une monnaie active (gala actif),
-        # avec fallback sur la route fédérée standard.
-        stripe_checkout_url = get_active_gala_refill_checkout_url(user)
+        fedowAPI = FedowAPI()
+        try:
+            stripe_checkout_url = fedowAPI.wallet.get_federated_token_refill_checkout(user)
+        except Exception as exc:
+            logger.error("refill_wallet Fedow error: %s", exc, exc_info=True)
+            messages.add_message(request, messages.ERROR, _("Refill service temporarily unavailable."))
+            return HttpResponseClientRedirect('/my_account/balance/')
         if stripe_checkout_url:
-            # Redirection du client vers le lien stripe demandé par Fedow
             return HttpResponseClientRedirect(stripe_checkout_url)
         else:
             messages.add_message(request, messages.ERROR, _("Not available. Contact an admin."))
-            return HttpResponseClientRedirect('/my_account/')
+            return HttpResponseClientRedirect('/my_account/balance/')
 
     @action(detail=True, methods=['GET'])
     def return_refill_wallet(self, request, pk=None):
-        # On demande confirmation à Fedow qui a du recevoir la validation en webhook POST
-        # Fedow vérifie la signature du paiement dans les metada Stripe
-        # C'est Fedow entré le metadata signé, c'est lui qui vérifie.
         user = request.user
         fedowAPI = FedowAPI()
-        fedow_domain = FedowConfig.get_solo().fedow_domain()
-        token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
 
         try:
-            wallet = None
-            if token and fedow_domain and getattr(user, "wallet", None):
-                endpoint = f"https://{fedow_domain}/dashboard/active-context/retrieve_refill_checkout/{pk}/"
-                payload = {
-                    "wallet_uuid": str(user.wallet.uuid),
-                    "email": (user.email or "").lower(),
-                }
-                try:
-                    response = requests.post(
-                        endpoint,
-                        headers={
-                            "Content-Type": "application/json",
-                            "X-Active-Gala-Token": token,
-                        },
-                        data=json.dumps(payload),
-                        timeout=20,
-                        verify=bool(not settings.DEBUG),
-                    )
-                    if response.status_code == 200:
-                        wallet = response.json()
-                    else:
-                        logger.warning(
-                            f"active gala refill retrieve failed ({response.status_code}): "
-                            f"{response.text[:300]}"
-                        )
-                except Exception as e:
-                    logger.warning(f"active gala refill retrieve endpoint error: {e}")
-
-            # Fallback historique (fédéré) pour compatibilité
-            if not wallet:
-                wallet = fedowAPI.wallet.retrieve_from_refill_checkout(user, pk)
+            wallet = fedowAPI.wallet.retrieve_from_refill_checkout(user, pk)
             if wallet:
                 messages.add_message(request, messages.SUCCESS, _("Refilled wallet"))
             else:
@@ -3672,144 +3591,3 @@ class Tenant(viewsets.ViewSet):
 
         #     _("Your Stripe account does not seem to be valid. "
         #       "\nPlease complete your Stripe.com registration before creating a new TiBillet space.")
-
-
-class GuestRefillViewSet(viewsets.ViewSet):
-    """Recharge de carte cashless sans compte utilisateur (scan QR → Stripe → succès)."""
-    authentication_classes = []
-    permission_classes = [AllowAny]
-
-    def _call_fedow(self, method, path, payload):
-        fedow_domain = FedowConfig.get_solo().fedow_domain()
-        token = (os.environ.get("ACTIVE_GALA_API_TOKEN") or "").strip()
-        url = f"https://{fedow_domain}/dashboard/{path}"
-        headers = {
-            "Content-Type": "application/json",
-            "X-Active-Gala-Token": token,
-        }
-        return requests.post(url, headers=headers, data=json.dumps(payload), timeout=20, verify=bool(not settings.DEBUG))
-
-    @action(detail=True, methods=["GET", "POST"], url_path="recharge", url_name="recharge")
-    def recharge(self, request, pk=None):
-        qrcode_uuid = pk
-        context = get_context(request)
-
-        try:
-            fedow_api = FedowAPI()
-            card_data = fedow_api.NFCcard.qr_retrieve(qrcode_uuid)
-        except Exception as e:
-            logger.warning(f"guest_refill qr_retrieve error: {e}")
-            card_data = None
-
-        if not card_data:
-            context["error"] = "Carte introuvable ou QR code invalide."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        if request.method == "GET":
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        email = (request.POST.get("email") or "").strip().lower()
-        lespass_domain = connection.tenant.get_primary_domain().domain
-        start_return_url = f"https://{lespass_domain}/recharge/{qrcode_uuid}/return"
-
-        try:
-            response = self._call_fedow("POST", "guest/refill_checkout/", {
-                "qrcode_uuid": qrcode_uuid,
-                "email": email,
-                "start_return_url": start_return_url,
-            })
-        except Exception as e:
-            logger.error(f"guest_refill call_fedow error: {e}")
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            context["error"] = "Erreur de connexion au serveur de paiement. Réessaie dans un instant."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        if response.status_code == 409:
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            context["error"] = "Aucun gala actif en ce moment. La recharge en ligne n'est pas disponible."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        if response.status_code == 417:
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            context["error"] = "Le paiement en ligne n'est pas configuré. Contacte un organisateur."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        if response.status_code != 202:
-            logger.error(f"guest_refill_checkout unexpected status {response.status_code}: {response.text[:300]}")
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            context["error"] = "Erreur lors de la création du paiement. Réessaie."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        checkout_url = response.json().get("checkout_url")
-        if not checkout_url:
-            context["card_data"] = card_data
-            context["qrcode_uuid"] = qrcode_uuid
-            context["error"] = "Impossible de créer le lien de paiement."
-            return render(request, "reunion/views/guest_refill.html", context=context)
-
-        # Sauvegarder l'email en session pour le récupérer au retour Stripe
-        if email:
-            request.session[f"guest_refill_email_{qrcode_uuid}"] = email
-
-        return redirect(checkout_url)
-
-    @action(detail=True, methods=["GET"], url_path=r"return/(?P<checkout_uuid>[0-9a-f-]+)", url_name="return")
-    def return_recharge(self, request, pk=None, checkout_uuid=None):
-        qrcode_uuid = pk
-        context = get_context(request)
-        context["qrcode_uuid"] = qrcode_uuid
-
-        try:
-            response = self._call_fedow("POST", f"guest/retrieve_refill_checkout/{checkout_uuid}/", {
-                "qrcode_uuid": qrcode_uuid,
-            })
-        except Exception as e:
-            logger.error(f"guest return_recharge call_fedow error: {e}")
-            context["error"] = "Impossible de vérifier le paiement. Contacte un organisateur."
-            return render(request, "reunion/views/guest_refill_success.html", context=context)
-
-        if response.status_code == 200:
-            data = response.json()
-            balance_eur = round(data.get("asset_balance_cents", 0) / 100, 2)
-            context["success"] = True
-            context["asset_name"] = data.get("asset_name", "")
-            context["balance_eur"] = balance_eur
-            context["card_number"] = data.get("card_number", "")
-            context["is_ephemere"] = data.get("is_ephemere", True)
-
-            # Si l'utilisateur avait fourni un email, on crée/trouve son compte
-            # et on envoie un magic link pointant vers l'association de carte
-            email = request.session.pop(f"guest_refill_email_{qrcode_uuid}", None)
-            if email and data.get("is_ephemere", True):
-                try:
-                    signed_next = signing.dumps(f"/qr/{qrcode_uuid}/")
-                    user = get_or_create_user(
-                        email=email,
-                        send_mail=True,
-                        force_mail=True,
-                        next_url=signed_next,
-                    )
-                    if user:
-                        context["account_email"] = email
-                        context["account_created"] = True
-                except Exception as e:
-                    logger.warning(f"guest_refill account creation error for {email}: {e}")
-        else:
-            body = {}
-            try:
-                body = response.json()
-            except Exception:
-                pass
-            err = body.get("error", "")
-            if err == "payment_validation_failed":
-                context["error"] = "Le paiement n'a pas pu être validé. Si tu as été débité, contacte un organisateur."
-            else:
-                context["error"] = "Statut de paiement inconnu. Contacte un organisateur si tu as été débité."
-
-        return render(request, "reunion/views/guest_refill_success.html", context=context)

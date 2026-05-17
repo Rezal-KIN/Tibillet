@@ -44,14 +44,6 @@ urlpatterns = [
     path('infos-pratiques/', base_view.infos_pratiques, name='infos_pratiques'),
 
     path('', base_view.index, name="index"),
-
-    # Guest recharge — URL imprimée sur les cartes
-    path('recharge/<str:pk>/',
-         base_view.GuestRefillViewSet.as_view({'get': 'recharge', 'post': 'recharge'}),
-         name='guest_refill'),
-    path('recharge/<str:pk>/return/<str:checkout_uuid>/',
-         base_view.GuestRefillViewSet.as_view({'get': 'return_recharge'}),
-         name='guest_refill_return'),
 ]
 
 urlpatterns += router.urls
