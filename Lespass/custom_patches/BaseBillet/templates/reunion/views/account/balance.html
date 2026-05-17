@@ -24,11 +24,19 @@
     {% endif %}
 
     <section class="card mb-3 pt-3">
-        <div class="card-body">
-            <h1 class="card-title">{% trans 'My balance' %}</h1>
-            <p class="lead">
-                Ici je peux voir mon solde accéder à mon historique de transactions et recharger mon compte
-            </p>
+        <div class="card-body d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+            <div>
+                <h1 class="card-title mb-0">{% trans 'My balance' %}</h1>
+                <p class="lead mb-0">
+                    Ici je peux voir mon solde accéder à mon historique de transactions et recharger mon compte
+                </p>
+            </div>
+            <div class="text-md-end">
+                <div class="text-muted small">Solde total</div>
+                <div id="total-balance-display" class="display-5 fw-bold text-primary">
+                    <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                </div>
+            </div>
         </div>
 
         {% if config.show_refill_button %}
@@ -43,26 +51,19 @@
                 <div class="offcanvas-body">
                     <div class="d-flex flex-column justify-content-between h-100">
                         <div>
-                            <div class="alert  alert-primary" role="alert">
-                                <h4>{% trans "Don't panic! You've got time left…" %}</h4>
+                            <div class="alert alert-primary" role="alert">
+                                <h4>Pas de panique !</h4>
                                 <p>
-                                    {% translate 'TiBillet works on a <a href="https://tibillet.org/docs/presentation/philosophy/">melting funds</a> principle.' %}
-                                    {% translate "You can get your leftover balance back for 14 months after your last Pass card use." %}
-                                    {% translate "We send a reminder a month before expiration." %}
-                                </p>
-                                <p>
-                                    {% translate "You will also soon be able to donate the leftover balance to the collective that issued this card." %}
-                                </p>
-                                <p>
-                                    {% translate "Your Pass card itself and your account are yours for life and can be used with every TiBillet collective!" %}
+                                    Vous avez la possibilité de vous faire rembourser le montant restant sur votre carte pendant un délai de 7 jours.
+                                    Après ce délai il ne vous est plus possible d'effectuer des demandes de remboursement sur notre site pour que nous puissions clôturer le gala.
                                 </p>
                             </div>
                         </div>
 
                         <div class="p-3">
-                            <div class="alert  alert-warning" role="alert">
+{# <div class="alert  alert-warning" role="alert">
                                 <p>{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named ‘TiBillet’. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
-                            </div>
+                            </div> #}
                             <p class="lead">
                                 {# TODO: montant remboursement #}
                                 {% trans "Confirm the refund request?" %}
@@ -95,7 +96,7 @@
             <div class="col-12 bg-body-tertiary p-3">
                 <div class="row g-2">
                     <div class="col-6 col-md-auto me-md-2">
-                        <a href="#" hx-get="/my_account/refill_wallet" hx-indicator="#tibillet-spinner"
+                        <a href="#" hx-get="/my_account/refill_wallet/" hx-indicator="#tibillet-spinner"
                            class="btn btn-primary square-btn w-100">
                             <i class="bi bi-plus-circle"></i>
                             Recharger mon compte (Stripe)
@@ -124,14 +125,6 @@
                         </div>
                     {% endif %}
 
-                    {# Initiate payment button moved above the Currencies heading for admins #}
-                    <div class="col-6 col-md-auto me-md-2">
-                        <a href="#detail-monnaies"
-                           class="btn btn-secondary square-btn w-100 d-md-none">
-                            <i class="bi bi-list-ul"></i>
-                            {% trans "Show currency list" %}
-                        </a>
-                    </div>
 
 
                     {% if config.show_refill_button %} <!-- Si pas possible de recharger -->
@@ -185,5 +178,36 @@
             <div class="spinner-border text-info" role="status"></div>
         </div>
     </section>
+
+<script>
+(function () {
+    fetch('/my_account/tokens_table/', {credentials: 'same-origin'})
+        .then(function (r) {
+            console.log('[balance] tokens_table status:', r.status);
+            return r.text();
+        })
+        .then(function (html) {
+            console.log('[balance] html preview:', html.substring(0, 800));
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            var strongs = tmp.querySelectorAll('tbody strong');
+            console.log('[balance] strongs found:', strongs.length);
+            strongs.forEach(function (s) { console.log('[balance] value:', JSON.stringify(s.textContent)); });
+            var total = 0;
+            strongs.forEach(function (s) {
+                var val = parseFloat(s.textContent.trim().replace(',', '.'));
+                if (!isNaN(val)) total += val;
+            });
+            console.log('[balance] total:', total);
+            var display = document.getElementById('total-balance-display');
+            if (display) display.textContent = total.toFixed(2) + ' €';
+        })
+        .catch(function (err) {
+            console.error('[balance] error:', err);
+            var display = document.getElementById('total-balance-display');
+            if (display) display.textContent = '—';
+        });
+})();
+</script>
 
 {% endblock %}
