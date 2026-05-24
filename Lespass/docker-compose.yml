@@ -57,6 +57,7 @@ services:
       - ./custom_patches/BaseBillet/templates/reunion/views/account/refund_local_form.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/refund_local_form.html
       - ./custom_patches/BaseBillet/templates/reunion/views/account/refund_local_success.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/refund_local_success.html
       - ./custom_patches/BaseBillet/templates/reunion/views/qr_landing.html:/DjangoFiles/BaseBillet/templates/reunion/views/qr_landing.html
+      - ./custom_patches/BaseBillet/templates/reunion/views/qr_check_email.html:/DjangoFiles/BaseBillet/templates/reunion/views/qr_check_email.html
     env_file: .env
     depends_on:
       - lespass_postgres
