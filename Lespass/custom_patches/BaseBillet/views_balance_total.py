@@ -10,6 +10,7 @@ from fedow_connect.fedow_api import FedowAPI
 from BaseBillet.refund_models import LocalRefundRequest
 from BaseBillet.models import Configuration
 from BaseBillet.views import get_skin_template
+from AuthBillet.utils import get_or_create_user
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,38 @@ def balance_tokens_rows(request):
     except Exception as e:
         logger.error(f"balance_tokens_rows error: {e}")
         return HttpResponse('')
+
+
+def connexion_with_names(request):
+    """Endpoint de connexion/inscription qui sauvegarde nom et prénom."""
+    if request.method != 'POST':
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(['POST'])
+
+    email = request.POST.get('email', '').strip().lower()
+    prenom = request.POST.get('prenom', '').strip()
+    nom = request.POST.get('nom', '').strip()
+
+    import re
+    if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+        return JsonResponse({'ok': False, 'message': 'Adresse email invalide.'}, status=400)
+
+    try:
+        user = get_or_create_user(email=email, send_mail=True, force_mail=True)
+        # Sauvegarde des noms si fournis et pas encore renseignés
+        changed = False
+        if prenom and not user.first_name:
+            user.first_name = prenom
+            changed = True
+        if nom and not user.last_name:
+            user.last_name = nom
+            changed = True
+        if changed:
+            user.save(update_fields=['first_name', 'last_name'])
+        return JsonResponse({'ok': True, 'message': 'Mail envoyé. Vérifiez votre boîte de réception.'})
+    except Exception as e:
+        logger.error(f"connexion_with_names error: {e}")
+        return JsonResponse({'ok': False, 'message': 'Erreur serveur, veuillez réessayer.'}, status=500)
 
 
 def refund_local_form(request):

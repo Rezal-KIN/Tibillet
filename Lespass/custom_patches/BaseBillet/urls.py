@@ -4,7 +4,7 @@ from BaseBillet import views as base_view
 from BaseBillet.views_robots import robots_txt
 from BaseBillet.test_error_views import test_404, test_500
 import BaseBillet.views_scan as views_scan
-from BaseBillet.views_balance_total import balance_total, balance_tokens_rows, refund_local_form, refund_local_success
+from BaseBillet.views_balance_total import balance_total, balance_tokens_rows, refund_local_form, refund_local_success, connexion_with_names
 
 router = routers.DefaultRouter()
 router.register(r'memberships', base_view.MembershipMVT, basename='membership_mvt')
@@ -47,6 +47,7 @@ urlpatterns = [
     path('', base_view.index, name="index"),
     path('my_account/balance_total/', balance_total, name='balance_total'),
     path('my_account/balance_tokens_rows/', balance_tokens_rows, name='balance_tokens_rows'),
+    path('connexion_with_names/', connexion_with_names, name='connexion_with_names'),
     path('my_account/refund_local_form/', refund_local_form, name='refund_local_form'),
     path('my_account/refund_local_success/', refund_local_success, name='refund_local_success'),
 ]

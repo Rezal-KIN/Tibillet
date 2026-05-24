@@ -41,6 +41,7 @@ services:
       - ./settings.py:/DjangoFiles/TiBillet/settings.py
       - ./custom_patches/Administration/admin_tenant.py:/DjangoFiles/Administration/admin_tenant.py
       - ./custom_patches/BaseBillet/templates/emails/connexion.html:/DjangoFiles/BaseBillet/templates/emails/connexion.html
+      - ./custom_patches/BaseBillet/templates/emails/base.html:/DjangoFiles/BaseBillet/templates/emails/base.html
       - ./custom_patches/BaseBillet/templates/reunion/forms/login.html:/DjangoFiles/BaseBillet/templates/reunion/forms/login.html
       - ./custom_patches/BaseBillet/templates/reunion/partials/navbar.html:/DjangoFiles/BaseBillet/templates/reunion/partials/navbar.html
       - ./custom_patches/BaseBillet/templates/reunion/views/account/preferences.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/preferences.html
