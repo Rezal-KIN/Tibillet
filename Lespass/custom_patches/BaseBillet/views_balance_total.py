@@ -8,6 +8,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from fedow_connect.fedow_api import FedowAPI
 from BaseBillet.refund_models import LocalRefundRequest
+from BaseBillet.models import Configuration
+from BaseBillet.views import get_skin_template
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +135,8 @@ def refund_local_form(request):
             errors.append("Votre solde local est nul, aucun remboursement possible.")
 
         if errors:
+            config = Configuration.get_solo()
+            base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
             return render(request, 'reunion/views/account/refund_local_form.html', {
                 'errors': errors,
                 'local_balance': local_balance,
@@ -141,6 +145,9 @@ def refund_local_form(request):
                 'iban': iban,
                 'bic': bic,
                 'ticket_number': ticket_number,
+                'base_template': base_template,
+                'user': request.user,
+                'config': config,
             })
 
         # Sauvegarde en base
@@ -207,8 +214,14 @@ def refund_local_form(request):
         logger.error(f"refund_local_form GET balance error: {e}")
         local_balance = None
 
+    config = Configuration.get_solo()
+    base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
+
     return render(request, 'reunion/views/account/refund_local_form.html', {
         'local_balance': local_balance,
+        'base_template': base_template,
+        'user': request.user,
+        'config': config,
     })
 
 
@@ -216,4 +229,10 @@ def refund_local_success(request):
     """Page de confirmation après soumission du formulaire."""
     if not request.user.is_authenticated:
         return redirect('/connexion/')
-    return render(request, 'reunion/views/account/refund_local_success.html', {})
+    config = Configuration.get_solo()
+    base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
+    return render(request, 'reunion/views/account/refund_local_success.html', {
+        'base_template': base_template,
+        'user': request.user,
+        'config': config,
+    })
