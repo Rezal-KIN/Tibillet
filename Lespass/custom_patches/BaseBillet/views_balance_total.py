@@ -145,7 +145,7 @@ def qr_card_landing(request, pk):
 
     # Carte déjà liée + non authentifié → magic link obligatoire
     try:
-        from BaseBillet.models import Wallet
+        from AuthBillet.models import Wallet
         from AuthBillet.utils import sender_mail_connect
         from django.core import signing
         wallet = Wallet.objects.get(uuid=serialized_card['wallet_uuid'])
