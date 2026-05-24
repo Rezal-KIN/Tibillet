@@ -99,7 +99,22 @@ def balance_tokens_rows(request):
 
 
 def qr_card_landing(request, pk):
-    """Intercepte /qr/<uuid>/ : landing page si authentifié, sinon flow original."""
+    """
+    Intercepte /qr/<uuid>/ avec authentification sécurisée.
+
+    - Authentifié (même navigateur) → landing page directe
+    - Carte non liée (éphémère) → register.html (flow original)
+    - Carte liée + non authentifié → magic link email + page "vérifiez votre email"
+    """
+    from uuid import UUID as _UUID
+
+    try:
+        qrcode_uuid = _UUID(pk)
+    except ValueError:
+        from django.http import Http404
+        raise Http404()
+
+    # Déjà authentifié → landing page directe
     if request.user.is_authenticated:
         config = Configuration.get_solo()
         base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
@@ -109,10 +124,44 @@ def qr_card_landing(request, pk):
             'config': config,
             'qrcode_uuid': pk,
         })
-    # Pas authentifié → délègue au flow original
-    from BaseBillet.views import ScanQrCode
-    view_func = ScanQrCode.as_view({'get': 'retrieve'})
-    return view_func(request, pk=pk)
+
+    # Pas authentifié → interroger Fedow
+    try:
+        fedowAPI = FedowAPI()
+        serialized_card = fedowAPI.NFCcard.qr_retrieve(qrcode_uuid)
+    except Exception as e:
+        logger.error(f"qr_card_landing fedow error: {e}")
+        serialized_card = None
+
+    if not serialized_card:
+        from django.http import Http404
+        raise Http404("Carte inconnue")
+
+    # Carte éphémère (jamais liée) → flow original d'inscription
+    if serialized_card.get('is_wallet_ephemere', True):
+        from BaseBillet.views import ScanQrCode
+        view_func = ScanQrCode.as_view({'get': 'retrieve'})
+        return view_func(request, pk=pk)
+
+    # Carte déjà liée + non authentifié → magic link obligatoire
+    try:
+        from BaseBillet.models import Wallet
+        from AuthBillet.utils import sender_mail_connect
+        wallet = Wallet.objects.get(uuid=serialized_card['wallet_uuid'])
+        user = wallet.user
+        sender_mail_connect(user.email)
+        masked_email = user.email[:2] + '***@' + user.email.split('@')[1]
+    except Exception as e:
+        logger.error(f"qr_card_landing magic link error: {e}")
+        masked_email = None
+
+    config = Configuration.get_solo()
+    base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
+    return render(request, 'reunion/views/qr_check_email.html', {
+        'base_template': base_template,
+        'config': config,
+        'masked_email': masked_email,
+    })
 
 
 def connexion_with_names(request):
