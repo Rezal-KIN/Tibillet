@@ -98,6 +98,23 @@ def balance_tokens_rows(request):
         return HttpResponse('')
 
 
+def qr_card_landing(request, pk):
+    """Intercepte /qr/<uuid>/ : landing page si authentifié, sinon flow original."""
+    if request.user.is_authenticated:
+        config = Configuration.get_solo()
+        base_template = get_skin_template(config, "headless.html" if request.htmx else "base.html")
+        return render(request, 'reunion/views/qr_landing.html', {
+            'base_template': base_template,
+            'user': request.user,
+            'config': config,
+            'qrcode_uuid': pk,
+        })
+    # Pas authentifié → délègue au flow original
+    from BaseBillet.views import ScanQrCode
+    view_func = ScanQrCode.as_view({'get': 'retrieve'})
+    return view_func(request, pk=pk)
+
+
 def connexion_with_names(request):
     """Endpoint de connexion/inscription qui sauvegarde nom et prénom."""
     if request.method != 'POST':
