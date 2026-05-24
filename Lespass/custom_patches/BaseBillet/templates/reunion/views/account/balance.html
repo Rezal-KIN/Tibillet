@@ -61,49 +61,51 @@
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
                             aria-label="{% trans 'Close' %}"></button>
                 </div>
-                <div class="offcanvas-body">
-                    <div class="d-flex flex-column justify-content-between h-100">
-                        <div>
-                            <div class="alert alert-primary" role="alert">
-                                <h4>Pas de panique !</h4>
-                                <p>
-                                    Vous avez la possibilité de vous faire rembourser le montant restant sur votre carte pendant un délai de 7 jours.
-                                    Après ce délai il ne vous est plus possible d'effectuer des demandes de remboursement sur notre site pour que nous puissions clôturer le gala.
-                                </p>
-                            </div>
+                <div class="offcanvas-body p-3">
 
-                            <div class="alert alert-warning" role="alert">
-                                <p class="mb-0">
-                                    Pour des raisons techniques, il nous est impossible de rembourser les transactions effectuées à l'aide de nos caisses physiques.
-                                    Si vous souhaitez rembourser ce solde restant, vous pouvez remplir un formulaire en appuyant sur le bouton <strong>Remboursement du solde local</strong> ci-dessous.
-                                    Des informations complémentaires vous concernant vous seront demandées.
-                                    Cette demande doit être formulée au maximum <strong>3 jours après le Gala</strong> pour des raisons de compatibilité et peut prendre <strong>jusqu'à 2 semaines</strong> pour être traitée.
-                                </p>
-                            </div>
+                    <!-- SECTION 1 : Solde en ligne (Stripe) -->
+                    <div class="border rounded p-3 mb-3" style="border-color:#198754 !important;">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge" style="background:#198754; font-size:0.85rem;">✓ Remboursable en ligne</span>
+                            <span class="small text-muted">Rechargé via Stripe</span>
                         </div>
-
-                        <div class="p-3">
-                            <button disabled type="button" class="btn btn-outline-secondary d-block w-100 mb-3">
-                                <i class="bi bi-cash-coin"></i>
-                                Remboursement du solde local
-                            </button>
-
-                            <p class="lead">
-                                {# TODO: montant remboursement #}
-                                {% trans "Confirm the refund request?" %}
-                            </p>
-
-                            <button type="button" class="btn btn-primary d-block w-100 mb-3"
-                                    data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"
-                                    hx-get="/my_account/refund_online/" hx-indicator="#tibillet-spinner">
-                                {% trans "Send request" %}</button>
-
-                            <button type="button" class="btn btn-danger d-block w-100" data-bs-dismiss="offcanvas"
-                                    aria-label="{% trans 'Close' %}">
-                                {% trans "Cancel" %}
-                            </button>
-                        </div>
+                        <p class="mb-2 small">
+                            Votre solde rechargé en ligne peut être remboursé directement depuis ce site.
+                            <strong>Délai : 7 jours après le Gala.</strong>
+                            Passé ce délai, la demande ne sera plus possible.
+                        </p>
+                        <p class="lead mb-2">{% trans "Confirm the refund request?" %}</p>
+                        <button type="button" class="btn btn-success d-block w-100"
+                                data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"
+                                hx-get="/my_account/refund_online/" hx-indicator="#tibillet-spinner">
+                            <i class="bi bi-arrow-return-left"></i>
+                            Demander le remboursement en ligne
+                        </button>
                     </div>
+
+                    <!-- SECTION 2 : Solde local (caisses physiques) -->
+                    <div class="border rounded p-3 mb-3" style="border-color:#dc3545 !important;">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-danger" style="font-size:0.85rem;">⚠ Non remboursable en ligne</span>
+                            <span class="small text-muted">Rechargé en caisse physique</span>
+                        </div>
+                        <p class="mb-2 small">
+                            Pour des raisons techniques, les recharges effectuées aux caisses physiques ne peuvent pas être remboursées directement en ligne.
+                            Vous pouvez déposer une demande manuelle via le bouton ci-dessous.
+                            <strong>Délai : 3 jours après le Gala.</strong>
+                            Le traitement peut prendre jusqu'à 2 semaines.
+                        </p>
+                        <button disabled type="button" class="btn btn-outline-danger d-block w-100">
+                            <i class="bi bi-cash-coin"></i>
+                            Remboursement du solde local (bientôt disponible)
+                        </button>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary d-block w-100" data-bs-dismiss="offcanvas"
+                            aria-label="{% trans 'Close' %}">
+                        {% trans "Cancel" %}
+                    </button>
+
                 </div>
             </div>
 
