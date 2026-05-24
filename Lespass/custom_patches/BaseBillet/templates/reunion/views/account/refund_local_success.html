@@ -1,0 +1,28 @@
+{% extends 'reunion/account_base.html' %}
+{% load i18n %}
+
+{% block title %}Demande envoyée{% endblock %}
+
+{% block account_page %}
+
+<section class="card text-center py-5">
+    <div class="card-body">
+        <div style="font-size:4rem; color:#198754;">✓</div>
+        <h1 class="mt-3 mb-2">Demande bien reçue !</h1>
+        <p class="lead text-muted mb-4">
+            Votre demande de remboursement du solde local a été transmise à l'équipe du Gala AM Aix.<br>
+            Un email de confirmation vous a été envoyé.
+        </p>
+        <div class="alert alert-info d-inline-block text-start">
+            <i class="bi bi-clock me-1"></i>
+            Le traitement de votre demande peut prendre <strong>jusqu'à 2 semaines</strong>.
+        </div>
+        <div class="mt-4">
+            <a href="/my_account/balance/" class="btn btn-primary">
+                Retour à mon compte
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

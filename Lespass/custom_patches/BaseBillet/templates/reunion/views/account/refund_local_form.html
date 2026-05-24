@@ -1,0 +1,129 @@
+{% extends 'reunion/account_base.html' %}
+{% load i18n %}
+
+{% block title %}Remboursement du solde local{% endblock %}
+
+{% block account_page %}
+
+<section class="card mb-4">
+    <div class="card-body">
+        <h1 class="card-title mb-1">Remboursement du solde local</h1>
+        <p class="text-muted mb-0">Solde rechargé en caisse physique lors du Gala AM Aix</p>
+    </div>
+</section>
+
+{% if local_balance is not None %}
+<div class="alert alert-warning d-flex align-items-center gap-3 mb-4">
+    <i class="bi bi-cash-coin fs-3"></i>
+    <div>
+        <strong>Solde local à rembourser : {{ local_balance|floatformat:2 }} €</strong><br>
+        <span class="small">Ce montant est vérifié côté serveur et ne peut pas être modifié.</span>
+    </div>
+</div>
+{% endif %}
+
+{% if errors %}
+<div class="alert alert-danger mb-4">
+    <strong>Veuillez corriger les erreurs suivantes :</strong>
+    <ul class="mb-0 mt-1">
+        {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<section class="card">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            <div class="row g-3">
+                <!-- Identité -->
+                <div class="col-12">
+                    <h5 class="text-muted fw-semibold mb-3" style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+                        Identité
+                    </h5>
+                </div>
+                <div class="col-md-6">
+                    <label for="prenom" class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="prenom" name="prenom"
+                           value="{{ prenom|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="nom" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nom" name="nom"
+                           value="{{ nom|default:'' }}" required>
+                </div>
+
+                <!-- Coordonnées bancaires -->
+                <div class="col-12 mt-2">
+                    <h5 class="text-muted fw-semibold mb-3" style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+                        Coordonnées bancaires
+                    </h5>
+                </div>
+                <div class="col-12">
+                    <label for="iban" class="form-label fw-semibold">IBAN <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control font-monospace" id="iban" name="iban"
+                           placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                           value="{{ iban|default:'' }}" required maxlength="34">
+                    <div class="form-text">Sans espaces ou avec espaces, les deux sont acceptés.</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="bic" class="form-label fw-semibold">BIC / SWIFT <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control font-monospace" id="bic" name="bic"
+                           placeholder="XXXXXXXX"
+                           value="{{ bic|default:'' }}" required maxlength="11">
+                </div>
+
+                <!-- Billet -->
+                <div class="col-12 mt-2">
+                    <h5 class="text-muted fw-semibold mb-3" style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+                        Informations Gala
+                    </h5>
+                </div>
+                <div class="col-md-8">
+                    <label for="ticket_number" class="form-label fw-semibold">Numéro de billet</label>
+                    <input type="text" class="form-control" id="ticket_number" name="ticket_number"
+                           placeholder="ex: TIB-2026-XXXXX"
+                           value="{{ ticket_number|default:'' }}">
+                    <div class="form-text">Visible sur votre billet ou email de confirmation d'achat.</div>
+                </div>
+
+                <!-- Pièce d'identité -->
+                <div class="col-12 mt-2">
+                    <h5 class="text-muted fw-semibold mb-3" style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">
+                        Justificatif d'identité
+                    </h5>
+                </div>
+                <div class="col-12">
+                    <label for="id_document" class="form-label fw-semibold">
+                        Pièce d'identité (CNI, passeport…) <span class="text-danger">*</span>
+                    </label>
+                    <input type="file" class="form-control" id="id_document" name="id_document"
+                           accept="image/*,.pdf" required>
+                    <div class="form-text">Photo ou scan recto-verso. Formats acceptés : JPG, PNG, PDF. Max 10 Mo.</div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="alert alert-info small mb-4">
+                <i class="bi bi-info-circle me-1"></i>
+                Cette demande doit être formulée au maximum <strong>3 jours après le Gala</strong>.
+                Le traitement peut prendre jusqu'à <strong>2 semaines</strong>.
+                Vous recevrez un email de confirmation à <strong>{{ request.user.email }}</strong>.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger px-4">
+                    <i class="bi bi-send me-1"></i>
+                    Envoyer la demande
+                </button>
+                <a href="/my_account/balance/" class="btn btn-outline-secondary">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
