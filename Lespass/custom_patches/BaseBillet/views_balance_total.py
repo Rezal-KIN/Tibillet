@@ -147,9 +147,12 @@ def qr_card_landing(request, pk):
     try:
         from BaseBillet.models import Wallet
         from AuthBillet.utils import sender_mail_connect
+        from django.core import signing
         wallet = Wallet.objects.get(uuid=serialized_card['wallet_uuid'])
         user = wallet.user
-        sender_mail_connect(user.email)
+        # Signer l'URL de retour : après clic sur le mail → /qr/<pk>/ → landing page
+        signed_next = signing.dumps(f"/qr/{pk}/")
+        sender_mail_connect(user.email, next_url=signed_next)
         masked_email = user.email[:2] + '***@' + user.email.split('@')[1]
     except Exception as e:
         logger.error(f"qr_card_landing magic link error: {e}")
