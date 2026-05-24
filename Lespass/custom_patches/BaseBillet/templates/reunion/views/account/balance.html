@@ -32,9 +32,16 @@
                 </p>
             </div>
             <div class="text-md-end">
-                <div class="text-muted small">Solde total</div>
-                <div id="total-balance-display" class="display-5 fw-bold text-primary">
+                <div class="text-muted small mb-1">Solde total</div>
+                <div id="total-balance-display" class="display-5 fw-bold text-primary mb-1">
                     <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                </div>
+                <div id="balance-breakdown" class="small text-muted" style="display:none;">
+                    <span class="text-success fw-semibold" id="balance-federated">—</span>
+                    <span class="text-muted">Remboursable immédiatement</span>
+                    <span class="mx-1">+</span>
+                    <span class="text-secondary fw-semibold" id="balance-local">—</span>
+                    <span class="text-muted">Contacter le Gala</span>
                 </div>
             </div>
         </div>
@@ -58,14 +65,23 @@
                                     Après ce délai il ne vous est plus possible d'effectuer des demandes de remboursement sur notre site pour que nous puissions clôturer le gala.
                                 </p>
                             </div>
+
+                            <div class="alert alert-warning" role="alert">
+                                <p class="mb-0">
+                                    Pour des raisons techniques, il nous est impossible de rembourser les transactions effectuées à l'aide de nos caisses physiques.
+                                    Si vous souhaitez rembourser ce solde restant, vous pouvez remplir un formulaire en appuyant sur le bouton <strong>Remboursement du solde local</strong> ci-dessous.
+                                    Des informations complémentaires vous concernant vous seront demandées.
+                                    Cette demande doit être formulée au maximum <strong>3 jours après le Gala</strong> pour des raisons de compatibilité et peut prendre <strong>jusqu'à 2 semaines</strong> pour être traitée.
+                                </p>
+                            </div>
                         </div>
 
                         <div class="p-3">
-                            {% comment %}
-                            <div class="alert alert-warning" role="alert">
-                                <p>{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named 'TiBillet'. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
-                            </div>
-                            {% endcomment %}
+                            <button disabled type="button" class="btn btn-outline-secondary d-block w-100 mb-3">
+                                <i class="bi bi-cash-coin"></i>
+                                Remboursement du solde local
+                            </button>
+
                             <p class="lead">
                                 {# TODO: montant remboursement #}
                                 {% trans "Confirm the refund request?" %}
@@ -75,13 +91,6 @@
                                     data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"
                                     hx-get="/my_account/refund_online/" hx-indicator="#tibillet-spinner">
                                 {% trans "Send request" %}</button>
-
-{#                            <button disabled type="button" class="btn btn-secondary d-block w-100 mb-3"#}
-{#                                {% trans "Gift my leftover balance to" %} {{ config.organisation }}#}
-{#                            </button>#}
-{#                            <p class="alert alert-warning">#}
-{#                                {% trans "The collective donation feature is being developed, coming soon!" %}#}
-{#                            </p>#}
 
                             <button type="button" class="btn btn-danger d-block w-100" data-bs-dismiss="offcanvas"
                                     aria-label="{% trans 'Close' %}">
@@ -187,7 +196,20 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
             var display = document.getElementById('total-balance-display');
+            var breakdown = document.getElementById('balance-breakdown');
+            var fedEl = document.getElementById('balance-federated');
+            var localEl = document.getElementById('balance-local');
+
             if (display) display.textContent = data.total.toFixed(2) + ' €';
+
+            if (breakdown && fedEl && localEl) {
+                fedEl.textContent = data.federated.toFixed(2) + ' €';
+                localEl.textContent = data.local.toFixed(2) + ' €';
+                // N'afficher la décomposition que si les deux sont non nuls
+                if (data.federated > 0 || data.local > 0) {
+                    breakdown.style.display = '';
+                }
+            }
         })
         .catch(function () {
             var display = document.getElementById('total-balance-display');
