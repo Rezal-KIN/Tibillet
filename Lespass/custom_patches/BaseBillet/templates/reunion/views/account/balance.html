@@ -36,16 +36,16 @@
                 <div id="total-balance-display" class="display-5 fw-bold text-primary mb-2">
                     <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
                 </div>
-                <div id="balance-breakdown" style="display:none;">
-                    <div class="d-flex align-items-start justify-content-md-end gap-3 flex-wrap">
-                        <div class="text-center">
-                            <div class="fs-3 fw-bold text-success" id="balance-federated">—</div>
-                            <div class="small fw-semibold text-success-emphasis">Remboursable<br>immédiatement</div>
+                <div id="balance-breakdown" style="display:none; margin-top:0.5rem;">
+                    <div style="display:flex; gap:1.5rem; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div id="balance-federated" style="font-size:1.6rem; font-weight:700; color:#198754;">—</div>
+                            <div style="font-size:0.78rem; font-weight:600; color:#198754; line-height:1.2;">Remboursable<br>immédiatement</div>
                         </div>
-                        <div class="fs-3 fw-bold text-muted align-self-start mt-1">+</div>
-                        <div class="text-center">
-                            <div class="fs-3 fw-bold text-danger" id="balance-local">—</div>
-                            <div class="small fw-semibold text-danger-emphasis">Contacter<br>le Gala</div>
+                        <div style="font-size:1.6rem; font-weight:700; color:#6c757d;">+</div>
+                        <div style="text-align:center;">
+                            <div id="balance-local" style="font-size:1.6rem; font-weight:700; color:#dc3545;">—</div>
+                            <div style="font-size:0.78rem; font-weight:600; color:#dc3545; line-height:1.2;">Contacter<br>le Gala</div>
                         </div>
                     </div>
                 </div>
