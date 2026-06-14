@@ -20,7 +20,7 @@ Internet
 
 Chaque service tourne dans son propre stack Docker Compose avec un réseau interne dédié (`lespass_backend`, `fedow_backend`, `laboutik_backend`), et se connecte au réseau externe `frontend` pour être exposé via Traefik.
 
-Les images Docker sont publiées par TiBillet sur Docker Hub et épinglées à une version testée via la variable `*_VERSION` dans chaque `.env`.
+Fedow et Laboutik utilisent des images Docker publiées par TiBillet sur Docker Hub, épinglées à une version testée via la variable `*_VERSION` dans chaque `.env`. Lespass est construit depuis le code source (mono-repo `TiBillet/TiBillet`, vendoré en submodule git dans `Lespass/app`, épinglé à un commit précis — voir `.claude/NOTES.md`).
 
 ---
 
@@ -36,9 +36,9 @@ Portefeuille fédéré — gère les actifs monétaires (tokens cashless, fiat),
 ### Lespass (`Lespass/`)
 Billetterie, gestion des membres et agenda fédéré. Supporte le multi-tenant (plusieurs lieux sous un même domaine racine).
 
-- Image : `tibillet/lespass`
+- Build : depuis le code source du mono-repo `TiBillet/TiBillet` (submodule git `Lespass/app`, voir `.claude/NOTES.md`)
 - Compose : postgres + redis + django + celery + nginx
-- Patches : [`Lespass/custom_patches/`](Lespass/custom_patches/)
+- Aucun patch custom — installation V2 propre (2026-06-14)
 
 ### Laboutik (`Laboutik/`, `Laboutik_*/`)
 Caisse cashless pour les points de vente. Plusieurs instances peuvent tourner en parallèle (une par gala/événement).
@@ -61,13 +61,6 @@ Fichier de prix à créer sur le serveur : `Laboutik/www/happy_hour_prices.json`
 {"biere": 2.50, "soft": 1.50}
 ```
 
-### Multi-cashless par tenant (Lespass)
-Modification de l'endpoint d'onboarding Laboutik pour permettre l'association de **plusieurs caisses** à un même tenant Lespass, sans bloquer si une caisse est déjà configurée.
-
-Patches concernés :
-- [`Lespass/custom_patches/ApiBillet/cashless_onboarding.py`](Lespass/custom_patches/ApiBillet/cashless_onboarding.py)
-- [`Lespass/custom_patches/ApiBillet/urls.py`](Lespass/custom_patches/ApiBillet/urls.py)
-
 ### Dashboard de suivi de gala (Fedow)
 Interface temps réel pour suivre les consommations par bar/caisse pendant un événement : totaux par actif monétaire, filtrage par lieu, suivi de session.
 
@@ -79,11 +72,6 @@ Patches concernés :
 
 ### Synchronisation des dons inter-caisses (Laboutik)
 Variable `ENABLE_GIFT_ASSET_SYNC` sur les instances additionnelles pour activer/désactiver la synchronisation des actifs de type don entre les caisses d'un même événement.
-
-### UI personnalisée (Lespass)
-Personnalisation de l'interface membre : navbar, page d'accueil, formulaire de connexion, pages de compte (solde, carte, préférences), historique des transactions, email de connexion.
-
-Patches concernés : [`Lespass/custom_patches/BaseBillet/templates/`](Lespass/custom_patches/BaseBillet/templates/)
 
 ---
 
@@ -122,7 +110,7 @@ Dans l'ordre (Fedow d'abord, il est la dépendance des autres) :
 
 ```bash
 cd Fedow    && docker compose pull && docker compose up -d && cd ..
-cd Lespass  && docker compose pull && docker compose up -d && cd ..
+cd Lespass  && docker compose build && docker compose up -d && cd ..
 cd Laboutik && docker compose pull && docker compose up -d && cd ..
 ```
 
@@ -155,5 +143,6 @@ docker compose up -d   # l'ancienne image est toujours en cache local
 Versions disponibles sur Docker Hub :
 - [tibillet/laboutik](https://hub.docker.com/r/tibillet/laboutik/tags)
 - [tibillet/fedow](https://hub.docker.com/r/tibillet/fedow/tags)
-- [tibillet/lespass](https://hub.docker.com/r/tibillet/lespass/tags)
+
+Pour Lespass (build from source), voir la procédure de mise à jour du submodule dans `.claude/NOTES.md`.
 

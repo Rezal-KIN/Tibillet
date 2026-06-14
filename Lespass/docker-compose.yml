@@ -29,7 +29,9 @@ services:
       - lespass_backend
 
   lespass_django:
-    image: tibillet/lespass:${LESPASS_VERSION:-latest}
+    build:
+      context: ./app
+      dockerfile: dockerfile
     restart: always
     container_name: lespass_django
     hostname: lespass_django
@@ -38,26 +40,6 @@ services:
       - ./logs:/DjangoFiles/logs
       - ./backup:/Backup
       - ./ssh:/home/tibillet/.ssh # if you want ssh borgbackup
-      - ./settings.py:/DjangoFiles/TiBillet/settings.py
-      - ./custom_patches/Administration/admin_tenant.py:/DjangoFiles/Administration/admin_tenant.py
-      - ./custom_patches/BaseBillet/templates/emails/connexion.html:/DjangoFiles/BaseBillet/templates/emails/connexion.html
-      - ./custom_patches/BaseBillet/templates/emails/base.html:/DjangoFiles/BaseBillet/templates/emails/base.html
-      - ./custom_patches/BaseBillet/templates/reunion/forms/login.html:/DjangoFiles/BaseBillet/templates/reunion/forms/login.html
-      - ./custom_patches/BaseBillet/templates/reunion/partials/navbar.html:/DjangoFiles/BaseBillet/templates/reunion/partials/navbar.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/preferences.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/preferences.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/balance.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/balance.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/card.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/card.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/index.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/index.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/home.html:/DjangoFiles/BaseBillet/templates/reunion/views/home.html
-      - ./custom_patches/BaseBillet/templates/reunion/partials/account/transaction_history.html:/DjangoFiles/BaseBillet/templates/reunion/partials/account/transaction_history.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/register.html:/DjangoFiles/BaseBillet/templates/reunion/views/register.html
-      - ./custom_patches/BaseBillet/views_balance_total.py:/DjangoFiles/BaseBillet/views_balance_total.py
-      - ./custom_patches/BaseBillet/refund_models.py:/DjangoFiles/BaseBillet/refund_models.py
-      - ./custom_patches/BaseBillet/urls.py:/DjangoFiles/BaseBillet/urls.py
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/refund_local_form.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/refund_local_form.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/account/refund_local_success.html:/DjangoFiles/BaseBillet/templates/reunion/views/account/refund_local_success.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/qr_landing.html:/DjangoFiles/BaseBillet/templates/reunion/views/qr_landing.html
-      - ./custom_patches/BaseBillet/templates/reunion/views/qr_check_email.html:/DjangoFiles/BaseBillet/templates/reunion/views/qr_check_email.html
     env_file: .env
     depends_on:
       - lespass_postgres
@@ -69,21 +51,15 @@ services:
       - lespass_memcached:memcached
     networks:
       - lespass_backend
-    # only useful for dev purpose :
-    extra_hosts:
-      - "fedow.tibillet.localhost:172.17.0.1"
-      - "lespass.tibillet.localhost:172.17.0.1"
-      - "cashless.tibillet.localhost:172.17.0.1"
 
   lespass_celery:
-    image: tibillet/lespass:${LESPASS_VERSION:-latest}
+    build:
+      context: ./app
+      dockerfile: dockerfile
     restart: always
     container_name: lespass_celery
     hostname: lespass_celery
     env_file: .env
-    volumes:
-      - ./settings.py:/DjangoFiles/TiBillet/settings.py
-      - ./custom_patches/BaseBillet/templates/emails/connexion.html:/DjangoFiles/BaseBillet/templates/emails/connexion.html
     depends_on:
       - lespass_postgres
       - lespass_redis
