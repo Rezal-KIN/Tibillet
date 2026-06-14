@@ -130,7 +130,10 @@ Lespass/www/_probe.txt
 tools/*.log
 
 # AI / IDE tools (may contain API keys or credentials)
-.claude/
+.claude/*
+!.claude/CLAUDE.md
+!.claude/OBJECTIFS.md
+!.claude/NOTES.md
 .codex/
 .copilot/
 .vscode-server/
