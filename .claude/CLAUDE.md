@@ -1,7 +1,10 @@
 ## Délégation locale via Ollama
 
-Un modèle local (`qwen3:8b`, ~5.2GB) est disponible via les outils MCP `mcp__ollama__*`.
-Utilise-le pour déléguer les tâches mécaniques suivantes afin d'économiser des tokens :
+Un modèle local (`qwen3:8b`, ~5.2GB) est disponible via les outils MCP `mcp__ollama__*` — **sur les machines où ce serveur MCP est configuré**. Toute personne travaillant sur ce repo n'a pas forcément ce setup.
+
+**Si les outils `mcp__ollama__*` ne sont pas disponibles** : pas d'erreur ni de blocage — informe simplement l'utilisateur en début de session ("délégation locale indisponible sur cette machine, je traite tout directement") et effectue les tâches ci-dessous toi-même, en mode normal.
+
+Si disponible, utilise-le pour déléguer les tâches mécaniques suivantes afin d'économiser des tokens :
 
 - Génération de tests unitaires répétitifs
 - Reformatage et renommage de variables
