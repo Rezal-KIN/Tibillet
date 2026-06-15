@@ -69,3 +69,43 @@ Format suggéré par entrée :
 - Script d'installation automatique sur VM vierge (`Administration/management/commands/install.py`
   + `flush.sh` upstream comme référence).
 - Déploiement sur `galas-am-aix.rezal.fr` — uniquement après validation + accord explicite.
+
+## Lespass-v2 — stack de PREVIEW de la branche `V2` (alpha, 2026-06-15)
+
+- **Système concerné** : nouveau répertoire `Lespass-v2/`, totalement séparé de `Lespass/` (prod).
+- **Pourquoi** : un dev TiBillet a annoncé une refonte majeure ("laboutik/fedow_core/inventaire
+  fusionnés") qui vit sur la branche `origin/V2` (tip `bc681a34fb1d08c3ba3fdd715d529742b797388e`,
+  2026-05-27). Cette branche est **officiellement déclarée "jamais mergée"** dans
+  `TECH_DOC/SESSIONS/M-To-V2/INDEX.md` côté upstream — les features en sont portées une par une
+  vers `main` via l'effort "M-To-V2"/"FEDOW_IMPORT" (toujours pas démarré au 2026-06-14, "Lot C-A").
+  L'utilisateur veut quand même "tester ce qui arrive" avant le gala (dans 5 mois).
+- **Pourquoi un stack séparé et pas un upgrade du pin `Lespass/app`** :
+  `BaseBillet/migrations/0204-0218` sont **complètement différentes** entre `main` (notre pin prod
+  `3a4dedb47d4a116dec45617b10c7a01cb2d902c1`, déjà appliqué sur 22 schémas tenant) et `V2`. Appliquer
+  V2 sur la DB de prod existante casserait ces 22 tenants. Sur une DB neuve, ce problème n'existe pas
+  (l'historique V2 est cohérent pour lui-même).
+- **Setup** :
+  - `Lespass-v2/app` = submodule git séparé sur le même repo `TiBillet/TiBillet`, pinné sur
+    `origin/V2`@`bc681a34fb1d08c3ba3fdd715d529742b797388e` (commit figé, pas de tracking de branche).
+  - `Lespass-v2/docker-compose.yml` : conteneurs/réseau/volumes préfixés `lespass_v2_*` (pas de
+    collision avec les conteneurs `lespass_*`/`fedow_*` de prod sur le même hôte Docker). DB Postgres
+    dédiée et vierge. **Pas de label Traefik** — `lespass_v2_nginx` n'écoute que sur
+    `127.0.0.1:8090`, accès via tunnel SSH (`ssh -L 8090:127.0.0.1:8090 ...`).
+  - `Lespass-v2/.env` (à partir de `.env.example`) : `DOMAIN=v2-preview.localhost`,
+    `ADDITIONAL_DOMAINS=localhost,127.0.0.1` (sinon `DisallowedHost` via le tunnel), `DEBUG=True`,
+    `MIGRATE=1` au premier démarrage (DB vierge → pas de collision, `migrate_schemas` tourne au
+    démarrage via `start.sh`).
+  - **Aucun `custom_patches/` repris** : on part de V2 "vanilla" pour avoir une baseline qui boot.
+    Le settings.py de V2 a déjà `django-cotton`/`fedow_core`/`channels`/`laboutik`/`inventaire`
+    intégrés nativement — pas besoin de patcher `TiBillet/settings.py`.
+  - V2 `settings.py` retire plusieurs durcissements de prod (Sentry sampling 0.3 au lieu de 0.0,
+    `CELERY_BROKER_TRANSPORT_OPTIONS` anti-duplication de tâches, `SECURE_PROXY_SSL_HEADER`,
+    `CanonicalDomainRedirectMiddleware`) — **sans importance pour ce stack de test** (pas de
+    Traefik/HTTPS, pas de vrai trafic), mais à garder en tête si jamais on portait V2 en prod un jour.
+  - V2 ajoute un `CELERY_BEAT_SCHEDULE` référençant `laboutik.tasks.*` et `seo.tasks.refresh_seo_cache`
+    pour les clôtures auto (LNE) — peut générer des warnings Celery si ces tasks ne sont pas
+    enregistrées ; attendu pour une branche alpha, à corriger au fil de l'eau ("tu corrigeras").
+- **Mise à jour du pin V2** : même mécanisme que `Lespass/app` (voir section précédente), mais sur
+  `Lespass-v2/app` et `origin/V2`.
+- **Ce stack est une PREVIEW jetable** : DB de test sans rapport avec les vraies données
+  d'association. Le stack de prod (`Lespass/`, pin `main`, 22 tenants) n'est touché à aucun moment.
