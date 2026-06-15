@@ -1,0 +1,98 @@
+# Stack de PREVIEW pour la branche TiBillet V2 (alpha).
+#
+# Isolé du stack de prod (Lespass/) : conteneurs/réseau/volumes préfixés
+# lespass_v2_, DB Postgres dédiée et vierge (pas de collision de migrations
+# avec la prod), pas de label Traefik / pas d'exposition publique. Accès via
+# tunnel SSH sur le port mappé par lespass_v2_nginx (127.0.0.1 uniquement).
+#
+# Voir .claude/NOTES.md pour le pin du submodule et comment mettre à jour.
+
+services:
+  lespass_v2_postgres:
+    image: postgres:13-bookworm
+    restart: unless-stopped
+    container_name: lespass_v2_postgres
+    hostname: lespass_v2_postgres
+    volumes:
+      - ./database:/var/lib/postgresql/data
+    env_file: .env
+    networks:
+      - lespass_v2_backend
+
+  lespass_v2_memcached:
+    image: memcached:1.6
+    container_name: lespass_v2_memcached
+    hostname: lespass_v2_memcached
+    restart: unless-stopped
+    networks:
+      - lespass_v2_backend
+
+  lespass_v2_redis:
+    image: redis:7.2.3-bookworm
+    container_name: lespass_v2_redis
+    hostname: lespass_v2_redis
+    restart: unless-stopped
+    networks:
+      - lespass_v2_backend
+
+  lespass_v2_django:
+    build:
+      context: ./app
+      dockerfile: dockerfile
+    restart: unless-stopped
+    container_name: lespass_v2_django
+    hostname: lespass_v2_django
+    volumes:
+      - ./www:/DjangoFiles/www
+      - ./logs:/DjangoFiles/logs
+    env_file: .env
+    depends_on:
+      - lespass_v2_postgres
+      - lespass_v2_redis
+      - lespass_v2_memcached
+    links:
+      - lespass_v2_postgres:postgres
+      - lespass_v2_redis:redis
+      - lespass_v2_memcached:memcached
+    networks:
+      - lespass_v2_backend
+
+  lespass_v2_celery:
+    build:
+      context: ./app
+      dockerfile: dockerfile
+    restart: unless-stopped
+    container_name: lespass_v2_celery
+    hostname: lespass_v2_celery
+    env_file: .env
+    depends_on:
+      - lespass_v2_postgres
+      - lespass_v2_redis
+      - lespass_v2_memcached
+    links:
+      - lespass_v2_postgres:postgres
+      - lespass_v2_redis:redis
+      - lespass_v2_memcached:memcached
+    command: "poetry run celery -A TiBillet worker -l INFO -B"
+    networks:
+      - lespass_v2_backend
+
+  # Pas de routeur Traefik : accès uniquement via tunnel SSH sur 127.0.0.1.
+  lespass_v2_nginx:
+    image: nginx:latest
+    container_name: lespass_v2_nginx
+    hostname: lespass_v2_nginx
+    restart: unless-stopped
+    links:
+      - lespass_v2_django:lespass_v2_django
+    volumes:
+      - ./www:/www
+      - ./logs:/logs
+      - ./nginx:/etc/nginx/conf.d
+    ports:
+      - "127.0.0.1:8090:80"
+    networks:
+      - lespass_v2_backend
+
+networks:
+  lespass_v2_backend:
