@@ -1,0 +1,99 @@
+services:
+  lespass_postgres:
+    image: postgres:13-bookworm
+    restart: always
+    container_name: lespass_postgres
+    hostname: lespass_postgres
+    volumes:
+      - ./database:/var/lib/postgresql/data
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
+    networks:
+      - lespass_backend
+
+
+  lespass_memcached:
+    image: memcached:1.6
+    container_name: lespass_memcached
+    hostname: lespass_memcached
+    restart: always
+    networks:
+      - lespass_backend
+
+
+  lespass_redis:
+    container_name: lespass_redis
+    hostname: lespass_redis
+    image: redis:7.2.3-bookworm
+    restart: always
+    networks:
+      - lespass_backend
+
+  lespass_django:
+    build:
+      context: ./app
+      dockerfile: dockerfile
+    restart: always
+    container_name: lespass_django
+    hostname: lespass_django
+    volumes:
+      - ./www:/DjangoFiles/www
+      - ./logs:/DjangoFiles/logs
+      - ./backup:/Backup
+      - ./ssh:/home/tibillet/.ssh # if you want ssh borgbackup
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
+    depends_on:
+      - lespass_postgres
+      - lespass_redis
+      - lespass_memcached
+    links:
+      - lespass_postgres:postgres
+      - lespass_redis:redis
+      - lespass_memcached:memcached
+    networks:
+      - lespass_backend
+
+  lespass_celery:
+    build:
+      context: ./app
+      dockerfile: dockerfile
+    restart: always
+    container_name: lespass_celery
+    hostname: lespass_celery
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
+    depends_on:
+      - lespass_postgres
+      - lespass_redis
+      - lespass_memcached
+    links:
+      - lespass_postgres:postgres
+      - lespass_redis:redis
+      - lespass_memcached:memcached
+    command: "poetry run celery -A TiBillet worker -l INFO -B"
+    networks:
+      - lespass_backend
+
+
+  lespass_nginx:
+    image: nginx:latest
+    container_name: lespass_nginx
+    hostname: lespass_nginx
+    restart: always
+    links:
+      - lespass_django:lespass_django
+    volumes:
+      - ./www:/www
+      - ./logs:/logs
+      - ./nginx:/etc/nginx/conf.d
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=frontend
+      - traefik.http.routers.lespass.tls.certresolver=myresolver
+      - traefik.http.routers.lespass.rule=Host(`${LESPASS_PUBLIC_DOMAIN:-${DOMAIN}}`)
+    networks:
+      - frontend
+      - lespass_backend
+
+networks:
+  frontend:
+    external: true
+  lespass_backend:
