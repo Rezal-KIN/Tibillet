@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>Suivi</h2>
+    <p class="text-sm text-secondary">Synthèse en temps réel des recharges et dépenses (depuis minuit, heure serveur).</p>
+
+    <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label for="place-filter" class="form-label mb-1">Lieu Fedow</label>
+                <select id="place-filter" class="form-select">
+                    <option value="">Tous les bars</option>
+                    {% for p in places %}
+                        <option value="{{ p.uuid }}" {% if selected_place_uuid == p.uuid|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="bar-filter" class="form-label mb-1">Point de vente</label>
+                <select id="bar-filter" class="form-select">
+                    <option value="">Tous les points de vente</option>
+                    {% for b in bar_names %}
+                        <option value="{{ b }}" {% if selected_bar_name == b %}selected{% endif %}>{{ b }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="start-filter" class="form-label mb-1">Début (HH:MM)</label>
+                <input id="start-filter" type="text" class="form-control" value="{{ selected_start }}" placeholder="22:00">
+            </div>
+            <div class="col-md-1">
+                <label for="end-filter" class="form-label mb-1">Fin</label>
+                <input id="end-filter" type="text" class="form-control" value="{{ selected_end }}" placeholder="01:00">
+            </div>
+            <div class="col-md-1">
+                <button id="apply-filter" class="btn btn-primary w-100">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card p-3">
+                <div class="text-xs text-secondary">Total rechargé</div>
+                <div id="kpi-recharged" class="h4 mb-0">0,00 €</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card p-3">
+                <div class="text-xs text-secondary">Total dépensé</div>
+                <div id="kpi-spent" class="h4 mb-0">0,00 €</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card p-3">
+                <div class="text-xs text-secondary">Reste des recharges en wallet</div>
+                <div id="kpi-wallet" class="h4 mb-0">0,00 €</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <div class="text-xs text-secondary mb-1">Wallet total live (tous soldes actuels)</div>
+        <div id="kpi-wallet-live" class="h5 mb-0">0,00 €</div>
+    </div>
+
+    <div class="card p-3">
+        <div style="height: 460px;">
+            <canvas id="suivi-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="mt-2 text-xs text-secondary">
+        Dernière mise à jour : <span id="last-update">-</span>
+        <span class="ms-3">Rafraîchissement : {{ refresh_seconds }}s</span>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const initialData = JSON.parse('{{ initial_data_json|escapejs }}');
+const refreshSeconds = {{ refresh_seconds|default:120 }};
+
+function eur(v) {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v || 0);
+}
+
+function setKpis(data) {
+    document.getElementById('kpi-recharged').innerText = eur(data.totals.recharged_eur);
+    document.getElementById('kpi-spent').innerText = eur(data.totals.spent_eur);
+    document.getElementById('kpi-wallet').innerText = eur(data.totals.wallet_remaining_eur);
+    document.getElementById('kpi-wallet-live').innerText = eur(data.totals.wallet_live_total_eur);
+    document.getElementById('last-update').innerText = new Date().toLocaleTimeString('fr-FR');
+}
+
+const chartCtx = document.getElementById('suivi-chart');
+const suiviChart = new Chart(chartCtx, {
+    type: 'line',
+    data: {
+        labels: initialData.series.labels,
+        datasets: [
+            {
+                label: 'Total rechargé',
+                data: initialData.series.recharged,
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46,204,113,0.15)',
+                tension: 0.25,
+                fill: false,
+            },
+            {
+                label: 'Total dépensé',
+                data: initialData.series.spent,
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231,76,60,0.15)',
+                tension: 0.25,
+                fill: false,
+            },
+            {
+                label: 'Reste en wallet (soirée)',
+                data: initialData.series.wallet_remaining,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52,152,219,0.15)',
+                tension: 0.25,
+                fill: false,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: (value) => value.toLocaleString('fr-FR') + ' €'
+                }
+            }
+        }
+    }
+});
+
+function refreshSuivi() {
+    const place = document.getElementById('place-filter').value;
+    const bar = document.getElementById('bar-filter').value;
+    const start = document.getElementById('start-filter').value || '00:00';
+    const end = document.getElementById('end-filter').value || '23:59';
+    const params = new URLSearchParams({ start, end });
+    if (place) {
+        params.append('place', place);
+    }
+    if (bar) {
+        params.append('bar', bar);
+    }
+    fetch('/dashboard/suivi/data/?' + params.toString())
+        .then((response) => response.json())
+        .then((data) => {
+            setKpis(data);
+            suiviChart.data.labels = data.series.labels;
+            suiviChart.data.datasets[0].data = data.series.recharged;
+            suiviChart.data.datasets[1].data = data.series.spent;
+            suiviChart.data.datasets[2].data = data.series.wallet_remaining;
+            suiviChart.update();
+
+            const pageParams = new URLSearchParams(params);
+            history.replaceState({}, '', '/dashboard/suivi/?' + pageParams.toString());
+        })
+        .catch((err) => {
+            console.error('Erreur refresh suivi:', err);
+        });
+}
+
+setKpis(initialData);
+document.getElementById('apply-filter').addEventListener('click', refreshSuivi);
+setInterval(refreshSuivi, refreshSeconds * 1000);
+</script>
+{% endblock content %}

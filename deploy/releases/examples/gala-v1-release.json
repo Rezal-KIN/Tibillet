@@ -1,0 +1,13 @@
+{
+  "release_id": "gala-am-aix-2027-v1.0.0",
+  "gala_slug": "gala-am-aix-2027",
+  "platform": "v1",
+  "application_repository": "Rezal-KIN/Tibillet",
+  "fork_commit": "0123456789abcdef0123456789abcdef01234567",
+  "tibillet_upstream_commit": "0123456789abcdef0123456789abcdef01234567",
+  "lespass_image": "123456789012.dkr.ecr.eu-north-1.amazonaws.com/tibillet-gala/lespass@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "fedow_image": "tibillet/fedow@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "laboutik_image": "tibillet/laboutik@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "traefik_image": "traefik@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "schema_generation": "v1"
+}

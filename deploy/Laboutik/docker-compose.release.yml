@@ -1,0 +1,8 @@
+# Applied on top of docker-compose.yml only during a pipeline-driven release
+# deploy (see tools/runtime/deploy-release.sh and gala.conf.example
+# COMPOSE_FILES). Pins laboutik_django to the exact digest recorded in the
+# release manifest instead of the floating ${LABOUTIK_VERSION:-latest} tag.
+# Running docker-compose.yml alone (local/dev) is unaffected.
+services:
+  laboutik_django:
+    image: ${LABOUTIK_IMAGE}
