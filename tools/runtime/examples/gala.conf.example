@@ -1,0 +1,56 @@
+# Copy to /etc/tibillet-gala/<slug>.conf on the gala's own EC2 instance, root-owned,
+# mode 0600. Never commit a real one — it names a real domain, bucket, and secret ARN.
+# Sourced (not executed as a general script) by tools/runtime/lib.sh:load_gala_config.
+
+GALA_SLUG="gala-am-aix-2027"
+AWS_REGION="eu-north-1"
+PLATFORM="v1"
+
+# Public routing values are non-secret and deliberately live here, not in the
+# app dotenvs. The permanent preview convention is the `dev.` label:
+# fedow.dev.galas-am-aix.rezal.fr, cashless.dev.galas-am-aix.rezal.fr, and
+# dev.galas-am-aix.rezal.fr for Lespass.
+FEDOW_PUBLIC_DOMAIN="fedow.example.org"
+LABOUTIK_PUBLIC_DOMAIN="cashless.example.org"
+LESPASS_PUBLIC_DOMAIN="example.org"
+
+# From `terraform -chdir=infra/terraform output -json galas` for this slug.
+BACKUP_BUCKET="tibillet-gala-production-123456789012-backups"
+RUNTIME_SECRET_ARN="arn:aws:secretsmanager:eu-north-1:123456789012:secret:tibillet/galas/gala-am-aix-2027/runtime-AbCdEf"
+RELEASE_BUCKET="tibillet-gala-production-123456789012-artifacts"
+
+# Absolute path to this repository checkout on the gala EC2.
+REPO_ROOT="/home/ubuntu/TiBillet"
+
+# Groups separated by ':', files within a group separated by ';' and merged
+# into ONE `docker compose -f a -f b ...` invocation (see lib.sh
+# compose_group_args). Each service's docker-compose.release.yml pins it to
+# the exact image from the deployed release manifest (see
+# tools/runtime/deploy-release.sh) instead of `latest`/building from source —
+# always include it, even for start-stacks.sh/stop-stacks.sh, so a reboot
+# doesn't silently revert to an unpinned image.
+COMPOSE_FILES="${REPO_ROOT}/traefik/docker-compose.yml;${REPO_ROOT}/traefik/docker-compose.release.yml:${REPO_ROOT}/Fedow/docker-compose.yml;${REPO_ROOT}/Fedow/docker-compose.release.yml:${REPO_ROOT}/Laboutik/docker-compose.yml;${REPO_ROOT}/Laboutik/docker-compose.release.yml:${REPO_ROOT}/Lespass/docker-compose.yml;${REPO_ROOT}/Lespass/docker-compose.release.yml"
+
+# Comma-separated container names, matched against docker-compose.yml
+# container_name for each stack's PostgreSQL service.
+POSTGRES_CONTAINERS="fedow_postgres,lespass_postgres,laboutik_postgres"
+
+# Comma-separated URLs checked after boot/deploy. 200/301/302 only.
+HEALTHCHECK_URLS="https://fedow.example.org/,https://cashless.example.org/,https://lespass.example.org/"
+
+# Refuses tools/runtime/deploy-release.sh once the gala has opened. Flip to
+# false only through the documented incident runbook, never by hand on a whim.
+DEPLOYMENT_LOCKED=true
+
+# The sole exception to the normally mandatory prior backup: set true only for
+# the very first deployment to an empty, dedicated gala instance. The initial
+# deployment must create a successful backup, then this is immediately false.
+ALLOW_INITIAL_DEPLOY=false
+
+# Preflight thresholds. 86400 = 24h max backup age. 10485760 KiB = 10 GiB free.
+MAX_BACKUP_AGE_SECONDS=86400
+MIN_FREE_SPACE_KIB=10485760
+
+# Left unset (false) outside an active, approved restore. See
+# docs/operations/backup-restore.md before ever setting this to true.
+ALLOW_RESTORE=false

@@ -1,0 +1,5 @@
+aws_account_id: "318629836660"
+runtime_region: eu-north-1
+instances:
+  - id: i-0cd4e52913c8ae928
+    name: TibilletBapts

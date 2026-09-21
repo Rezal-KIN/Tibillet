@@ -175,3 +175,23 @@ marimo/_lsp/
 __marimo__/
 .infisical.json
 traefik/acme.json
+
+# Terraform state and local credentials (never commit)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+backend.hcl
+!*.hcl.example
+crash.log
+crash.*.log
+
+# Generated releases and ephemeral runtime material
+releases/*.json
+!releases/examples/*.json
+/runtime/
+
+# Per-gala registry: real entries name real domains/status, never commit them
+registry/*.json
+!registry/examples/*.json

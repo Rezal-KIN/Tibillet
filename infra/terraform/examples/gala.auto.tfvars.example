@@ -1,0 +1,53 @@
+# Copy to a private *.tfvars file. Never commit personal e-mail, AWS account IDs,
+# public IP allowlists, instance IDs, or domain names for a real gala.
+aws_region             = "eu-north-1"
+identity_center_region = "eu-west-3"
+environment            = "production"
+
+gala_account_id     = "318629836660"
+bapts_instance_id   = "i-0cd4e52913c8ae928"
+bapts_instance_name = "TibilletBapts"
+
+# Default safe mode: no AWS resource is created and Bapts is observed only.
+# enable_additive_resources = false
+
+# One-time human-confirmed bootstrap in the independent Gala account:
+# enable_organization_bootstrap      = true
+# enable_identity_center_resources   = true
+# administrator_users = {
+#   operator-one = { email = "person@example.org", given_name = "First", family_name = "Last" }
+#   operator-two = { email = "person2@example.org", given_name = "First", family_name = "Last" }
+# }
+
+# Enable delivery only after the fork exists and the CodeStar connection has
+# been created and approved by a named human in the AWS console.
+# enable_delivery_platform       = true
+# application_github_owner       = "Rezal-KIN"
+# application_github_repository  = "Tibillet"
+# test_source_branch              = "main"
+
+# VPC/subnet/AMI must be explicit. New EC2 creation remains off until a reviewed
+# plan targets the correct independent Gala account.
+# vpc_id     = "vpc-..."
+# subnet_id  = "subnet-..."
+# ec2_ami_id = "ami-..."
+#
+# `domain` below is the gala's own apex (Lespass has no subdomain — see
+# infra/README.md "Conventions de nommage"). Fedow and Laboutik each get their
+# own subdomain of it (fedow.<domain>, cashless.<domain>) set independently in
+# each app's private .env, not here.
+#   - Production : domain = "galas-am-aix.rezal.fr"
+#       -> fedow.galas-am-aix.rezal.fr, cashless.galas-am-aix.rezal.fr
+#   - Test/preview (pipeline tibillet-gala-test) : domain = "dev.galas-am-aix.rezal.fr"
+#       -> fedow.dev.galas-am-aix.rezal.fr, cashless.dev.galas-am-aix.rezal.fr
+# galas = {
+#   gala-am-aix-2027 = {
+#     platform                 = "v1"
+#     domain                   = "galas-am-aix.rezal.fr"
+#     instance_type            = "t3.medium"
+#     root_volume_size_gib     = 40
+#     ssh_emergency_cidrs      = ["203.0.113.10/32"]
+#     create_instance          = false
+#     protect_from_destruction = true
+#   }
+# }

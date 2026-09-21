@@ -1,0 +1,18 @@
+# Applied on top of docker-compose.yml only during a pipeline-driven release
+# deploy (see tools/runtime/deploy-release.sh and gala.conf.example
+# COMPOSE_FILES). Pins lespass_django/lespass_celery to the exact ECR digest
+# recorded in the release manifest, replacing the source build used for
+# local/dev iteration.
+#
+# `build: !reset null` is required, not optional: Compose merges services by
+# key, so without it docker-compose.yml's `build:` would still win over
+# `image:` and a "release" deploy would silently rebuild from source instead
+# of running the validated digest (see .claude/NOTES.md, "Pipeline delivery").
+# !reset needs Docker Compose >= 2.24 — the gala EC2 runs v5.1.0, confirmed.
+services:
+  lespass_django:
+    image: ${LESPASS_IMAGE}
+    build: !reset null
+  lespass_celery:
+    image: ${LESPASS_IMAGE}
+    build: !reset null

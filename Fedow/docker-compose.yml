@@ -4,7 +4,7 @@ services:
     restart: always
     container_name: fedow_postgres
     hostname: fedow_postgres
-    env_file: .env
+    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
     volumes:
       - ./database:/var/lib/postgresql/data
     networks:
@@ -21,7 +21,7 @@ services:
     container_name: fedow_django
     hostname: fedow_django
     restart: always
-    env_file: .env
+    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
     user: fedow
     links:
       - fedow_postgres:postgres
@@ -58,7 +58,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=frontend
       - traefik.http.routers.fedow_nginx.tls.certresolver=myresolver
-      - traefik.http.routers.fedow_nginx.rule=Host(`fedow.galas-am-aix.rezal.fr`)
+      - traefik.http.routers.fedow_nginx.rule=Host(`${FEDOW_PUBLIC_DOMAIN:-${DOMAIN}}`)
     networks:
       - frontend
       - fedow_backend
