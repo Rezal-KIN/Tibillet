@@ -240,6 +240,7 @@ crash.*.log
 /deploy/registry/*.json
 !/deploy/registry/examples/*.json
 /deploy/traefik/acme.json
+/deploy/traefik/acme.json.pre_*
 /deploy/.infisical.json
 /deploy/.envrc
 /deploy/**/.env.bak*
