@@ -1,0 +1,16 @@
+[Unit]
+Description=Create an encrypted logical PostgreSQL backup for one TiBillet Gala
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/lib/tibillet-gala/backup-postgres.sh /etc/tibillet-gala/%i.conf
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/tibillet-gala

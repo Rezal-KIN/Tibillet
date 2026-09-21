@@ -1,0 +1,10 @@
+[Unit]
+Description=Run TiBillet Gala PostgreSQL backup every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00 UTC
+Persistent=true
+Unit=tibillet-gala-backup@%i.service
+
+[Install]
+WantedBy=timers.target

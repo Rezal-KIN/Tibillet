@@ -1,0 +1,8 @@
+# Applied on top of docker-compose.yml only during a pipeline-driven release
+# deploy (see tools/runtime/deploy-release.sh and gala.conf.example
+# COMPOSE_FILES). Pins fedow_django to the exact digest recorded in the
+# release manifest instead of the floating ${FEDOW_VERSION:-latest} tag.
+# Running docker-compose.yml alone (local/dev) is unaffected.
+services:
+  fedow_django:
+    image: ${FEDOW_IMAGE}

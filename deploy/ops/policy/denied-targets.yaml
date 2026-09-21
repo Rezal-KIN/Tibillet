@@ -1,0 +1,11 @@
+instances:
+  - Tibillet100J_OG
+  - PPSCP
+  - TibilletSiteKfet
+stacks:
+  - Laboutik_100-jours-225
+  - Lespass-v2
+scripts:
+  - tools/start-stacks-on-boot.sh
+  - tools/scripts/backup_soldes.sh
+  - tools/scripts/reset_soldes.sh
