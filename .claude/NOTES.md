@@ -10,6 +10,134 @@ Format suggéré par entrée :
 
 ---
 
+## Inventaire AWS compte 318629836660 — le compte n'est pas dédié Gala (2026-09-21)
+
+- **Système concerné** : compte AWS `318629836660` ("KIN_REZAL"), cible du plan AWS Gala
+  (`docs/aws-access.md` à venir, voir plan `infra/terraform/**`).
+- **Symptôme** : le plan suppose un compte dédié Gala avec une seule instance EC2 gala. Un
+  inventaire en lecture seule (via un utilisateur IAM bootstrap temporaire, supprimé après
+  SSO/Terraform) montre que ce n'est pas le cas.
+- **Constat** :
+  - Le compte héberge aussi des ressources Méthodo en prod : RDS `methodo` (postgres,
+    eu-west-3), bucket S3 `methodo-app`, utilisateur IAM `Methodo-app` avec clé d'accès
+    active, security groups liés (`ec2-rds-1`, `rds-ec2-1`, `elasticache-ec2-tibillet-redis`).
+  - C'est déjà le compte de management d'une Organization AWS existante (`o-3bri040k1e`),
+    avec un compte membre invité `Miniveleur` (149828426208, email thomastabaczka@gmail.com,
+    `PENDING_ACTIVATION`) — objet non identifié.
+  - `eu-north-1` (Stockholm) contient **4 instances EC2** Tibillet, pas une seule :
+    `TibilletBapts` (running), `Tibillet100J_OG` (running), `PPSCP` (stopped),
+    `TibilletSiteKfet` (t3.large, stopped) — chacune avec son propre volume EBS gp3. Deux
+    snapshots EBS orphelins ne correspondent à aucun volume actuellement attaché.
+  - `eu-west-3` a une Elastic IP orpheline (`13.36.118.48`, non associée).
+  - IAM Identity Center est **déjà actif** (`ssoins-6656ba18a5bc0eba`, store `d-80677e1879`,
+    région eu-west-3), avec un seul utilisateur (`raphael.faure`), un groupe (`admin`), un
+    permission set (`AdministratorAccess`, session 1h) assigné directement sur le compte —
+    pas encore les permission sets Operator/Elevated ni les 2 autres utilisateurs nominatifs.
+  - Aucun secret Secrets Manager n'existe encore dans eu-west-3 ni eu-north-1.
+- **Cause** : usage historique du compte antérieur au projet Gala — pas une régression
+  introduite par ce repo.
+- **Solution / contournement** : voir mémoire personnelle
+  `gala-aws-account-actual-state-2026-09-21` pour le détail complet. **Aucune action
+  Terraform/IAM destructive tant que la séparation Gala/Méthodo et l'identification des 3
+  instances EC2 hors périmètre + du compte `Miniveleur` n'ont pas été validées explicitement
+  par l'utilisateur.**
+- **Mise à jour (2026-09-21, plus tard)** : Méthodo a bien migré vers un compte AWS distinct
+  (`051826693409`) autour du 2026-07-25 (dernière écriture S3 / dernier usage de la clé IAM
+  `Methodo-app` à cette date). Les restes dans `318629836660` étaient des données de
+  **test** (facture avec adresse "dad"/"dadad", SIRET bidon `12345678900001`, 4 fichiers
+  seulement) et le RDS `methodo` avait 0 connexion sur 14 jours. Après confirmation
+  explicite de l'utilisateur, ces restes ont été **supprimés** : IAM user `Methodo-app` + sa
+  clé, RDS `methodo` (avec snapshot final `methodo-final-snapshot-2026-09-21` conservé par
+  sécurité), bucket S3 `methodo-app`. Security groups liés (`ec2-rds-1`, `rds-ec2-1`,
+  `elasticache-ec2-tibillet-redis`, `ec2-elasticache-...`) **pas encore nettoyés** (hors
+  scope de cette suppression). Ne jamais confondre `318629836660` (Gala) et `051826693409`
+  (Méthodo) — toujours vérifier via `aws sts get-caller-identity` avant toute commande.
+- **Mise à jour (2026-09-21, identification instance live)** : `eu-north-1` (Stockholm)
+  contient 4 instances EC2 Tibillet, mais **une seule est dans le périmètre de ce repo** :
+  `TibilletBapts` (i-0cd4e52913c8ae928, 13.61.201.166) — confirmé par résolution DNS de
+  `galas-am-aix.rezal.fr`/`fedow.galas-am-aix.rezal.fr`/`cashless.galas-am-aix.rezal.fr`
+  (toutes → 13.61.201.166) et recoupé avec l'IP de l'alias SSH `MACHINE-Guinche-Main`.
+  **`Tibillet100J_OG` (i-01107b29b967dc1dc, 13.60.93.29) est explicitement HORS PÉRIMÈTRE** —
+  instance distincte avec beaucoup de personnalisations que l'utilisateur veut garder intacte ;
+  ne jamais la toucher (Terraform import, migration, arrêt, etc.) dans le cadre de ce repo.
+  `PPSCP` et `TibilletSiteKfet` (arrêtées) sont d'anciennes instances plus utilisées, mais pas
+  encore explicitement validées pour suppression.
+
+---
+
+## Runtime live Bapts — cohabitation effective des stacks 100 jours et V2 (2026-09-21)
+
+- **Système concerné** : EC2 `TibilletBapts` (`i-0cd4e52913c8ae928`, `eu-north-1`), unique
+  runtime live de ce repo (`galas-am-aix.rezal.fr` → `13.61.201.166`).
+- **Constat (inventaire AWS + SSH strictement lecture seule)** : Bapts exécute non seulement
+  Fedow, Lespass et Traefik, mais aussi **`laboutik_100-jours-225`** (Django/Nginx/Redis/
+  PostgreSQL 11.5/Memcached) et le preview local **`Lespass-v2`** (Django/Celery/PostgreSQL/
+  Redis/Memcached/Nginx, Nginx lié à `127.0.0.1:8090`). Les deux stacks sont `Up` au
+  2026-09-21 ; leurs répertoires/Compose sont présents dans `/home/ubuntu/TiBillet`.
+- **Ne pas surinterpréter** : cela ne prouve pas que la stack `Laboutik_100-jours-225` est la
+  **même chose** que l'EC2 séparée `Tibillet100J_OG` (hors périmètre absolu) ; il s'agit ici
+  d'une stack qui tourne sur Bapts, la relation avec l'autre VM reste à établir. Ne jamais
+  automatiser l'EC2 `Tibillet100J_OG` ; ne jamais muter cette stack Bapts ou `Lespass-v2`
+  avant décision explicite sur leur statut.
+- **État hôte utile** : Ubuntu 24.04, Docker 29.3.0, Compose 5.1.0 ; volume root gp3 64 GiB
+  non chiffré avec `DeleteOnTermination=false`, aucun snapshot owned observé ; aucune instance
+  profile IAM ni inscription SSM. `tibillet-stacks.service` est enabled ; le cron legacy
+  `backup_soldes.sh` existe encore. Rien de cela n'a été changé.
+- **Git VM** : checkout `Rezal-KIN/Gala-am-Aix-Tibillet` à `25cbc91`; deux assets statiques
+  non committés sous `Lespass/www/static/reunion/` — ne jamais les écraser/revertir.
+- **Conséquence** : pas de Terraform import/apply, SSM, instance profile, install systemd,
+  Secret Manager, Docker pull/up/down/build/restart ni pipeline visant Bapts avant que
+  l'utilisateur approuve la liste précise : stacks live à conserver, stacks de test à
+  préserver/arrêter, et stacks exclues. La pipeline Test build/publish reste sans cible Bapts.
+
+---
+
+## Pipeline delivery — `deploy-release.sh` exporte des images qu'aucun compose ne consomme (2026-09-20, résolu 2026-09-21)
+
+- **Système concerné** : `tools/runtime/deploy-release.sh` + `Fedow/`, `Laboutik/`, `Lespass/`,
+  `traefik/docker-compose.yml`.
+- **Symptôme (pas encore observé en prod — trouvé à la relecture)** : `deploy-release.sh`
+  exporte `LESPASS_IMAGE`/`FEDOW_IMAGE`/`LABOUTIK_IMAGE`/`TRAEFIK_IMAGE` à partir du manifeste
+  de release (digest ECR immuable), mais **aucun `docker-compose.yml` ne référence ces
+  variables**. `Fedow/docker-compose.yml` et `Laboutik/docker-compose.yml` utilisent encore
+  `tibillet/fedow:${FEDOW_VERSION:-latest}` / `tibillet/laboutik:${LABOUTIK_VERSION:-latest}` ;
+  `Lespass/docker-compose.yml` a un `build: context: ./app` (passage V2, voir plus bas) ;
+  `traefik/docker-compose.yml` a `image: traefik:latest` en dur. Le garde-fou
+  `deploy-release.sh:27` ("release references latest") ne vérifie que la **chaîne du
+  manifeste**, pas ce que `docker compose pull && up -d` va réellement tirer — un déploiement
+  "release" actuel pullerait `latest`/rebuild depuis les sources, pas le digest validé par la
+  pipeline Test.
+- **Cause** : les compose files ont été écrits/adaptés (passage Lespass V2, etc.) sans jamais
+  être branchés sur le contrat que `deploy-release.sh` suppose déjà (variables `*_IMAGE`).
+- **Complication découverte en creusant une correction (overrides additifs par service)** :
+  `deploy-release.sh`/`start-stacks.sh`/`preflight.sh`/`stop-stacks.sh` bouclent sur
+  `COMPOSE_FILES` (liste `:`-séparée) et appellent `docker compose -f "$compose_file" ...`
+  **une fois par fichier, indépendamment** — jamais `-f a -f b` combinés. Un fichier
+  `docker-compose.release.yml` additif à côté de chaque base ne serait donc pas fusionné tel
+  quel avec la config actuelle des scripts.
+- **Ce qui a déjà été vérifié et corrigé séparément** : `Fedow/docker-compose.yml` avait aussi
+  un domaine Traefik codé en dur (`Host(\`fedow.galas-am-aix.rezal.fr\`)`) au lieu de
+  `${DOMAIN}` comme Laboutik/Lespass — corrigé (bug de copier-coller indépendant du problème
+  ci-dessus). Vérifié par SSH (lecture seule) que `Fedow/.env` réel sur la VM a bien
+  `DOMAIN=fedow.galas-am-aix.rezal.fr` avant de changer — donc comportement inchangé au
+  prochain déploiement.
+- **Solution / contournement (implémenté 2026-09-21)** : `COMPOSE_FILES` accepte maintenant
+  des groupes séparés par `:`, chaque groupe étant lui-même une liste de fichiers séparés par
+  `;` fusionnés en **un seul** appel `docker compose -f a -f b ...` (helper
+  `compose_group_args` dans `lib.sh`, utilisé par les 4 scripts). Un `docker-compose.release.yml`
+  additif existe désormais pour chaque service (`Fedow/`, `Laboutik/`, `traefik/`,
+  `Lespass/`), ne fixant que `image: ${..._IMAGE}`. Pour Lespass, qui a un `build:` dans le
+  fichier de base, l'override utilise `build: !reset null` (Compose Spec, nécessite Compose
+  >= 2.24 — la VM tourne en v5.1.0) pour retirer complètement `build:` : sans ce reset,
+  `build:` aurait continué à gagner sur `image:` et le déploiement aurait silencieusement
+  rebuild depuis les sources. **Vérifié** localement avec `docker compose -f base -f release
+  config` sur les 4 paires (copies temporaires hors repo, jamais écrit sur la VM ni dans le
+  repo) : `image` résout bien vers le digest fourni, et pour Lespass aucune clé `build` ne
+  subsiste dans la config fusionnée. `tools/runtime/examples/gala.conf.example` documente le
+  nouveau format de `COMPOSE_FILES`.
+
+---
+
 ## Lespass — passage à la V2 (build from source, clean install)
 
 - **Système concerné** : `Lespass/` (Django/django-tenants, billetterie + comptes membres).

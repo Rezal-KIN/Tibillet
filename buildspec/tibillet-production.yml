@@ -1,0 +1,46 @@
+version: 0.2
+
+# Production deliberately does not execute docker build. It validates a
+# reviewed release manifest and asks a narrowly scoped SSM document to deploy
+# the exact digest the Test pipeline already published.
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - python3 --version
+      - aws --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -f "$RELEASE_MANIFEST_PATH"
+      - python3 tools/runtime/validate-release.py "$RELEASE_MANIFEST_PATH"
+      - python3 - "$RELEASE_MANIFEST_PATH" "$EXPECTED_GALA_SLUG" <<'PY'
+import json, sys
+manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+if manifest["gala_slug"] != sys.argv[2]:
+    raise SystemExit("release manifest targets a different gala")
+if manifest["platform"] not in {"v1", "v2"}:
+    raise SystemExit("production pipeline refuses preview platform")
+PY
+  build:
+    commands:
+      - |
+        set -euo pipefail
+        command_id="$(aws ssm send-command \
+          --document-name "$DEPLOYMENT_DOCUMENT_NAME" \
+          --instance-ids "$TARGET_INSTANCE_ID" \
+          --parameters "releaseManifestPath=$RELEASE_MANIFEST_PATH" \
+          --query 'Command.CommandId' \
+          --output text)"
+        test -n "$command_id"
+        printf 'SSM deployment command submitted: %s\n' "$command_id"
+        for attempt in $(seq 1 72); do
+          status="$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$TARGET_INSTANCE_ID" --query Status --output text 2>/dev/null || true)"
+          case "$status" in
+            Success) exit 0 ;;
+            Pending|InProgress|Delayed|"") sleep 5 ;;
+            *) printf 'SSM deployment failed with status: %s\n' "$status" >&2; exit 1 ;;
+          esac
+        done
+        printf 'SSM deployment timed out waiting for completion\n' >&2
+        exit 1

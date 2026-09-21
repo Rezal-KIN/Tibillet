@@ -6,7 +6,7 @@ services:
     hostname: lespass_postgres
     volumes:
       - ./database:/var/lib/postgresql/data
-    env_file: .env
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
     networks:
       - lespass_backend
 
@@ -40,7 +40,7 @@ services:
       - ./logs:/DjangoFiles/logs
       - ./backup:/Backup
       - ./ssh:/home/tibillet/.ssh # if you want ssh borgbackup
-    env_file: .env
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
     depends_on:
       - lespass_postgres
       - lespass_redis
@@ -59,7 +59,7 @@ services:
     restart: always
     container_name: lespass_celery
     hostname: lespass_celery
-    env_file: .env
+    env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
     depends_on:
       - lespass_postgres
       - lespass_redis
@@ -88,7 +88,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=frontend
       - traefik.http.routers.lespass.tls.certresolver=myresolver
-      - traefik.http.routers.lespass.rule=Host(`$DOMAIN`)
+      - traefik.http.routers.lespass.rule=Host(`${LESPASS_PUBLIC_DOMAIN:-${DOMAIN}}`)
     networks:
       - frontend
       - lespass_backend

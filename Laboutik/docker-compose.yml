@@ -2,7 +2,7 @@ services:
   laboutik_postgres:
     image: postgres:11.5-alpine
     restart: "no"
-    env_file: .env
+    env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     container_name: laboutik_postgres
     hostname: laboutik_postgres
     volumes:
@@ -21,7 +21,7 @@ services:
   laboutik_redis:
     image: redis:6-alpine
     restart: "no"
-    env_file: .env
+    env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     container_name: laboutik_redis
     hostname: laboutik_redis
     networks:
@@ -30,7 +30,7 @@ services:
   laboutik_django:
     image: tibillet/laboutik:${LABOUTIK_VERSION:-latest}
     restart: "no"
-    env_file: .env
+    env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     container_name: laboutik_django
     hostname: laboutik_django
     volumes:
@@ -79,7 +79,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=frontend
       - traefik.http.routers.laboutik_nginx.tls.certresolver=myresolver
-      - traefik.http.routers.laboutik_nginx.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.laboutik_nginx.rule=Host(`${LABOUTIK_PUBLIC_DOMAIN:-${DOMAIN}}`)
     networks:
       - frontend
       - laboutik_backend
