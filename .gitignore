@@ -215,6 +215,33 @@ laboutik_client_android_v2/mobile-app/package-lock.json
 # Outillage agent IA local : jamais committe (secrets, etat local, workspaces jetables).
 # Les skills partages vivent dans api_v2/skills/ et sont lies ici par un symlink.
 # / Local AI tooling: never committed. Shared skills live in api_v2/skills/, symlinked here.
-/.claude/
+.claude/*
+!.claude/CLAUDE.md
+!.claude/OBJECTIFS.md
+!.claude/NOTES.md
 INTEROP_REPO
 OLD_REPO
+
+# Terraform state and local credentials for deploy/ (never commit)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+backend.hcl
+!*.hcl.example
+crash.log
+crash.*.log
+
+# Generated deploy material
+/deploy/releases/*.json
+!/deploy/releases/examples/*.json
+/deploy/runtime/
+/deploy/registry/*.json
+!/deploy/registry/examples/*.json
+/deploy/traefik/acme.json
+/deploy/traefik/acme.json.pre_*
+/deploy/.infisical.json
+/deploy/.envrc
+/deploy/**/.env.bak*
+/deploy/**/*secret*

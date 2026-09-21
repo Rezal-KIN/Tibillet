@@ -1,0 +1,8 @@
+# Copy to a private infra/terraform/backend.hcl (never commit it — the bucket
+# name reveals the AWS account ID). Fill in the bucket name from:
+#   terraform -chdir=infra/terraform-bootstrap output state_bucket_name
+#
+# Then: terraform -chdir=infra/terraform init -backend-config=../terraform/backend.hcl
+bucket = "tibillet-gala-123456789012-tfstate"
+key    = "infra/test.tfstate" # or infra/production.tfstate — one key per environment
+region = "eu-north-1"

@@ -1,0 +1,68 @@
+services:
+  fedow_postgres:
+    image: postgres:13-bookworm
+    restart: always
+    container_name: fedow_postgres
+    hostname: fedow_postgres
+    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
+    volumes:
+      - ./database:/var/lib/postgresql/data
+    networks:
+      - fedow_backend
+  fedow_memcached:
+    image: memcached:1.6
+    container_name: fedow_memcached
+    hostname: fedow_memcached
+    restart: always
+    networks:
+      - fedow_backend
+  fedow_django:
+    image: tibillet/fedow:${FEDOW_VERSION:-latest}
+    container_name: fedow_django
+    hostname: fedow_django
+    restart: always
+    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
+    user: fedow
+    links:
+      - fedow_postgres:postgres
+      - fedow_memcached:memcached
+    volumes:
+      - ./www:/home/fedow/Fedow/www
+      - ./logs:/home/fedow/Fedow/logs
+      - ./settings.py:/home/fedow/Fedow/fedowallet_django/settings.py
+      - ./custom_patches/fedow_core/serializers.py:/home/fedow/Fedow/fedow_core/serializers.py
+      - ./custom_patches/fedow_dashboard/urls.py:/home/fedow/Fedow/fedow_dashboard/urls.py
+      - ./custom_patches/fedow_dashboard/views.py:/home/fedow/Fedow/fedow_dashboard/views.py
+      - ./custom_patches/fedow_dashboard/index.html:/home/fedow/Fedow/fedow_dashboard/templates/index/index.html
+      - ./custom_patches/fedow_dashboard/suivi.html:/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html
+    networks:
+      - fedow_backend
+    extra_hosts:
+      - "fedow.tibillet.localhost:172.17.0.1"
+      - "lespass.tibillet.localhost:172.17.0.1"
+      - "cashless.tibillet.localhost:172.17.0.1"
+  fedow_nginx:
+    image: nginx:latest
+    restart: always
+    container_name: fedow_nginx
+    hostname: fedow_nginx
+    volumes:
+      - ./www:/www
+      - ./logs:/logs
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - fedow_django
+    links:
+      - fedow_django:fedow_django
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=frontend
+      - traefik.http.routers.fedow_nginx.tls.certresolver=myresolver
+      - traefik.http.routers.fedow_nginx.rule=Host(`${FEDOW_PUBLIC_DOMAIN:-${DOMAIN}}`)
+    networks:
+      - frontend
+      - fedow_backend
+networks:
+  frontend:
+    external: true
+  fedow_backend:

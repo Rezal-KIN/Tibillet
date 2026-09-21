@@ -1,0 +1,197 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Tooling
+.pdm-python
+.pdm-build/
+.pixi
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments and secrets
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+**/.env
+**/*.pem
+**/*.key
+**/*.crt
+**/*secret*
+
+# Runtime data
+Laboutik_*/
+Fedow/www/
+Laboutik/www/
+Lespass/www/
+Lespass-v2/www/
+**/database/
+**/database_prewipe_*/
+**/logs/
+**/backup/
+**/backups/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+Fedow/www/active_gala_context.json
+Fedow/www/gala_provision_requests.json
+Lespass/www/_probe.txt
+**/.env.bak*
+**/*.bak*
+**/*.save
+tools/*.log
+
+# AI / IDE tools (may contain API keys or credentials)
+.claude/*
+!.claude/CLAUDE.md
+!.claude/OBJECTIFS.md
+!.claude/NOTES.md
+.codex/
+.copilot/
+.vscode-server/
+.cursor/
+
+# SSH & system
+.ssh/
+.android/
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
+.spyderproject
+.spyproject
+.ropeproject
+
+# Typing/cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+.ruff_cache/
+
+# Abstra / Cursor
+.abstra/
+.cursorignore
+.cursorindexingignore
+
+# PyPI
+.pypirc
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+.infisical.json
+traefik/acme.json
+
+# Terraform state and local credentials (never commit)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+backend.hcl
+!*.hcl.example
+crash.log
+crash.*.log
+
+# Generated releases and ephemeral runtime material
+releases/*.json
+!releases/examples/*.json
+/runtime/
+
+# Per-gala registry: real entries name real domains/status, never commit them
+registry/*.json
+!registry/examples/*.json
