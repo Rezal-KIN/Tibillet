@@ -229,9 +229,28 @@ resource "aws_iam_role_policy" "test_pipeline" {
 }
 
 resource "aws_codepipeline" "test" {
-  count    = local.delivery_resources_enabled ? 1 : 0
-  name     = "${local.name_prefix}-test"
-  role_arn = aws_iam_role.test_pipeline[0].arn
+  count         = local.delivery_resources_enabled ? 1 : 0
+  name          = "${local.name_prefix}-test"
+  role_arn      = aws_iam_role.test_pipeline[0].arn
+  pipeline_type = "V2"
+
+  trigger {
+    provider_type = "CodeStarSourceConnection"
+
+    git_configuration {
+      source_action_name = "LespassFork"
+
+      push {
+        branches {
+          includes = [var.test_source_branch]
+        }
+
+        file_paths {
+          excludes = ["deploy/**"]
+        }
+      }
+    }
+  }
 
   artifact_store {
     location = aws_s3_bucket.artifacts[0].bucket
@@ -253,7 +272,7 @@ resource "aws_codepipeline" "test" {
         ConnectionArn        = aws_codestarconnections_connection.github[0].arn
         FullRepositoryId     = "${var.application_github_owner}/${var.application_github_repository}"
         BranchName           = var.test_source_branch
-        DetectChanges        = "true"
+        DetectChanges        = "false"
         OutputArtifactFormat = "CODEBUILD_CLONE_REF"
       }
     }

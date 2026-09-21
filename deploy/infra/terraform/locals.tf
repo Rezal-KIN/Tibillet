@@ -7,7 +7,7 @@ locals {
     Project     = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
-    Repository  = "Rezal-KIN/Gala-am-Aix-Tibillet"
+    Repository  = "Rezal-KIN/Tibillet"
     DataClass   = "gala-isolated"
   }
 

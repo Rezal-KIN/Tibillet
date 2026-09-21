@@ -158,15 +158,15 @@ variable "application_github_repository" {
 }
 
 variable "github_owner" {
-  description = "GitHub organization that owns the Gala infrastructure repository."
+  description = "GitHub organization that owns this combined application and Gala deployment repository."
   type        = string
   default     = "Rezal-KIN"
 }
 
 variable "github_repository" {
-  description = "Gala infrastructure repository name."
+  description = "Combined application and Gala deployment repository name."
   type        = string
-  default     = "Gala-am-Aix-Tibillet"
+  default     = "Tibillet"
 }
 
 variable "production_source_branch" {
