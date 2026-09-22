@@ -11,8 +11,10 @@ CONFIG_PATH="${1:-}"
 MANIFEST_PATH="${2:-}"
 [[ -n "$CONFIG_PATH" && -n "$MANIFEST_PATH" ]] || fail "usage: $0 CONFIG RELEASE_MANIFEST"
 load_gala_config "$CONFIG_PATH"
+require_command aws
 require_command docker
 require_command python3
+require_var AWS_REGION
 require_var COMPOSE_FILES
 
 # Materialize the three app-specific secrets before Compose reads their env_file
@@ -25,6 +27,10 @@ require_var COMPOSE_FILES
 # here so the images exported to Compose are exactly the release it checked.
 load_release_images "$MANIFEST_PATH"
 write_compose_environment
+
+lespass_registry="${LESPASS_IMAGE%%/*}"
+[[ "$lespass_registry" == *.dkr.ecr.*.amazonaws.com ]] || fail "LESPASS_IMAGE must use the Gala ECR registry"
+aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$lespass_registry" >/dev/null
 
 IFS=':' read -r -a compose_groups <<< "$COMPOSE_FILES"
 for group in "${compose_groups[@]}"; do

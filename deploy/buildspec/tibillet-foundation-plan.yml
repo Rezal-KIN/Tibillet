@@ -1,0 +1,28 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - terraform version
+      - python3 --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_RESOLVED_SOURCE_VERSION:-}"
+      - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
+      - export FOUNDATION_SOURCE_COMMIT="$(git rev-parse HEAD)"
+      - export FOUNDATION_TFVARS="$CODEBUILD_SRC_DIR/foundation.auto.tfvars.json"
+      - python3 deploy/tools/validate-foundation-inputs.py "$FOUNDATION_TFVARS"
+      - terraform -chdir=deploy/infra/terraform init -backend=false -input=false
+      - terraform -chdir=deploy/infra/terraform validate
+  build:
+    commands:
+      - set -euo pipefail
+      - terraform -chdir=deploy/infra/terraform plan -input=false -lock=false -out="$CODEBUILD_SRC_DIR/foundation.tfplan" -var-file="$FOUNDATION_TFVARS"
+      - terraform -chdir=deploy/infra/terraform show -no-color "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.txt"
+artifacts:
+  files:
+    - foundation.auto.tfvars.json
+    - foundation.tfplan
+    - foundation-plan.txt

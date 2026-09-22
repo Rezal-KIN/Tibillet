@@ -65,7 +65,7 @@ valeurs (disponibles auprès d'un administrateur nommé), le script refuse de s'
 aws sso login --profile gala-operator
 aws sts get-caller-identity --profile gala-operator
 export AWS_PROFILE=gala-operator
-export AWS_REGION=eu-north-1
+export AWS_REGION=eu-west-3
 ```
 
 L'ouverture du navigateur, la connexion et la MFA sont faites par l'humain, au maximum une

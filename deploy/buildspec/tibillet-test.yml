@@ -2,6 +2,8 @@ version: 0.2
 
 # The source connection must target the Rezal fork of TiBillet/Lespass, never
 # the production Gala EC2 checkout. CodeBuild receives a fixed source revision.
+# Output is a candidate image digest only; a complete immutable release manifest
+# (pinning all four service images) must be assembled and reviewed before promotion.
 phases:
   install:
     commands:
@@ -15,7 +17,7 @@ phases:
       - test -f dockerfile
       - test -n "${CODEBUILD_RESOLVED_SOURCE_VERSION:-}"
       - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
-      - python3 -m compileall -q TiBillet BaseBillet ApiBillet Administration AuthBillet 2>/dev/null || true
+      - python3 -m compileall -q TiBillet BaseBillet ApiBillet Administration AuthBillet
   build:
     commands:
       - |

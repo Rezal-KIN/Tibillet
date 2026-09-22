@@ -5,4 +5,4 @@
 # Then: terraform -chdir=infra/terraform init -backend-config=../terraform/backend.hcl
 bucket = "tibillet-gala-123456789012-tfstate"
 key    = "infra/test.tfstate" # or infra/production.tfstate — one key per environment
-region = "eu-north-1"
+region = "eu-west-3"

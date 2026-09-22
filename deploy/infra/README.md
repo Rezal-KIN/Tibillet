@@ -11,12 +11,14 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
 - **Terraform** (`infra/terraform/`) : source de vérité de l'infra AWS.
   - `organization.tf`, `identity-center.tf` : Organization et IAM Identity Center Gala.
   - `gala-instances.tf`, `modules/gala/` : une EC2/secret/préfixe S3 par gala, `for_each var.galas`.
-  - `delivery.tf` : pipelines CodeBuild/CodePipeline Test et Production, ECR.
-  - `storage.tf` : bucket de backups chiffré (SSE-S3), bucket d'artefacts à rétention courte.
-  - `secrets.tf`, `budget.tf` : Secrets Manager (valeurs jamais dans Terraform), budget AWS.
-  - `versions.tf` : state local pendant l'inventaire Bapts en lecture seule. Le backend S3
-    (locking natif, pas de DynamoDB) ne sera activé qu'après approbation d'une fondation
-    additive ; il nécessitera alors un `backend.hcl` privé, voir `examples/backend.hcl.example`.
+  - `delivery.tf` : pipeline CodeBuild/CodePipeline Test et ECR ; la promotion immutable est
+    définie dans `production-delivery.tf`.
+  - `storage.tf` : bucket de backups chiffré (SSE-S3), qui conserve aussi les manifestes de
+    release promus, et bucket d'artefacts à rétention courte.
+  - `modules/gala/bootstrap-runtime.sh.tftpl` : bootstrap idempotent de l'EC2 Paris.
+  - `budget.tf` : budget AWS. Les valeurs Secrets Manager ne sont jamais dans Terraform.
+  - `versions.tf` : backend S3 (locking natif, pas de DynamoDB), activé avec un
+    `backend.hcl` privé après approbation de la fondation, voir `examples/backend.hcl.example`.
   - `examples/gala.auto.tfvars.example`, `examples/backend.hcl.example` : à copier en
     fichiers privés (`.tfvars`, `backend.hcl`), jamais commités.
 - **State distant** (`infra/terraform-bootstrap/`) : config séparée, state local, appliquée
@@ -53,19 +55,21 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
 1. `docs/aws-access.md` : un administrateur nommé active IAM Identity Center dans le
    compte Gala (décision console ponctuelle), puis exécute `install-sso-profile.sh` avec
    les vraies valeurs.
-2. Pendant l'inventaire Bapts : `terraform init` et `terraform plan` utilisent un state
-   local et ne font qu'observer `TibilletBapts` (`i-0cd4e52913c8ae928`). Aucun import, apply,
-   instance profile, secret, bucket, pipeline ou changement de VM n'est permis.
+2. La fondation runtime est exclusivement à Paris (`eu-west-3`). `TibilletBapts` est arrêtée
+   et reste une archive de secours Stockholm, hors graphe Terraform et hors cible de déploiement.
 3. Après approbation explicite d'un plan de fondation additive :
    `infra/terraform-bootstrap/` crée une seule fois le bucket de state distant. Copier
    `terraform output state_bucket_name` dans un `infra/terraform/backend.hcl` privé
-   (voir `examples/backend.hcl.example`), puis activer le backend S3 dans un changement revu.
-4. L'Organization et IAM Identity Center existent déjà : ils sont observés ou importés dans
-   une phase dédiée, jamais recréés avec `enable_organization_bootstrap` ou
-   `enable_identity_center_resources`.
+   (voir `examples/backend.hcl.example), puis activer le backend S3 dans un changement revu.
+4. Le workflow CodeBuild de fondation recueille seulement les paramètres non secrets validés
+   (slug, domaine, capacité, VPC/subnet/AMI). Il produit un plan archivé et attend une
+   approbation humaine avant tout apply ; Secrets Manager est alimenté séparément.
 5. `enable_delivery_platform = true` seulement après approbation de la connexion CodeStar
-   GitHub vers `Rezal-KIN/Tibillet` et d'un plan de ressources additives. La pipeline Test
-   reste build/publish sans cible Bapts ; la Production reste désactivée.
+   GitHub vers `Rezal-KIN/Tibillet`, création du bucket de sauvegardes/releases et plan de
+   ressources additives. La pipeline Test build/publish une candidate ; la promotion vers une
+   EC2 Paris exige ensuite une release immuable complète et une approbation manuelle.
+6. Après le bootstrap, une sauvegarde et une restauration isolée validée précèdent toute
+   bascule DNS ou promotion publique.
 
 Aucune de ces étapes n'est automatique : chaque `terraform apply` reste un plan revu et
 approuvé par un humain, jamais déclenché par un push applicatif.

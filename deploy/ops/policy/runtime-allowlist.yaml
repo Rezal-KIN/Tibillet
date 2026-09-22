@@ -1,5 +1,5 @@
 aws_account_id: "318629836660"
-runtime_region: eu-north-1
+runtime_region: eu-west-3
 instances:
-  - id: i-0cd4e52913c8ae928
-    name: TibilletBapts
+  - id: i-00000000000000000
+    name: tibillet-gala-not-provisioned
