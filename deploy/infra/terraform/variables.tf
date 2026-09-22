@@ -1,11 +1,11 @@
 variable "aws_region" {
   description = "AWS region hosting the Gala runtime."
   type        = string
-  default     = "eu-north-1"
+  default     = "eu-west-3"
 
   validation {
-    condition     = var.aws_region == "eu-north-1"
-    error_message = "The current plan-only scope permits only the Bapts runtime region eu-north-1."
+    condition     = var.aws_region == "eu-west-3"
+    error_message = "The Gala runtime region is Paris eu-west-3."
   }
 }
 
@@ -27,43 +27,15 @@ variable "enable_additive_resources" {
 }
 
 variable "enable_backup_storage" {
-  description = "Creates the encrypted, versioned backups bucket used for future gala DB backups and promoted release manifests. Deferred to the dedicated backups project (plan Phase 5) — keep false until that work is separately approved, even while delivery/ECR resources are enabled."
+  description = "Creates the encrypted, versioned backup and promoted-release bucket required by every Gala runtime foundation."
   type        = bool
   default     = false
-}
-
-variable "enable_secrets_scaffolding" {
-  description = "Creates the empty Secrets Manager runtime template container. The secrets mechanism decision (Infisical vs Secrets Manager) is a separate Phase 5 approval — keep false until that decision is made, even while delivery/ECR resources are enabled."
-  type        = bool
-  default     = false
-}
-
-variable "bapts_instance_id" {
-  description = "The only live runtime instance permitted for read-only observation in this phase."
-  type        = string
-  default     = "i-0cd4e52913c8ae928"
-
-  validation {
-    condition     = var.bapts_instance_id == "i-0cd4e52913c8ae928"
-    error_message = "The Bapts instance allowlist is fixed to i-0cd4e52913c8ae928."
-  }
-}
-
-variable "bapts_instance_name" {
-  description = "Expected Name tag for the only in-scope live runtime."
-  type        = string
-  default     = "TibilletBapts"
-
-  validation {
-    condition     = var.bapts_instance_name == "TibilletBapts"
-    error_message = "The Bapts Name-tag allowlist is fixed to TibilletBapts."
-  }
 }
 
 variable "project_name" {
-  description = "Stable project identifier used in resource names and tags."
+  description = "Stable Paris control-plane identifier used in resource names and tags."
   type        = string
-  default     = "tibillet-gala"
+  default     = "tibillet-gala-paris"
 }
 
 variable "environment" {
@@ -117,9 +89,14 @@ variable "enable_production_pipeline" {
 }
 
 variable "production_target_instance_id" {
-  description = "Explicit Gala EC2 instance ID targeted by the manually triggered Production pipeline. Empty keeps production delivery disabled."
+  description = "Explicit Paris Gala EC2 instance ID targeted by the manually triggered Production pipeline. Empty keeps production delivery disabled."
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.production_target_instance_id == "" || can(regex("^i-[0-9a-f]{17}$", var.production_target_instance_id))
+    error_message = "production_target_instance_id must be an EC2 instance ID."
+  }
 }
 
 variable "production_gala_slug" {
@@ -140,21 +117,32 @@ variable "production_release_manifest_path" {
 }
 
 variable "enable_delivery_platform" {
-  description = "Creates shared ECR, CodeBuild, CodePipeline, and short-lived artifact storage. Keep false until AWS account inventory and CodeStar connection approval are complete."
+  description = "Creates shared ECR, CodeBuild, CodePipeline, and short-lived artifact storage."
   type        = bool
   default     = false
 }
 
-variable "application_github_owner" {
-  description = "GitHub organization owning the Rezal fork of the TiBillet application."
+variable "github_connection_arn" {
+  description = "Approved existing GitHub CodeConnections ARN in Paris, used by all Gala pipelines."
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.github_connection_arn == "" || can(regex("^arn:aws:codeconnections:eu-west-3:[0-9]{12}:connection/[0-9a-f-]{36}$", var.github_connection_arn))
+    error_message = "github_connection_arn must be a Paris CodeConnections ARN."
+  }
+}
+
+variable "application_github_owner" {
+  description = "GitHub organization owning the TiBillet application built by CodeBuild."
+  type        = string
+  default     = "Rezal-KIN"
 }
 
 variable "application_github_repository" {
-  description = "Fork repository built by CodeBuild, for example Lespass-gala. Empty keeps delivery disabled."
+  description = "TiBillet repository built by CodeBuild."
   type        = string
-  default     = ""
+  default     = "Tibillet"
 }
 
 variable "github_owner" {
@@ -167,6 +155,17 @@ variable "github_repository" {
   description = "Combined application and Gala deployment repository name."
   type        = string
   default     = "Tibillet"
+}
+
+variable "runtime_repository_ref" {
+  description = "Reviewed repository branch or tag installed by bootstrap on a new Gala EC2."
+  type        = string
+  default     = "main"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$", var.runtime_repository_ref))
+    error_message = "runtime_repository_ref must be a safe branch or tag name."
+  }
 }
 
 variable "production_source_branch" {

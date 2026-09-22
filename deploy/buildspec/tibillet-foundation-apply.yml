@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - terraform version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -f foundation.tfplan
+  build:
+    commands:
+      - set -euo pipefail
+      - terraform -chdir=deploy/infra/terraform apply -input=false -lock=true foundation.tfplan

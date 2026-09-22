@@ -3,16 +3,6 @@ output "aws_account_id" {
   description = "The independent Gala AWS account targeted by this Terraform configuration."
 }
 
-output "bapts_observed_runtime" {
-  value = {
-    instance_id = data.aws_instance.bapts.id
-    name        = data.aws_instance.bapts.tags["Name"]
-    state       = data.aws_instance.bapts.instance_state
-    region      = var.aws_region
-  }
-  description = "Read-only observation of the sole allowlisted live runtime during the plan-only phase."
-}
-
 output "backup_bucket_name" {
   value       = var.enable_additive_resources && var.enable_backup_storage ? aws_s3_bucket.backups[0].bucket : null
   description = "Encrypted, private backup bucket."

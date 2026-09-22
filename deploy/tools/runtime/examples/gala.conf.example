@@ -3,7 +3,7 @@
 # Sourced (not executed as a general script) by tools/runtime/lib.sh:load_gala_config.
 
 GALA_SLUG="gala-am-aix-2027"
-AWS_REGION="eu-north-1"
+AWS_REGION="eu-west-3"
 PLATFORM="v1"
 
 # Public routing values are non-secret and deliberately live here, not in the
@@ -16,8 +16,8 @@ LESPASS_PUBLIC_DOMAIN="example.org"
 
 # From `terraform -chdir=infra/terraform output -json galas` for this slug.
 BACKUP_BUCKET="tibillet-gala-production-123456789012-backups"
-RUNTIME_SECRET_ARN="arn:aws:secretsmanager:eu-north-1:123456789012:secret:tibillet/galas/gala-am-aix-2027/runtime-AbCdEf"
-RELEASE_BUCKET="tibillet-gala-production-123456789012-artifacts"
+RUNTIME_SECRET_ARN="arn:aws:secretsmanager:eu-west-3:123456789012:secret:tibillet-gala/galas/gala-am-aix-2027/runtime-AbCdEf"
+RELEASE_BUCKET="$BACKUP_BUCKET"
 
 # Absolute path to this repository checkout on the gala EC2.
 REPO_ROOT="/home/ubuntu/TiBillet"

@@ -1,8 +1,9 @@
 version: 0.2
 
 # Production deliberately does not execute docker build. It validates a
-# reviewed release manifest and asks a narrowly scoped SSM document to deploy
-# the exact digest the Test pipeline already published.
+# reviewed release manifest, uploads it to the Gala's release prefix in the
+# backup bucket, then asks a narrowly scoped SSM document to deploy the exact
+# digest using an S3 URI.
 phases:
   install:
     commands:
@@ -26,10 +27,17 @@ PY
     commands:
       - |
         set -euo pipefail
+        # Upload the validated release manifest to the Gala-only release prefix
+        # in the backup bucket. The SSM document accepts only an S3 URI under this prefix.
+        release_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_id"])' "$RELEASE_MANIFEST_PATH")"
+        release_uri="s3://${RELEASE_BUCKET}/releases/${EXPECTED_GALA_SLUG}/${release_id}.json"
+        aws s3 cp --only-show-errors "$RELEASE_MANIFEST_PATH" "$release_uri"
+        printf 'Release manifest uploaded: %s\n' "$release_uri"
+
         command_id="$(aws ssm send-command \
           --document-name "$DEPLOYMENT_DOCUMENT_NAME" \
           --instance-ids "$TARGET_INSTANCE_ID" \
-          --parameters "releaseManifestPath=$RELEASE_MANIFEST_PATH" \
+          --parameters "ReleaseManifestUri=$release_uri" \
           --query 'Command.CommandId' \
           --output text)"
         test -n "$command_id"

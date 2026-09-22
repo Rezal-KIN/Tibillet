@@ -18,6 +18,12 @@ variable "release_bucket_name" {
   type    = string
   default = null
 }
+variable "ecr_lespass_repository_arn" {
+  type    = string
+  default = null
+}
+variable "repository_url" { type = string }
+variable "repository_ref" { type = string }
 variable "ssh_emergency_cidrs" { type = list(string) }
 variable "create_instance" { type = bool }
 variable "protect_from_destruction" { type = bool }

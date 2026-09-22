@@ -14,11 +14,11 @@ BASE = [
     "--account",
     "318629836660",
     "--region",
-    "eu-north-1",
+    "eu-west-3",
     "--instance",
-    "i-0cd4e52913c8ae928",
+    "i-00000000000000000",
     "--instance-name",
-    "TibilletBapts",
+    "tibillet-gala-not-provisioned",
 ]
 
 
@@ -33,7 +33,7 @@ def run(*extra: str) -> subprocess.CompletedProcess[str]:
 
 
 class RuntimeScopeTests(unittest.TestCase):
-    def test_allows_only_bapts(self) -> None:
+    def test_allows_provisioning_placeholder_only(self) -> None:
         result = run()
 
         self.assertEqual(result.returncode, 0)
@@ -47,14 +47,22 @@ class RuntimeScopeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("outside the Gala allowlist", result.stderr)
 
-    def test_rejects_excluded_instance(self) -> None:
+    def test_rejects_stockholm_region(self) -> None:
         args = BASE.copy()
-        args[args.index("i-0cd4e52913c8ae928")] = "i-01107b29b967dc1dc"
-        args[args.index("TibilletBapts")] = "Tibillet100J_OG"
+        args[args.index("eu-west-3")] = "eu-north-1"
         result = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=False)
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("instance i-01107b29b967dc1dc is outside", result.stderr)
+        self.assertIn("outside the Gala runtime allowlist", result.stderr)
+
+    def test_rejects_unapproved_instance(self) -> None:
+        args = BASE.copy()
+        args[args.index("i-00000000000000000")] = "i-0123456789abcdef0"
+        args[args.index("tibillet-gala-not-provisioned")] = "tibillet-gala-gala-am-aix-2027"
+        result = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=False)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("instance i-0123456789abcdef0 is outside", result.stderr)
 
     def test_rejects_legacy_references(self) -> None:
         for reference in (

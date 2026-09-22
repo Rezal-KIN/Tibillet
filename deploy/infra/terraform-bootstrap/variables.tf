@@ -1,13 +1,13 @@
 variable "aws_region" {
   description = "AWS region hosting the Terraform state bucket. Should match infra/terraform's aws_region."
   type        = string
-  default     = "eu-north-1"
+  default     = "eu-west-3"
 }
 
 variable "project_name" {
-  description = "Stable project identifier used in the state bucket name. Must match infra/terraform's project_name."
+  description = "Stable project identifier used in the Paris state bucket name. Must match infra/terraform's project_name."
   type        = string
-  default     = "tibillet-gala"
+  default     = "tibillet-gala-paris"
 }
 
 variable "environment" {
