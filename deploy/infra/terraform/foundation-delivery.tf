@@ -126,7 +126,7 @@ data "aws_iam_policy_document" "foundation_build" {
     sid = "ManageOnlyGalaDeliveryResources"
     actions = [
       "codebuild:*", "codepipeline:*", "ecr:*", "logs:*", "ssm:AddTagsToResource", "ssm:CreateDocument",
-      "ssm:DeleteDocument", "ssm:DescribeDocument", "ssm:GetDocument", "ssm:ListDocumentVersions", "ssm:ModifyDocumentPermission",
+      "ssm:DeleteDocument", "ssm:DescribeDocument", "ssm:DescribeDocumentPermission", "ssm:GetDocument", "ssm:ListDocumentVersions", "ssm:ModifyDocumentPermission",
       "ssm:UpdateDocument",
     ]
     resources = [
