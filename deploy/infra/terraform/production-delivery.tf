@@ -1,17 +1,21 @@
+# A production pipeline is intentionally created per live gala. Its CodeBuild
+# role can address one SSM document and one EC2 instance only; the operator
+# selects a release manifest, never an EC2 target.
+
 resource "aws_ssm_document" "production_deploy" {
-  count           = local.production_resources_enabled ? 1 : 0
-  name            = "${local.name_prefix}-production-deploy"
+  for_each        = local.production_target_galas
+  name            = "${local.name_prefix}-production-${each.key}-deploy"
   document_type   = "Command"
   document_format = "JSON"
 
   content = jsonencode({
     schemaVersion = "2.2"
-    description   = "Deploy one approved immutable TiBillet Gala release to its explicitly targeted EC2 instance."
+    description   = "Deploy one approved immutable TiBillet Gala release to the ${each.key} EC2 instance only."
     parameters = {
       ReleaseManifestUri = {
         type           = "String"
         description    = "S3 URI of the immutable release manifest under this Gala's release prefix."
-        allowedPattern = "^s3://${aws_s3_bucket.backups[0].bucket}/releases/${var.production_gala_slug}/[A-Za-z0-9._-]+\\.json$"
+        allowedPattern = "^s3://${aws_s3_bucket.backups[0].bucket}/releases/${each.key}/[A-Za-z0-9._-]+\\.json$"
       }
     }
     mainSteps = [{
@@ -19,7 +23,7 @@ resource "aws_ssm_document" "production_deploy" {
       name   = "DeployApprovedRelease"
       inputs = {
         runCommand = [
-          "/usr/local/lib/tibillet-gala/deploy-release-from-s3.sh /etc/tibillet-gala/${var.production_gala_slug}.conf '{{ ReleaseManifestUri }}'",
+          "/usr/local/lib/tibillet-gala/deploy-release-from-s3.sh /etc/tibillet-gala/${each.key}.conf '{{ ReleaseManifestUri }}'",
         ]
       }
     }]
@@ -27,49 +31,39 @@ resource "aws_ssm_document" "production_deploy" {
 
   lifecycle {
     precondition {
-      condition     = var.production_target_instance_id != "" && var.production_gala_slug != ""
-      error_message = "production_target_instance_id and production_gala_slug are required when enable_production_pipeline is true."
-    }
-
-    precondition {
-      condition     = contains(keys(var.galas), var.production_gala_slug)
-      error_message = "production_gala_slug must name a declared gala so Terraform can provision its secret and S3 permissions."
+      condition     = module.gala[each.key].instance_id != null
+      error_message = "A production pipeline may only be created for a Gala with an EC2 instance created by Terraform."
     }
   }
 }
 
 resource "aws_iam_role" "production_build" {
-  count              = local.production_resources_enabled ? 1 : 0
-  name               = "${local.name_prefix}-production-build"
+  for_each           = local.production_target_galas
+  name               = "${local.name_prefix}-production-${each.key}-build"
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role.json
 }
 
 data "aws_iam_policy_document" "production_build" {
-  count = local.production_resources_enabled ? 1 : 0
+  for_each = local.production_target_galas
 
   statement {
     sid       = "WriteShortLivedBuildLogs"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = ["${aws_cloudwatch_log_group.production_deploy[0].arn}:*"]
+    resources = ["${aws_cloudwatch_log_group.production_deploy[each.key].arn}:*"]
   }
 
   statement {
-    sid = "WriteOnlyTargetGalaReleaseManifest"
-    actions = [
-      "s3:PutObject",
-      "s3:PutObjectTagging",
-    ]
-    resources = ["${aws_s3_bucket.backups[0].arn}/releases/${var.production_gala_slug}/*"]
+    sid       = "WriteOnlyTargetGalaReleaseManifest"
+    actions   = ["s3:PutObject", "s3:PutObjectTagging"]
+    resources = ["${aws_s3_bucket.backups[0].arn}/releases/${each.key}/*"]
   }
 
   statement {
-    sid = "DeployOnlyToTheTargetGala"
-    actions = [
-      "ssm:SendCommand",
-    ]
+    sid     = "DeployOnlyToTheTargetGala"
+    actions = ["ssm:SendCommand"]
     resources = [
-      aws_ssm_document.production_deploy[0].arn,
-      "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${var.production_target_instance_id}",
+      aws_ssm_document.production_deploy[each.key].arn,
+      "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${module.gala[each.key].instance_id}",
     ]
   }
 
@@ -81,17 +75,17 @@ data "aws_iam_policy_document" "production_build" {
 }
 
 resource "aws_iam_role_policy" "production_build" {
-  count  = local.production_resources_enabled ? 1 : 0
-  name   = "${local.name_prefix}-production-build"
-  role   = aws_iam_role.production_build[0].id
-  policy = data.aws_iam_policy_document.production_build[0].json
+  for_each = local.production_target_galas
+  name     = "${local.name_prefix}-production-${each.key}-build"
+  role     = aws_iam_role.production_build[each.key].id
+  policy   = data.aws_iam_policy_document.production_build[each.key].json
 }
 
 resource "aws_codebuild_project" "production" {
-  count          = local.production_resources_enabled ? 1 : 0
-  name           = "${local.name_prefix}-production"
-  description    = "Manually promotes one reviewed immutable release manifest without rebuilding it."
-  service_role   = aws_iam_role.production_build[0].arn
+  for_each       = local.production_target_galas
+  name           = "${local.name_prefix}-production-${each.key}"
+  description    = "Manually promotes one reviewed immutable release for ${each.key}; it cannot target another Gala."
+  service_role   = aws_iam_role.production_build[each.key].arn
   build_timeout  = 30
   queued_timeout = 60
 
@@ -106,11 +100,11 @@ resource "aws_codebuild_project" "production" {
 
     environment_variable {
       name  = "EXPECTED_GALA_SLUG"
-      value = var.production_gala_slug
+      value = each.key
     }
     environment_variable {
       name  = "RELEASE_MANIFEST_PATH"
-      value = var.production_release_manifest_path
+      value = "releases/${each.key}/production.json"
     }
     environment_variable {
       name  = "RELEASE_BUCKET"
@@ -118,17 +112,17 @@ resource "aws_codebuild_project" "production" {
     }
     environment_variable {
       name  = "TARGET_INSTANCE_ID"
-      value = var.production_target_instance_id
+      value = module.gala[each.key].instance_id
     }
     environment_variable {
       name  = "DEPLOYMENT_DOCUMENT_NAME"
-      value = aws_ssm_document.production_deploy[0].name
+      value = aws_ssm_document.production_deploy[each.key].name
     }
   }
 
   logs_config {
     cloudwatch_logs {
-      group_name  = aws_cloudwatch_log_group.production_deploy[0].name
+      group_name  = aws_cloudwatch_log_group.production_deploy[each.key].name
       stream_name = "deploy"
     }
   }
@@ -140,8 +134,8 @@ resource "aws_codebuild_project" "production" {
 }
 
 resource "aws_iam_role" "production_pipeline" {
-  count = local.production_resources_enabled ? 1 : 0
-  name  = "${local.name_prefix}-production-pipeline"
+  for_each = local.production_target_galas
+  name     = "${local.name_prefix}-production-${each.key}-pipeline"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -153,7 +147,7 @@ resource "aws_iam_role" "production_pipeline" {
 }
 
 data "aws_iam_policy_document" "production_pipeline" {
-  count = local.production_resources_enabled ? 1 : 0
+  for_each = local.production_target_galas
 
   statement {
     sid       = "UseOnlyGalaGitHubConnection"
@@ -162,37 +156,36 @@ data "aws_iam_policy_document" "production_pipeline" {
   }
 
   statement {
-    sid       = "RunOnlyGalaProductionBuild"
+    sid       = "RunOnlyThisGalaProductionBuild"
     actions   = ["codebuild:StartBuild", "codebuild:BatchGetBuilds"]
-    resources = [aws_codebuild_project.production[0].arn]
+    resources = [aws_codebuild_project.production[each.key].arn]
   }
 
   statement {
-    sid = "UseShortLivedArtifacts"
-    actions = [
-      "s3:GetBucketVersioning",
-      "s3:GetObject",
-      "s3:GetObjectVersion",
-      "s3:PutObject",
-    ]
-    resources = [
-      aws_s3_bucket.artifacts[0].arn,
-      "${aws_s3_bucket.artifacts[0].arn}/*",
-    ]
+    sid       = "UseShortLivedArtifacts"
+    actions   = ["s3:GetBucketVersioning", "s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"]
+    resources = [aws_s3_bucket.artifacts[0].arn, "${aws_s3_bucket.artifacts[0].arn}/*"]
   }
 }
 
 resource "aws_iam_role_policy" "production_pipeline" {
-  count  = local.production_resources_enabled ? 1 : 0
-  name   = "${local.name_prefix}-production-pipeline"
-  role   = aws_iam_role.production_pipeline[0].id
-  policy = data.aws_iam_policy_document.production_pipeline[0].json
+  for_each = local.production_target_galas
+  name     = "${local.name_prefix}-production-${each.key}-pipeline"
+  role     = aws_iam_role.production_pipeline[each.key].id
+  policy   = data.aws_iam_policy_document.production_pipeline[each.key].json
 }
 
 resource "aws_codepipeline" "production" {
-  count    = local.production_resources_enabled ? 1 : 0
-  name     = "${local.name_prefix}-production"
-  role_arn = aws_iam_role.production_pipeline[0].arn
+  for_each      = local.production_target_galas
+  name          = "${local.name_prefix}-production-${each.key}"
+  role_arn      = aws_iam_role.production_pipeline[each.key].arn
+  pipeline_type = "V2"
+
+  variable {
+    name          = "ReleaseManifestPath"
+    default_value = "releases/${each.key}/production.json"
+    description   = "Repo-relative immutable release manifest for ${each.key}. Its gala_slug must match this pipeline."
+  }
 
   artifact_store {
     location = aws_s3_bucket.artifacts[0].bucket
@@ -244,7 +237,14 @@ resource "aws_codepipeline" "production" {
       input_artifacts = ["SourceOutput"]
 
       configuration = {
-        ProjectName = aws_codebuild_project.production[0].name
+        ProjectName = aws_codebuild_project.production[each.key].name
+        EnvironmentVariables = jsonencode([
+          {
+            name  = "RELEASE_MANIFEST_PATH"
+            value = "#{variables.ReleaseManifestPath}"
+            type  = "PLAINTEXT"
+          },
+        ])
       }
     }
   }

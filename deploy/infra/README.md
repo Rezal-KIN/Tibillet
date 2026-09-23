@@ -63,13 +63,15 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
    `infra/terraform-bootstrap/` crée une seule fois le bucket de state distant. Copier
    `terraform output state_bucket_name` dans un `infra/terraform/backend.hcl` privé
    (voir `examples/backend.hcl.example), puis activer le backend S3 dans un changement revu.
-4. Le workflow CodeBuild de fondation recueille seulement les paramètres non secrets validés
-   (slug, domaine, capacité, VPC/subnet/AMI). Il produit un plan archivé et attend une
-   approbation humaine avant tout apply ; Secrets Manager est alimenté séparément.
+4. Une pipeline CodePipeline **Foundation**, déclenchée manuellement, recueille seulement
+   les paramètres non secrets validés (slug, domaine, capacité, VPC/subnet/AMI). Elle
+   produit un plan archivé et attend une approbation humaine avant tout apply ; Secrets
+   Manager est alimenté séparément. Son premier bootstrap et le seed du catalogue privé
+   des galas sont des actions Terraform administrateur ponctuelles.
 5. `enable_delivery_platform = true` seulement après approbation de la connexion CodeStar
    GitHub vers `Rezal-KIN/Tibillet`, création du bucket de sauvegardes/releases et plan de
-   ressources additives. La pipeline Test build/publish une candidate ; la promotion vers une
-   EC2 Paris exige ensuite une release immuable complète et une approbation manuelle.
+   ressources additives. La pipeline Test build/publish une candidate sans EC2 ; Terraform
+   crée ensuite une pipeline Production manuelle par gala, verrouillée sur sa seule EC2 Paris.
 6. Après le bootstrap, une sauvegarde et une restauration isolée validée précèdent toute
    bascule DNS ou promotion publique.
 

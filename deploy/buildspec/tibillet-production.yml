@@ -13,16 +13,22 @@ phases:
   pre_build:
     commands:
       - set -euo pipefail
+      - |
+        case "$RELEASE_MANIFEST_PATH" in
+          "releases/${EXPECTED_GALA_SLUG}/"*.json) ;;
+          *) echo "RELEASE_MANIFEST_PATH must be under releases/${EXPECTED_GALA_SLUG}/" >&2; exit 1 ;;
+        esac
       - test -f "$RELEASE_MANIFEST_PATH"
       - python3 tools/runtime/validate-release.py "$RELEASE_MANIFEST_PATH"
-      - python3 - "$RELEASE_MANIFEST_PATH" "$EXPECTED_GALA_SLUG" <<'PY'
-import json, sys
-manifest = json.load(open(sys.argv[1], encoding="utf-8"))
-if manifest["gala_slug"] != sys.argv[2]:
-    raise SystemExit("release manifest targets a different gala")
-if manifest["platform"] not in {"v1", "v2"}:
-    raise SystemExit("production pipeline refuses preview platform")
-PY
+      - |
+        python3 - "$RELEASE_MANIFEST_PATH" "$EXPECTED_GALA_SLUG" <<'PY'
+        import json, sys
+        manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+        if manifest["gala_slug"] != sys.argv[2]:
+            raise SystemExit("release manifest targets a different gala")
+        if manifest["platform"] not in {"v1", "v2"}:
+            raise SystemExit("production pipeline refuses preview platform")
+        PY
   build:
     commands:
       - |

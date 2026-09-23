@@ -23,6 +23,15 @@ gala_account_id = "318629836660"
 # application_github_owner       = "Rezal-KIN"
 # application_github_repository  = "Tibillet"
 # test_source_branch              = "main"
+#
+# The Foundation pipeline is manually started in CodePipeline to add one new
+# gala after plan review. Its CodeBuild role is pre-approved separately because
+# it is the only automated role allowed to run Terraform apply.
+# enable_foundation_pipeline     = true
+# foundation_codebuild_role_arn  = "arn:aws:iam::318629836660:role/tibillet-gala-foundation-codebuild"
+# terraform_state_bucket_name    = "tibillet-gala-paris-318629836660-tfstate"
+# terraform_state_key            = "infra/production.tfstate"
+# enable_production_pipeline     = true # creates one manually started pipeline per live gala
 
 # VPC/subnet/AMI must be explicit. New EC2 creation remains off until a reviewed
 # plan targets the correct independent Gala account.

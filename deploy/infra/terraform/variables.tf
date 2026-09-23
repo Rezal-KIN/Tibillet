@@ -88,32 +88,38 @@ variable "enable_production_pipeline" {
   default     = false
 }
 
-variable "production_target_instance_id" {
-  description = "Explicit Paris Gala EC2 instance ID targeted by the manually triggered Production pipeline. Empty keeps production delivery disabled."
+variable "enable_foundation_pipeline" {
+  description = "Creates the manually started infrastructure pipeline. Its CodeBuild role is supplied separately and is the only role allowed to run Terraform apply."
+  type        = bool
+  default     = false
+}
+
+variable "foundation_codebuild_role_arn" {
+  description = "Pre-approved elevated CodeBuild role ARN for the infrastructure pipeline. It is deliberately external to this Terraform state."
   type        = string
   default     = ""
 
   validation {
-    condition     = var.production_target_instance_id == "" || can(regex("^i-[0-9a-f]{17}$", var.production_target_instance_id))
-    error_message = "production_target_instance_id must be an EC2 instance ID."
+    condition     = var.foundation_codebuild_role_arn == "" || can(regex("^arn:aws:iam::318629836660:role/[A-Za-z0-9+=,.@_-]+$", var.foundation_codebuild_role_arn))
+    error_message = "foundation_codebuild_role_arn must be an IAM role in the Gala account."
   }
 }
 
-variable "production_gala_slug" {
-  description = "Slug of the one Gala EC2 targeted by the initial Production pipeline. It scopes the SSM document config path and the S3 release-manifest prefix."
+variable "terraform_state_bucket_name" {
+  description = "Existing private S3 bucket that stores the Terraform state used by the infrastructure CodePipeline."
   type        = string
   default     = ""
-
-  validation {
-    condition     = var.production_gala_slug == "" || can(regex("^[a-z0-9][a-z0-9-]{1,62}$", var.production_gala_slug))
-    error_message = "production_gala_slug must be empty or a lowercase Gala slug."
-  }
 }
 
-variable "production_release_manifest_path" {
-  description = "Repo-relative immutable release manifest selected by the manually run Production pipeline."
+variable "terraform_state_key" {
+  description = "S3 object key of the Terraform production state used by the infrastructure CodePipeline."
   type        = string
-  default     = "releases/production.json"
+  default     = "infra/production.tfstate"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{1,255}$", var.terraform_state_key))
+    error_message = "terraform_state_key must be a safe S3 key."
+  }
 }
 
 variable "enable_delivery_platform" {

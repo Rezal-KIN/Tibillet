@@ -53,8 +53,8 @@ resource "aws_cloudwatch_log_group" "test_build" {
 }
 
 resource "aws_cloudwatch_log_group" "production_deploy" {
-  count             = local.production_resources_enabled ? 1 : 0
-  name              = "/aws/codebuild/${local.name_prefix}-production"
+  for_each          = local.production_target_galas
+  name              = "/aws/codebuild/${local.name_prefix}-production-${each.key}"
   retention_in_days = var.codebuild_log_retention_days
 }
 

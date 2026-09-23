@@ -54,8 +54,15 @@ cashless.galas-am-aix.rezal.fr → Laboutik
 2. Créer une fois le bucket de state Paris avec
    `infra/terraform-bootstrap/`.
 3. Configurer un `backend.hcl` privé pour l'état Terraform du gala.
-4. Générer et revoir le plan Terraform avec les paramètres non secrets.
-5. Appliquer le plan approuvé.
+4. Lancer manuellement la pipeline **Foundation** depuis CodePipeline et saisir
+   uniquement les paramètres non secrets demandés (slug, domaine, VPC, subnet,
+   AMI, capacité et CIDR SSH d'urgence éventuel).
+5. Revoir son `foundation-plan.txt`, puis approuver explicitement l'apply du
+   plan binaire exact. Un push Git ne lance jamais cette pipeline.
+
+Le premier bootstrap de cette pipeline reste une action Terraform manuelle :
+une pipeline ne peut pas se créer avant d'exister. Son rôle CodeBuild élevé est
+fourni par un administrateur et ne sert qu'à cette pipeline Infrastructure.
 
 La fondation crée notamment :
 
@@ -127,16 +134,18 @@ Une release production est un manifeste revu qui fixe les digests exacts de :
 Le manifeste est stocké sous `releases/<slug>/` dans le bucket de backups et
 porte un `release_id` unique. Il n'utilise jamais de tag mutable.
 
-### 7. Créer et utiliser la chaîne Production
+### 7. Utiliser la chaîne Production du gala
 
-Une fois l'ID de la nouvelle EC2 connu, la pipeline Production peut être
-provisionnée. Elle comporte obligatoirement une approbation humaine :
+L'apply Infrastructure crée automatiquement une pipeline Production dédiée au
+nouveau gala. Terraform y enregistre l'ID réel de son EC2, son slug et son
+document SSM. Une pipeline Aix ne peut donc pas viser l'EC2 d'un autre gala.
+Elle comporte obligatoirement une approbation humaine :
 
 ```text
 Manifeste revu → approbation → upload du manifeste → commande SSM ciblée
 ```
 
-La commande SSM ne vise que l'instance allowlistée. Elle vérifie le manifeste,
+La commande SSM ne vise que l'instance définie par Terraform. Elle vérifie le manifeste,
 le secret, l'espace disque et les conditions de backup avant le démarrage des
 stacks. Une première mise en ligne exige une décision explicite : elle ne doit
 pas contourner le garde-fou de backup initial sans être documentée.
@@ -161,7 +170,7 @@ supprimer une ancienne cible.
 2. Lancer les tests pertinents localement.
 3. Ouvrir une PR, faire relire puis fusionner dans `main`.
 4. La pipeline Test construit une nouvelle candidate ECR liée au commit de
-   fusion.
+   fusion. Elle ne cible aucune EC2.
 
 Les changements applicatifs ne modifient pas l'infrastructure. Les changements
 dans `deploy/`, Terraform, IAM, secret, DNS ou la politique d'allowlist suivent
@@ -171,7 +180,9 @@ un plan revu séparé.
 
 1. Choisir les digests produits et les dépendances exactes.
 2. Composer puis revoir le manifeste de release.
-3. Déclencher la pipeline Production manuellement.
+3. Déclencher manuellement la pipeline Production du gala concerné. La seule
+   variable saisissable est le chemin du manifeste ; l'EC2 n'est jamais un
+   paramètre utilisateur.
 4. Vérifier l'approbation humaine, le preflight et les healthchecks.
 5. Enregistrer le `release_id` effectivement déployé dans le registre privé.
 
@@ -193,5 +204,6 @@ personnalisée.
 - [Accès AWS](../aws-access.md)
 - [Périmètre et portes de changement](../platform/scope-and-change-gates.md)
 - [Registre d'un gala](gala-registry.md)
+- [Bootstrap de la pipeline Infrastructure](foundation-pipeline-bootstrap.md)
 - [Démarrage, arrêt et dormance](start-stop-dormance.md)
 - [Sauvegarde et restauration](backup-restore.md)
