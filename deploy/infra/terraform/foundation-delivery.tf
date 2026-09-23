@@ -140,7 +140,7 @@ data "aws_iam_policy_document" "foundation_build" {
 
   statement {
     sid       = "UseOnlyApprovedGitHubConnection"
-    actions   = ["codeconnections:GetConnection", "codeconnections:UseConnection", "codestar-connections:GetConnection", "codestar-connections:UseConnection"]
+    actions   = ["codeconnections:GetConnection", "codeconnections:PassConnection", "codeconnections:UseConnection", "codestar-connections:GetConnection", "codestar-connections:PassConnection", "codestar-connections:UseConnection"]
     resources = [var.github_connection_arn]
   }
 }
