@@ -38,8 +38,9 @@ fi
 
 command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
 # Ubuntu images commonly install the SSM agent through Snap. The service is
-# usable in that layout even though its executable is not on PATH.
-if ! command -v amazon-ssm-agent >/dev/null 2>&1 && [[ ! -x /snap/bin/amazon-ssm-agent ]]; then
+# usable in that layout even though its executable is not on PATH or /snap/bin.
+if ! command -v amazon-ssm-agent >/dev/null 2>&1 \
+  && ! systemctl cat snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1; then
   echo "approved AMI must include Amazon SSM Agent" >&2
   exit 1
 fi
