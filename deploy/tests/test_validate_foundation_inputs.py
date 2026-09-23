@@ -68,6 +68,7 @@ class FoundationInputTests(unittest.TestCase):
         self.assertTrue(output["manage_foundation_codebuild_role"])
         self.assertEqual(proposal["vpc_id"], "vpc-0123456789abcdef0")
         self.assertEqual(output["galas"]["gala-marseille"]["ssh_emergency_cidrs"], [])
+        self.assertTrue(output["galas"]["gala-marseille"]["associate_public_ip_address"])
 
     def test_preserves_existing_galas_in_the_proposed_state(self) -> None:
         catalog = {
