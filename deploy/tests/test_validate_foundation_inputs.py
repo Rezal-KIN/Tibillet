@@ -31,7 +31,7 @@ def environment(**overrides: str) -> dict[str, str]:
         "MANAGE_FOUNDATION_CODEBUILD_ROLE": "true",
         "TERRAFORM_STATE_BUCKET": "tibillet-gala-paris-318629836660-tfstate",
         "TERRAFORM_STATE_KEY": "infra/production.tfstate",
-        "SSH_EMERGENCY_CIDRS": "203.0.113.10/32",
+        "SSH_EMERGENCY_CIDRS": "disabled",
     }
     values.update(overrides)
     return {**os.environ, **values}
@@ -67,6 +67,7 @@ class FoundationInputTests(unittest.TestCase):
         self.assertTrue(output["enable_foundation_pipeline"])
         self.assertTrue(output["manage_foundation_codebuild_role"])
         self.assertEqual(proposal["vpc_id"], "vpc-0123456789abcdef0")
+        self.assertEqual(output["galas"]["gala-marseille"]["ssh_emergency_cidrs"], [])
 
     def test_preserves_existing_galas_in_the_proposed_state(self) -> None:
         catalog = {

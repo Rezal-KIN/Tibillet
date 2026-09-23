@@ -333,8 +333,8 @@ resource "aws_codepipeline" "foundation" {
   }
   variable {
     name          = "SshEmergencyCidrs"
-    default_value = ""
-    description   = "Optional comma-separated emergency SSH CIDRs; never use 0.0.0.0/0."
+    default_value = "disabled"
+    description   = "Optional comma-separated emergency SSH CIDRs; use disabled when no SSH ingress is needed."
   }
 
   artifact_store {

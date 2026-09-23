@@ -36,7 +36,8 @@ saisir :
 
 - `GalaSlug`, `GalaDomain` ;
 - `VpcId`, `SubnetId`, `Ec2AmiId` ;
-- `InstanceType`, taille du volume et, si nécessaire, CIDR SSH d'urgence.
+- `InstanceType`, taille du volume et, si nécessaire, CIDR SSH d'urgence
+  (laisser `disabled` lorsqu'aucun accès SSH n'est nécessaire).
 
 La pipeline valide ces valeurs, fusionne le gala dans le catalogue, calcule le
 plan Terraform et s'arrête à l'approbation. L'approbateur lit
