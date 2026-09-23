@@ -54,6 +54,7 @@ gala_account_id = "318629836660"
 #     instance_type            = "t3.medium"
 #     root_volume_size_gib     = 40
 #     ssh_emergency_cidrs      = ["203.0.113.10/32"]
+#     associate_public_ip_address = false # new Galas use their EIP only
 #     create_instance          = false
 #     protect_from_destruction = true
 #   }

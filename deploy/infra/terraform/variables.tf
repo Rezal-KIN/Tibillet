@@ -272,13 +272,14 @@ variable "ec2_ami_id" {
 variable "galas" {
   description = "Independent Gala instances. A new gala has its own EC2, secret, S3 prefix, DB volumes, and platform generation."
   type = map(object({
-    platform                 = string
-    domain                   = string
-    instance_type            = optional(string, "t3.medium")
-    root_volume_size_gib     = optional(number, 40)
-    ssh_emergency_cidrs      = optional(list(string), [])
-    create_instance          = optional(bool, false)
-    protect_from_destruction = optional(bool, true)
+    platform                    = string
+    domain                      = string
+    instance_type               = optional(string, "t3.medium")
+    root_volume_size_gib        = optional(number, 40)
+    ssh_emergency_cidrs         = optional(list(string), [])
+    associate_public_ip_address = optional(bool, false)
+    create_instance             = optional(bool, false)
+    protect_from_destruction    = optional(bool, true)
   }))
   default = {}
 
