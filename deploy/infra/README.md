@@ -8,6 +8,8 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
 
 - **Accès** (SSO, élévation, portabilité multi-ordinateur) : `docs/aws-access.md`.
 - **Registre par gala** (statut, release déployée, rétention) : `docs/operations/gala-registry.md`.
+- **Guide de déploiement et de développement** :
+  `docs/operations/new-gala-deployment-and-development-workflow.md`.
 - **Terraform** (`infra/terraform/`) : source de vérité de l'infra AWS.
   - `organization.tf`, `identity-center.tf` : Organization et IAM Identity Center Gala.
   - `gala-instances.tf`, `modules/gala/` : une EC2/secret/préfixe S3 par gala, `for_each var.galas`.
