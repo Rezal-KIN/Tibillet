@@ -37,7 +37,12 @@ if ! command -v aws >/dev/null 2>&1; then
 fi
 
 command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
-command -v amazon-ssm-agent >/dev/null 2>&1 || { echo "approved AMI must include Amazon SSM Agent" >&2; exit 1; }
+# Ubuntu images commonly install the SSM agent through Snap. The service is
+# usable in that layout even though its executable is not on PATH.
+if ! command -v amazon-ssm-agent >/dev/null 2>&1 && [[ ! -x /snap/bin/amazon-ssm-agent ]]; then
+  echo "approved AMI must include Amazon SSM Agent" >&2
+  exit 1
+fi
 systemctl enable --now amazon-ssm-agent.service \
   || systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service
 systemctl enable --now docker
@@ -45,11 +50,11 @@ systemctl enable --now docker
 install -d -m 0755 /etc/tibillet-gala "$RUNTIME_LIBRARY" /var/lib/tibillet-gala
 install -d -m 0755 /opt/tibillet-gala
 if [[ ! -d "$REPOSITORY_ROOT/.git" ]]; then
-  git clone --depth 1 --branch "$REPOSITORY_REF" "$REPOSITORY_URL" "$REPOSITORY_ROOT"
-else
-  git -C "$REPOSITORY_ROOT" fetch --depth 1 origin "$REPOSITORY_REF"
-  git -C "$REPOSITORY_ROOT" checkout --detach FETCH_HEAD
+  git init "$REPOSITORY_ROOT"
+  git -C "$REPOSITORY_ROOT" remote add origin "$REPOSITORY_URL"
 fi
+git -C "$REPOSITORY_ROOT" fetch --depth 1 origin "$REPOSITORY_REF"
+git -C "$REPOSITORY_ROOT" checkout --detach FETCH_HEAD
 
 install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/backup-postgres.sh" "$RUNTIME_LIBRARY/backup-postgres.sh"
 install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/deploy-release-from-s3.sh" "$RUNTIME_LIBRARY/deploy-release-from-s3.sh"
