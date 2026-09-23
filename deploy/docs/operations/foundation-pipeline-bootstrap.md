@@ -11,16 +11,16 @@ fois un `terraform plan`, le révise, puis applique la configuration qui active 
 
 ```hcl
 enable_foundation_pipeline   = true
-foundation_codebuild_role_arn = "arn:aws:iam::318629836660:role/..."
+manage_foundation_codebuild_role = true
 terraform_state_bucket_name  = "..."
 ```
 
-Le rôle indiqué est un rôle CodeBuild élevé, approuvé séparément. Il doit être
-limité au compte Gala et pouvoir : lire/verrouiller l'état Terraform, lire et
-écrire `foundation-inputs/galas.json` dans le bucket de sauvegardes, écrire les
+Terraform crée alors un rôle CodeBuild dédié, limité au compte Gala, aux
+ressources `tibillet-gala-paris` et à Paris. Un ARN de rôle approuvé peut aussi
+être fourni à la place. Dans les deux cas, il doit pouvoir lire/verrouiller
+l'état Terraform, lire et écrire `foundation-inputs/galas.json`, écrire les
 artefacts/logs, utiliser la connexion GitHub approuvée et effectuer les actions
-Terraform explicitement autorisées. Il ne reçoit pas `GetSecretValue` sur les
-secrets runtime.
+Terraform nécessaires. Il ne reçoit pas `GetSecretValue` sur les secrets runtime.
 
 Avant la première exécution, le catalogue doit être créé dans le bucket de
 sauvegardes à la clé `foundation-inputs/galas.json`. Il contient la

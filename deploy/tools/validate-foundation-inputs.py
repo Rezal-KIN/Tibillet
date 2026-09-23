@@ -129,6 +129,9 @@ def main() -> None:
     foundation_role = value("FOUNDATION_CODEBUILD_ROLE_ARN")
     state_bucket = value("TERRAFORM_STATE_BUCKET")
     state_key = value("TERRAFORM_STATE_KEY")
+    manage_foundation_role = value("MANAGE_FOUNDATION_CODEBUILD_ROLE")
+    if manage_foundation_role not in {"true", "false"}:
+        fail("MANAGE_FOUNDATION_CODEBUILD_ROLE must be true or false")
     output = {
         "aws_region": REGION,
         "environment": "production",
@@ -139,6 +142,7 @@ def main() -> None:
         "enable_production_pipeline": True,
         "enable_foundation_pipeline": True,
         "foundation_codebuild_role_arn": foundation_role,
+        "manage_foundation_codebuild_role": manage_foundation_role == "true",
         "terraform_state_bucket_name": state_bucket,
         "terraform_state_key": state_key,
         "github_connection_arn": github_connection_arn,

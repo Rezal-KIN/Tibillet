@@ -28,6 +28,7 @@ def environment(**overrides: str) -> dict[str, str]:
         "GITHUB_CONNECTION_ARN": CONNECTION,
         "FOUNDATION_SOURCE_COMMIT": COMMIT,
         "FOUNDATION_CODEBUILD_ROLE_ARN": "arn:aws:iam::318629836660:role/tibillet-gala-foundation-codebuild",
+        "MANAGE_FOUNDATION_CODEBUILD_ROLE": "true",
         "TERRAFORM_STATE_BUCKET": "tibillet-gala-paris-318629836660-tfstate",
         "TERRAFORM_STATE_KEY": "infra/production.tfstate",
         "SSH_EMERGENCY_CIDRS": "203.0.113.10/32",
@@ -64,6 +65,7 @@ class FoundationInputTests(unittest.TestCase):
         self.assertEqual(set(output["galas"]), {"gala-marseille"})
         self.assertTrue(output["enable_production_pipeline"])
         self.assertTrue(output["enable_foundation_pipeline"])
+        self.assertTrue(output["manage_foundation_codebuild_role"])
         self.assertEqual(proposal["vpc_id"], "vpc-0123456789abcdef0")
 
     def test_preserves_existing_galas_in_the_proposed_state(self) -> None:
