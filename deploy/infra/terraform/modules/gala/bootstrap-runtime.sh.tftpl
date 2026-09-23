@@ -17,7 +17,24 @@ CONFIG_PATH="/etc/tibillet-gala/$${GALA_SLUG}.conf"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install --yes awscli ca-certificates curl git docker.io docker-compose-plugin python3
+apt-get install --yes ca-certificates curl docker-compose-v2 docker.io git python3 unzip
+
+# Ubuntu 24.04 does not publish awscli in the enabled APT repositories. Install
+# AWS CLI v2 from its official distribution; it is needed only by the runtime
+# scripts to read this instance's own secret and to authenticate to the Gala ECR.
+if ! command -v aws >/dev/null 2>&1; then
+  aws_cli_zip="$(mktemp)"
+  aws_cli_dir="$(mktemp -d)"
+  cleanup_aws_cli() { rm -f "$aws_cli_zip"; rm -rf "$aws_cli_dir"; }
+  trap cleanup_aws_cli EXIT
+  curl --fail --silent --show-error --location \
+    "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+    --output "$aws_cli_zip"
+  unzip -q "$aws_cli_zip" -d "$aws_cli_dir"
+  "$aws_cli_dir/aws/install" --update
+  trap - EXIT
+  cleanup_aws_cli
+fi
 
 command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
 command -v amazon-ssm-agent >/dev/null 2>&1 || { echo "approved AMI must include Amazon SSM Agent" >&2; exit 1; }
