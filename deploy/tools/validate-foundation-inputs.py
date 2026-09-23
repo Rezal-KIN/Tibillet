@@ -92,7 +92,10 @@ def main() -> None:
         fail("FOUNDATION_SOURCE_COMMIT must be a full 40-character Git SHA")
 
     cidrs = []
-    for raw_cidr in os.environ.get("SSH_EMERGENCY_CIDRS", "").split(","):
+    raw_cidrs = os.environ.get("SSH_EMERGENCY_CIDRS", "disabled").strip()
+    if raw_cidrs.lower() == "disabled":
+        raw_cidrs = ""
+    for raw_cidr in raw_cidrs.split(","):
         cidr = raw_cidr.strip()
         if not cidr:
             continue
