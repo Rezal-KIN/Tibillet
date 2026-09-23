@@ -3,6 +3,137 @@
 # administrator, rather than silently granting Terraform-wide permissions to a
 # normal delivery role.
 
+resource "aws_iam_role" "foundation_build" {
+  count              = var.manage_foundation_codebuild_role ? 1 : 0
+  name               = "${local.name_prefix}-foundation-build"
+  assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role.json
+}
+
+data "aws_iam_policy_document" "foundation_build" {
+  count = var.manage_foundation_codebuild_role ? 1 : 0
+
+  statement {
+    sid       = "IdentifyTheGalaAccount"
+    actions   = ["sts:GetCallerIdentity"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "UseOnlyTerraformStateAndGalaBuckets"
+    actions = [
+      "s3:GetBucketVersioning", "s3:ListBucket", "s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:s3:::${var.terraform_state_bucket_name}",
+      "arn:${data.aws_partition.current.partition}:s3:::${var.terraform_state_bucket_name}/*",
+      aws_s3_bucket.backups[0].arn,
+      "${aws_s3_bucket.backups[0].arn}/*",
+      aws_s3_bucket.artifacts[0].arn,
+      "${aws_s3_bucket.artifacts[0].arn}/*",
+    ]
+  }
+
+  statement {
+    sid = "ManageOnlyGalaNamedStorage"
+    actions = [
+      "s3:CreateBucket", "s3:DeleteBucket", "s3:GetBucket*", "s3:PutBucket*", "s3:GetEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration", "s3:GetPublicAccessBlock", "s3:GetBucketTagging", "s3:PutBucketTagging",
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:s3:::${local.name_prefix}-*"]
+  }
+
+  statement {
+    sid       = "ListBucketsForTerraform"
+    actions   = ["s3:ListAllMyBuckets"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ManageParisGalaEc2"
+    actions = [
+      "ec2:AllocateAddress", "ec2:AssociateAddress", "ec2:AuthorizeSecurityGroupEgress", "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CreateSecurityGroup", "ec2:CreateTags", "ec2:DeleteSecurityGroup", "ec2:DeleteTags", "ec2:Describe*",
+      "ec2:DisassociateAddress", "ec2:ModifyInstanceAttribute", "ec2:ReleaseAddress", "ec2:RevokeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress", "ec2:RunInstances", "ec2:TerminateInstances",
+    ]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid = "ManageOnlyGalaIamRoles"
+    actions = [
+      "iam:AttachRolePolicy", "iam:CreateInstanceProfile", "iam:CreateRole", "iam:DeleteInstanceProfile", "iam:DeleteRole",
+      "iam:DeleteRolePolicy", "iam:DetachRolePolicy", "iam:GetInstanceProfile", "iam:GetRole", "iam:GetRolePolicy",
+      "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
+      "iam:UntagRole", "iam:UpdateAssumeRolePolicy",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${local.name_prefix}-*",
+    ]
+  }
+
+  statement {
+    sid       = "PassOnlyGalaServiceRoles"
+    actions   = ["iam:PassRole"]
+    resources = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*"]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ec2.amazonaws.com", "codebuild.amazonaws.com", "codepipeline.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid = "ManageOnlyGalaSecrets"
+    actions = [
+      "secretsmanager:CreateSecret", "secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret", "secretsmanager:ListSecretVersionIds",
+      "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:UpdateSecret",
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*"]
+  }
+
+  statement {
+    sid       = "ListSecretsForTerraform"
+    actions   = ["secretsmanager:ListSecrets"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ManageOnlyGalaDeliveryResources"
+    actions = [
+      "codebuild:*", "codepipeline:*", "ecr:*", "logs:*", "ssm:AddTagsToResource", "ssm:CreateDocument",
+      "ssm:DeleteDocument", "ssm:DescribeDocument", "ssm:GetDocument", "ssm:ListDocumentVersions", "ssm:ModifyDocumentPermission",
+      "ssm:UpdateDocument",
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:codebuild:${var.aws_region}:${data.aws_caller_identity.current.account_id}:project/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:codepipeline:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}/*",
+      "arn:${data.aws_partition.current.partition}:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:document/${local.name_prefix}-*",
+    ]
+  }
+
+  statement {
+    sid       = "UseOnlyApprovedGitHubConnection"
+    actions   = ["codeconnections:GetConnection", "codeconnections:UseConnection", "codestar-connections:GetConnection", "codestar-connections:UseConnection"]
+    resources = [var.github_connection_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "foundation_build" {
+  count  = var.manage_foundation_codebuild_role ? 1 : 0
+  name   = "${local.name_prefix}-foundation-build"
+  role   = aws_iam_role.foundation_build[0].id
+  policy = data.aws_iam_policy_document.foundation_build[0].json
+}
+
 resource "aws_cloudwatch_log_group" "foundation_plan" {
   count             = local.foundation_pipeline_enabled ? 1 : 0
   name              = "/aws/codebuild/${local.name_prefix}-foundation-plan"
@@ -19,7 +150,7 @@ resource "aws_codebuild_project" "foundation_plan" {
   count          = local.foundation_pipeline_enabled ? 1 : 0
   name           = "${local.name_prefix}-foundation-plan"
   description    = "Validates a new Gala request and produces an exact Terraform plan; no AWS resources are changed."
-  service_role   = var.foundation_codebuild_role_arn
+  service_role   = local.foundation_codebuild_role_arn
   build_timeout  = 45
   queued_timeout = 60
 
@@ -42,7 +173,11 @@ resource "aws_codebuild_project" "foundation_plan" {
     }
     environment_variable {
       name  = "FOUNDATION_CODEBUILD_ROLE_ARN"
-      value = var.foundation_codebuild_role_arn
+      value = local.foundation_codebuild_role_arn
+    }
+    environment_variable {
+      name  = "MANAGE_FOUNDATION_CODEBUILD_ROLE"
+      value = tostring(var.manage_foundation_codebuild_role)
     }
     environment_variable {
       name  = "FOUNDATION_CATALOG_URI"
@@ -68,8 +203,8 @@ resource "aws_codebuild_project" "foundation_plan" {
 
   lifecycle {
     precondition {
-      condition     = var.foundation_codebuild_role_arn != "" && var.terraform_state_bucket_name != ""
-      error_message = "foundation_codebuild_role_arn and terraform_state_bucket_name are required to create the infrastructure pipeline."
+      condition     = local.foundation_codebuild_role_arn != "" && var.terraform_state_bucket_name != ""
+      error_message = "A Foundation CodeBuild role (managed or supplied) and terraform_state_bucket_name are required to create the infrastructure pipeline."
     }
   }
 }
@@ -78,7 +213,7 @@ resource "aws_codebuild_project" "foundation_apply" {
   count          = local.foundation_pipeline_enabled ? 1 : 0
   name           = "${local.name_prefix}-foundation-apply"
   description    = "Applies only the reviewed Terraform plan from the preceding foundation stage."
-  service_role   = var.foundation_codebuild_role_arn
+  service_role   = local.foundation_codebuild_role_arn
   build_timeout  = 45
   queued_timeout = 60
 

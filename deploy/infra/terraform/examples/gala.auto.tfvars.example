@@ -28,7 +28,7 @@ gala_account_id = "318629836660"
 # gala after plan review. Its CodeBuild role is pre-approved separately because
 # it is the only automated role allowed to run Terraform apply.
 # enable_foundation_pipeline     = true
-# foundation_codebuild_role_arn  = "arn:aws:iam::318629836660:role/tibillet-gala-foundation-codebuild"
+# manage_foundation_codebuild_role = true
 # terraform_state_bucket_name    = "tibillet-gala-paris-318629836660-tfstate"
 # terraform_state_key            = "infra/production.tfstate"
 # enable_production_pipeline     = true # creates one manually started pipeline per live gala

@@ -6,7 +6,8 @@ locals {
     for slug, gala in var.galas : slug => gala
     if gala.create_instance
   } : {}
-  foundation_pipeline_enabled = local.delivery_resources_enabled && var.enable_foundation_pipeline
+  foundation_codebuild_role_arn = var.foundation_codebuild_role_arn != "" ? var.foundation_codebuild_role_arn : try(aws_iam_role.foundation_build[0].arn, "")
+  foundation_pipeline_enabled   = local.delivery_resources_enabled && var.enable_foundation_pipeline
 
   common_tags = {
     Project     = var.project_name

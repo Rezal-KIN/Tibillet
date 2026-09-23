@@ -95,7 +95,7 @@ variable "enable_foundation_pipeline" {
 }
 
 variable "foundation_codebuild_role_arn" {
-  description = "Pre-approved elevated CodeBuild role ARN for the infrastructure pipeline. It is deliberately external to this Terraform state."
+  description = "Optional pre-approved elevated CodeBuild role ARN for the infrastructure pipeline. When empty, set manage_foundation_codebuild_role=true to create the dedicated role in this state."
   type        = string
   default     = ""
 
@@ -103,6 +103,12 @@ variable "foundation_codebuild_role_arn" {
     condition     = var.foundation_codebuild_role_arn == "" || can(regex("^arn:aws:iam::318629836660:role/[A-Za-z0-9+=,.@_-]+$", var.foundation_codebuild_role_arn))
     error_message = "foundation_codebuild_role_arn must be an IAM role in the Gala account."
   }
+}
+
+variable "manage_foundation_codebuild_role" {
+  description = "Creates the dedicated, scoped CodeBuild role used only by the manually started Foundation pipeline."
+  type        = bool
+  default     = false
 }
 
 variable "terraform_state_bucket_name" {
