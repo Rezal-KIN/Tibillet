@@ -37,7 +37,7 @@ data "aws_iam_policy_document" "foundation_build" {
     sid = "ManageOnlyGalaNamedStorage"
     actions = [
       "s3:CreateBucket", "s3:DeleteBucket", "s3:GetBucket*", "s3:PutBucket*", "s3:GetEncryptionConfiguration",
-      "s3:GetAccelerateConfiguration", "s3:GetLifecycleConfiguration", "s3:GetPublicAccessBlock", "s3:GetBucketTagging", "s3:PutBucketTagging",
+      "s3:GetAccelerateConfiguration", "s3:GetLifecycleConfiguration", "s3:GetPublicAccessBlock", "s3:GetReplicationConfiguration", "s3:GetBucketTagging", "s3:PutBucketTagging",
     ]
     resources = ["arn:${data.aws_partition.current.partition}:s3:::${local.name_prefix}-*"]
   }
@@ -69,7 +69,7 @@ data "aws_iam_policy_document" "foundation_build" {
     actions = [
       "iam:AttachRolePolicy", "iam:CreateInstanceProfile", "iam:CreateRole", "iam:DeleteInstanceProfile", "iam:DeleteRole",
       "iam:DeleteRolePolicy", "iam:DetachRolePolicy", "iam:GetInstanceProfile", "iam:GetRole", "iam:GetRolePolicy",
-      "iam:ListRolePolicies", "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
+      "iam:ListAttachedRolePolicies", "iam:ListRolePolicies", "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
       "iam:UntagRole", "iam:UpdateAssumeRolePolicy",
     ]
     resources = [
