@@ -38,7 +38,8 @@ fi
 
 command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
 command -v amazon-ssm-agent >/dev/null 2>&1 || { echo "approved AMI must include Amazon SSM Agent" >&2; exit 1; }
-systemctl enable --now amazon-ssm-agent
+systemctl enable --now amazon-ssm-agent.service \
+  || systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service
 systemctl enable --now docker
 
 install -d -m 0755 /etc/tibillet-gala "$RUNTIME_LIBRARY" /var/lib/tibillet-gala
