@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "foundation_build" {
       "iam:AttachRolePolicy", "iam:CreateInstanceProfile", "iam:CreateRole", "iam:DeleteInstanceProfile", "iam:DeleteRole",
       "iam:DeleteRolePolicy", "iam:DetachRolePolicy", "iam:GetInstanceProfile", "iam:GetRole", "iam:GetRolePolicy",
       "iam:ListAttachedRolePolicies", "iam:ListRolePolicies", "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
-      "iam:UntagRole", "iam:UpdateAssumeRolePolicy",
+      "iam:TagInstanceProfile", "iam:UntagInstanceProfile", "iam:UntagRole", "iam:UpdateAssumeRolePolicy",
     ]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
