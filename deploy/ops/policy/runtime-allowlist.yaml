@@ -3,3 +3,5 @@ runtime_region: eu-west-3
 instances:
   - id: i-0801aa8a2273838aa
     name: tibillet-gala-paris-gala-am-aix
+  - id: i-0037b98572fccdff2
+    name: tibillet-gala-paris-gala-smoke
