@@ -37,7 +37,7 @@ data "aws_iam_policy_document" "foundation_build" {
     sid = "ManageOnlyGalaNamedStorage"
     actions = [
       "s3:CreateBucket", "s3:DeleteBucket", "s3:GetBucket*", "s3:PutBucket*", "s3:GetEncryptionConfiguration",
-      "s3:GetLifecycleConfiguration", "s3:GetPublicAccessBlock", "s3:GetBucketTagging", "s3:PutBucketTagging",
+      "s3:GetAccelerateConfiguration", "s3:GetLifecycleConfiguration", "s3:GetPublicAccessBlock", "s3:GetBucketTagging", "s3:PutBucketTagging",
     ]
     resources = ["arn:${data.aws_partition.current.partition}:s3:::${local.name_prefix}-*"]
   }
@@ -69,19 +69,26 @@ data "aws_iam_policy_document" "foundation_build" {
     actions = [
       "iam:AttachRolePolicy", "iam:CreateInstanceProfile", "iam:CreateRole", "iam:DeleteInstanceProfile", "iam:DeleteRole",
       "iam:DeleteRolePolicy", "iam:DetachRolePolicy", "iam:GetInstanceProfile", "iam:GetRole", "iam:GetRolePolicy",
-      "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
+      "iam:ListRolePolicies", "iam:PutRolePolicy", "iam:RemoveRoleFromInstanceProfile", "iam:AddRoleToInstanceProfile", "iam:TagRole",
       "iam:UntagRole", "iam:UpdateAssumeRolePolicy",
     ]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${local.name_prefix}-*",
+      # Gala EC2 roles deliberately omit the environment segment (for example
+      # tibillet-gala-paris-gala-smoke-ec2), but remain confined to this project.
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-gala-*-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-gala-*-*",
     ]
   }
 
   statement {
-    sid       = "PassOnlyGalaServiceRoles"
-    actions   = ["iam:PassRole"]
-    resources = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*"]
+    sid     = "PassOnlyGalaServiceRoles"
+    actions = ["iam:PassRole"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-gala-*-*",
+    ]
     condition {
       test     = "StringEquals"
       variable = "iam:PassedToService"
@@ -93,7 +100,9 @@ data "aws_iam_policy_document" "foundation_build" {
     sid = "ManageOnlyGalaSecrets"
     actions = [
       "secretsmanager:CreateSecret", "secretsmanager:DeleteSecret", "secretsmanager:DescribeSecret", "secretsmanager:ListSecretVersionIds",
-      "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:UpdateSecret",
+      # Terraform reads a secret resource policy while refreshing state. This
+      # deliberately excludes secretsmanager:GetSecretValue.
+      "secretsmanager:GetResourcePolicy", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:UpdateSecret",
     ]
     resources = ["arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*"]
   }
@@ -101,6 +110,15 @@ data "aws_iam_policy_document" "foundation_build" {
   statement {
     sid       = "ListSecretsForTerraform"
     actions   = ["secretsmanager:ListSecrets"]
+    resources = ["*"]
+  }
+
+  # DescribeLogGroups does not support a log-group resource ARN. It is a
+  # read-only discovery call Terraform makes before refreshing the two named
+  # Foundation log groups.
+  statement {
+    sid       = "DiscoverLogGroupsForTerraform"
+    actions   = ["logs:DescribeLogGroups"]
     resources = ["*"]
   }
 
