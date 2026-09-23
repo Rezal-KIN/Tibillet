@@ -6,6 +6,14 @@ phases:
   install:
     commands:
       - set -euo pipefail
+      # Keep the exact same verified Terraform version as the plan job: the
+      # saved plan file is deliberately passed unchanged through approval.
+      - export TERRAFORM_VERSION=1.10.5
+      - export TERRAFORM_SHA256=0566a24f5332098b15716ebc394be503f4094acba5ba529bf5eb0698ed5e2a90
+      - curl --fail --silent --show-error --location "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" --output /tmp/terraform.zip
+      - printf '%s  %s\n' "$TERRAFORM_SHA256" /tmp/terraform.zip | sha256sum --check --status
+      - unzip -q /tmp/terraform.zip -d /usr/local/bin
+      - rm /tmp/terraform.zip
       - terraform version
       - aws --version
   pre_build:
