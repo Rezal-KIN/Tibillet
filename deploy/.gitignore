@@ -107,6 +107,7 @@ venv.bak/
 **/*.key
 **/*.crt
 **/*secret*
+!tools/runtime/fetch-runtime-secret.sh
 
 # Runtime data
 Laboutik_*/

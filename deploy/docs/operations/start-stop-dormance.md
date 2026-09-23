@@ -12,6 +12,24 @@ validée a déjà été déployée. Le démarrage échoue volontairement sans
 `$(release_dir)/deployed-manifest.json` : il ne doit jamais choisir `latest` ni rebâtir du
 code local par défaut.
 
+## Secret runtime
+
+Avant le premier déploiement, un administrateur renseigne la valeur du secret créé par
+Terraform dans Secrets Manager. Sa valeur est un objet JSON avec exactement trois chaînes
+dotenv, une par application :
+
+```json
+{
+  "fedow_env": "KEY=value\\n",
+  "laboutik_env": "KEY=value\\n",
+  "lespass_env": "KEY=value\\n"
+}
+```
+
+Ces valeurs ne vont ni dans Git, ni dans Terraform, ni dans les variables CodeBuild.
+`fetch-runtime-secret.sh` les récupère uniquement depuis l'instance autorisée, écrit les
+trois fichiers avec le mode `0600`, et n'en affiche jamais le contenu.
+
 ## Démarrage au boot (automatique)
 
 `systemd/tibillet-gala-stacks.service`, instancié par slug (`tibillet-gala-stacks@<slug>`),
