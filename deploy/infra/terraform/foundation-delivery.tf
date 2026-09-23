@@ -436,7 +436,11 @@ resource "aws_codepipeline" "foundation" {
       input_artifacts = ["SourceOutput", "PlanOutput"]
 
       configuration = {
-        ProjectName = aws_codebuild_project.foundation_apply[0].name
+        # CodeBuild needs an explicit primary source when it receives the
+        # repository clone and the reviewed plan as two separate artifacts.
+        # The plan remains available as CODEBUILD_SRC_DIR_PlanOutput.
+        ProjectName   = aws_codebuild_project.foundation_apply[0].name
+        PrimarySource = "SourceOutput"
       }
     }
   }
