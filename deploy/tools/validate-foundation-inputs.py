@@ -125,7 +125,10 @@ def main() -> None:
         "instance_type": instance_type,
         "root_volume_size_gib": root_volume_size_gib,
         "ssh_emergency_cidrs": cidrs,
-        "associate_public_ip_address": False,
+        # A Gala is served publicly through its dedicated EIP. Keeping this
+        # true also matches the public subnet's initial EC2 configuration, so
+        # a failed run can be resumed without proposing an instance replacement.
+        "associate_public_ip_address": True,
         "create_instance": True,
         "protect_from_destruction": True,
     }
