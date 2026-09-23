@@ -188,9 +188,9 @@ variable "runtime_repository_ref" {
 }
 
 variable "production_source_branch" {
-  description = "Branch or tag containing reviewed immutable production release manifests."
+  description = "Branch containing reviewed immutable production release manifests. The normal integration branch is main."
   type        = string
-  default     = "production"
+  default     = "main"
 }
 
 variable "test_source_branch" {
