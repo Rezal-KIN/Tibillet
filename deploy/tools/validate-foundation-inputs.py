@@ -68,6 +68,13 @@ def main() -> None:
     if not AMI.fullmatch(ec2_ami_id):
         fail("EC2_AMI_ID is invalid")
 
+    github_connection_arn = value("GITHUB_CONNECTION_ARN")
+    if not re.fullmatch(
+        r"^arn:aws:codeconnections:eu-west-3:318629836660:connection/[0-9a-f-]{36}$",
+        github_connection_arn,
+    ):
+        fail("GITHUB_CONNECTION_ARN must be an approved Paris CodeConnections ARN")
+
     source_commit = value("FOUNDATION_SOURCE_COMMIT")
     if not COMMIT.fullmatch(source_commit):
         fail("FOUNDATION_SOURCE_COMMIT must be a full 40-character Git SHA")
@@ -92,6 +99,7 @@ def main() -> None:
         "enable_additive_resources": True,
         "enable_backup_storage": True,
         "enable_delivery_platform": True,
+        "github_connection_arn": github_connection_arn,
         "github_owner": "Rezal-KIN",
         "github_repository": "Tibillet",
         "runtime_repository_ref": source_commit,

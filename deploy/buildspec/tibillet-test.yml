@@ -37,7 +37,7 @@ phases:
         # recorded digest instead of creating a different release.
         digest="$(aws ecr describe-images --repository-name "$LESPASS_ECR_REPOSITORY" --image-ids imageTag="$tag" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)"
         if [ -z "$digest" ] || [ "$digest" = "None" ]; then
-          docker build --pull=false --tag "$image_uri" --file dockerfile .
+          docker build --pull=true --tag "$image_uri" --file dockerfile .
           docker push "$image_uri"
           digest="$(aws ecr describe-images --repository-name "$LESPASS_ECR_REPOSITORY" --image-ids imageTag="$tag" --query 'imageDetails[0].imageDigest' --output text)"
         fi

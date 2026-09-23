@@ -1,4 +1,4 @@
-FROM python:3.11-bullseye
+FROM python:3.11-bookworm
 
 RUN mkdir -p /usr/share/man/man1 /usr/share/man/man7 \
     && apt-get update \
