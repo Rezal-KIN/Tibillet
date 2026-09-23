@@ -203,8 +203,10 @@ resource "aws_instance" "runtime" {
     repository_url     = var.repository_url
     runtime_secret_arn = aws_secretsmanager_secret.runtime.arn
   })
-  user_data_replace_on_change = true
-  associate_public_ip_address = false
+  # Cloud-init is first-boot only. Runtime upgrades are rerun through the
+  # versioned SSM installer, never by replacing an already managed EC2.
+  user_data_replace_on_change = false
+  associate_public_ip_address = var.associate_public_ip_address
   monitoring                  = false
   disable_api_termination     = var.protect_from_destruction
 
@@ -229,6 +231,11 @@ resource "aws_instance" "runtime" {
   })
 
   lifecycle {
+    # Existing hosts are upgraded through the idempotent SSM installer. Do not
+    # turn a bootstrap-template revision into an EC2 replacement or a surprise
+    # user-data mutation on a live Gala.
+    ignore_changes = [user_data]
+
     precondition {
       condition     = var.ami_id != "" && var.subnet_id != "" && var.vpc_id != ""
       error_message = "ami_id, subnet_id, and vpc_id must be explicit before creating a Gala EC2 instance."

@@ -122,6 +122,7 @@ def main() -> None:
         "instance_type": instance_type,
         "root_volume_size_gib": root_volume_size_gib,
         "ssh_emergency_cidrs": cidrs,
+        "associate_public_ip_address": False,
         "create_instance": True,
         "protect_from_destruction": True,
     }
