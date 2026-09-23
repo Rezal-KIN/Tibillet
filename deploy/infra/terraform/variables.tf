@@ -123,13 +123,20 @@ variable "enable_delivery_platform" {
 }
 
 variable "github_connection_arn" {
-  description = "Approved existing GitHub CodeConnections ARN in Paris, used by all Gala pipelines."
+  description = "Approved existing GitHub CodeConnections ARN in Paris, used by all Gala pipelines. Required when enable_delivery_platform is true."
   type        = string
   default     = ""
 
   validation {
     condition     = var.github_connection_arn == "" || can(regex("^arn:aws:codeconnections:eu-west-3:[0-9]{12}:connection/[0-9a-f-]{36}$", var.github_connection_arn))
     error_message = "github_connection_arn must be a Paris CodeConnections ARN."
+  }
+}
+
+check "delivery_connection_is_explicit" {
+  assert {
+    condition     = !var.enable_delivery_platform || var.github_connection_arn != ""
+    error_message = "github_connection_arn must be set to an approved Paris GitHub connection before enabling the delivery platform."
   }
 }
 

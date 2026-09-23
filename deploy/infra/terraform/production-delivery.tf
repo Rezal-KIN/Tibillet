@@ -158,7 +158,7 @@ data "aws_iam_policy_document" "production_pipeline" {
   statement {
     sid       = "UseOnlyGalaGitHubConnection"
     actions   = ["codeconnections:UseConnection", "codestar-connections:UseConnection"]
-    resources = [aws_codestarconnections_connection.github[0].arn]
+    resources = [var.github_connection_arn]
   }
 
   statement {
@@ -211,7 +211,7 @@ resource "aws_codepipeline" "production" {
       output_artifacts = ["SourceOutput"]
 
       configuration = {
-        ConnectionArn        = aws_codestarconnections_connection.github[0].arn
+        ConnectionArn        = var.github_connection_arn
         FullRepositoryId     = "${var.github_owner}/${var.github_repository}"
         BranchName           = var.production_source_branch
         DetectChanges        = "false"

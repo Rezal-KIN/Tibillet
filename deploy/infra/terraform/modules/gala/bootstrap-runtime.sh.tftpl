@@ -17,7 +17,7 @@ CONFIG_PATH="/etc/tibillet-gala/$${GALA_SLUG}.conf"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install --yes ca-certificates curl git docker.io docker-compose-plugin python3
+apt-get install --yes awscli ca-certificates curl git docker.io docker-compose-plugin python3
 
 command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
 command -v amazon-ssm-agent >/dev/null 2>&1 || { echo "approved AMI must include Amazon SSM Agent" >&2; exit 1; }

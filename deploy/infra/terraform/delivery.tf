@@ -1,10 +1,8 @@
-# Delivery resources are opt-in. They cannot exist until a named human has
-# approved the GitHub CodeStar connection in the independent Gala account.
-resource "aws_codestarconnections_connection" "github" {
-  count         = local.delivery_resources_enabled ? 1 : 0
-  name          = "${local.name_prefix}-github"
-  provider_type = "GitHub"
-}
+# Delivery resources are opt-in and use a pre-approved, regional GitHub
+# connection.  Creating a connection in Terraform only creates it in PENDING
+# state; its console approval would be a separate, easy-to-miss action.  Keep
+# the connection lifecycle outside this state and require its approved ARN as
+# an explicit foundation input instead.
 
 resource "aws_ecr_repository" "lespass" {
   count                = local.delivery_resources_enabled ? 1 : 0
@@ -123,7 +121,7 @@ data "aws_iam_policy_document" "test_build" {
       "codeconnections:GetConnectionToken",
       "codeconnections:UseConnection",
     ]
-    resources = [aws_codestarconnections_connection.github[0].arn]
+    resources = [var.github_connection_arn]
   }
 }
 
@@ -197,7 +195,7 @@ data "aws_iam_policy_document" "test_pipeline" {
   statement {
     sid       = "UseOnlyGalaGitHubConnection"
     actions   = ["codeconnections:UseConnection", "codestar-connections:UseConnection"]
-    resources = [aws_codestarconnections_connection.github[0].arn]
+    resources = [var.github_connection_arn]
   }
 
   statement {
@@ -269,7 +267,7 @@ resource "aws_codepipeline" "test" {
       output_artifacts = ["SourceOutput"]
 
       configuration = {
-        ConnectionArn        = aws_codestarconnections_connection.github[0].arn
+        ConnectionArn        = var.github_connection_arn
         FullRepositoryId     = "${var.application_github_owner}/${var.application_github_repository}"
         BranchName           = var.test_source_branch
         DetectChanges        = "false"
