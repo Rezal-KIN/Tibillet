@@ -1,11 +1,15 @@
 version: 0.2
 
+# The pipeline supplies only non-secret Gala metadata. The persistent catalog
+# retains every existing Gala so a new request can never make Terraform forget
+# an older one. It must be seeded once during the manual pipeline bootstrap.
 phases:
   install:
     commands:
       - set -euo pipefail
       - terraform version
       - python3 --version
+      - aws --version
   pre_build:
     commands:
       - set -euo pipefail
@@ -13,16 +17,20 @@ phases:
       - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
       - export FOUNDATION_SOURCE_COMMIT="$(git rev-parse HEAD)"
       - export FOUNDATION_TFVARS="$CODEBUILD_SRC_DIR/foundation.auto.tfvars.json"
-      - python3 deploy/tools/validate-foundation-inputs.py "$FOUNDATION_TFVARS"
-      - terraform -chdir=deploy/infra/terraform init -backend=false -input=false
+      - export FOUNDATION_CATALOG="$CODEBUILD_SRC_DIR/foundation-gala-catalog.json"
+      - export FOUNDATION_CATALOG_PROPOSAL="$CODEBUILD_SRC_DIR/foundation-gala-catalog-proposal.json"
+      - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_URI" "$FOUNDATION_CATALOG"
+      - python3 deploy/tools/validate-foundation-inputs.py "$FOUNDATION_TFVARS" --catalog "$FOUNDATION_CATALOG" --catalog-output "$FOUNDATION_CATALOG_PROPOSAL"
+      - terraform -chdir=deploy/infra/terraform init -reconfigure -input=false -backend-config="bucket=$TERRAFORM_STATE_BUCKET" -backend-config="key=$TERRAFORM_STATE_KEY" -backend-config="region=$AWS_DEFAULT_REGION"
       - terraform -chdir=deploy/infra/terraform validate
   build:
     commands:
       - set -euo pipefail
-      - terraform -chdir=deploy/infra/terraform plan -input=false -lock=false -out="$CODEBUILD_SRC_DIR/foundation.tfplan" -var-file="$FOUNDATION_TFVARS"
+      - terraform -chdir=deploy/infra/terraform plan -input=false -lock-timeout=5m -out="$CODEBUILD_SRC_DIR/foundation.tfplan" -var-file="$FOUNDATION_TFVARS"
       - terraform -chdir=deploy/infra/terraform show -no-color "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.txt"
 artifacts:
   files:
     - foundation.auto.tfvars.json
+    - foundation-gala-catalog-proposal.json
     - foundation.tfplan
     - foundation-plan.txt

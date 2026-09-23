@@ -1,15 +1,24 @@
 version: 0.2
 
+# PlanOutput is a second CodePipeline input artifact. Terraform applies the
+# exact reviewed binary plan, then records the matching desired Gala catalog.
 phases:
   install:
     commands:
       - set -euo pipefail
       - terraform version
+      - aws --version
   pre_build:
     commands:
       - set -euo pipefail
-      - test -f foundation.tfplan
+      - test -n "${CODEBUILD_SRC_DIR_PlanOutput:-}"
+      - export FOUNDATION_PLAN="$CODEBUILD_SRC_DIR_PlanOutput/foundation.tfplan"
+      - export FOUNDATION_CATALOG_PROPOSAL="$CODEBUILD_SRC_DIR_PlanOutput/foundation-gala-catalog-proposal.json"
+      - test -f "$FOUNDATION_PLAN"
+      - test -f "$FOUNDATION_CATALOG_PROPOSAL"
+      - terraform -chdir=deploy/infra/terraform init -reconfigure -input=false -backend-config="bucket=$TERRAFORM_STATE_BUCKET" -backend-config="key=$TERRAFORM_STATE_KEY" -backend-config="region=$AWS_DEFAULT_REGION"
   build:
     commands:
       - set -euo pipefail
-      - terraform -chdir=deploy/infra/terraform apply -input=false -lock=true foundation.tfplan
+      - terraform -chdir=deploy/infra/terraform apply -input=false "$FOUNDATION_PLAN"
+      - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_PROPOSAL" "$FOUNDATION_CATALOG_URI"

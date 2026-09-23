@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Validate non-secret CodeBuild inputs for a Paris Gala foundation."""
+"""Validate non-secret CodePipeline inputs and extend the Gala catalog safely."""
 from __future__ import annotations
 
+import argparse
 import ipaddress
 import json
 import os
@@ -18,6 +19,7 @@ VPC = re.compile(r"^vpc-[0-9a-f]{8,17}$")
 SUBNET = re.compile(r"^subnet-[0-9a-f]{8,17}$")
 AMI = re.compile(r"^ami-[0-9a-f]{8,17}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
+CONNECTION = re.compile(r"^arn:aws:codeconnections:eu-west-3:318629836660:connection/[0-9a-f-]{36}$")
 
 
 def fail(message: str) -> None:
@@ -32,9 +34,24 @@ def value(name: str) -> str:
     return result
 
 
+def read_catalog(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {"version": 1, "galas": {}}
+    try:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        fail(f"foundation catalog is not valid JSON: {error.msg}")
+    if not isinstance(catalog, dict) or catalog.get("version") != 1 or not isinstance(catalog.get("galas"), dict):
+        fail("foundation catalog must contain version=1 and a galas object")
+    return catalog
+
+
 def main() -> None:
-    if len(sys.argv) != 2:
-        fail("usage: validate-foundation-inputs.py OUTPUT_TFVARS.json")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output_tfvars", type=Path)
+    parser.add_argument("--catalog", type=Path, required=True)
+    parser.add_argument("--catalog-output", type=Path, required=True)
+    args = parser.parse_args()
 
     if value("AWS_DEFAULT_REGION") != REGION:
         fail(f"AWS_DEFAULT_REGION must be {REGION}")
@@ -58,9 +75,7 @@ def main() -> None:
     if not 40 <= root_volume_size_gib <= 512:
         fail("ROOT_VOLUME_SIZE_GIB must be between 40 and 512")
 
-    vpc_id = value("VPC_ID")
-    subnet_id = value("SUBNET_ID")
-    ec2_ami_id = value("EC2_AMI_ID")
+    vpc_id, subnet_id, ec2_ami_id = value("VPC_ID"), value("SUBNET_ID"), value("EC2_AMI_ID")
     if not VPC.fullmatch(vpc_id):
         fail("VPC_ID is invalid")
     if not SUBNET.fullmatch(subnet_id):
@@ -69,10 +84,7 @@ def main() -> None:
         fail("EC2_AMI_ID is invalid")
 
     github_connection_arn = value("GITHUB_CONNECTION_ARN")
-    if not re.fullmatch(
-        r"^arn:aws:codeconnections:eu-west-3:318629836660:connection/[0-9a-f-]{36}$",
-        github_connection_arn,
-    ):
+    if not CONNECTION.fullmatch(github_connection_arn):
         fail("GITHUB_CONNECTION_ARN must be an approved Paris CodeConnections ARN")
 
     source_commit = value("FOUNDATION_SOURCE_COMMIT")
@@ -92,6 +104,31 @@ def main() -> None:
             fail("SSH_EMERGENCY_CIDRS must not allow the whole Internet")
         cidrs.append(str(network))
 
+    catalog = read_catalog(args.catalog)
+    galas = catalog["galas"]
+    assert isinstance(galas, dict)
+    if slug in galas:
+        fail(f"GALA_SLUG {slug} already exists in the foundation catalog; use a reviewed Terraform change for an existing Gala")
+
+    for field, provided in (("vpc_id", vpc_id), ("subnet_id", subnet_id), ("ec2_ami_id", ec2_ami_id)):
+        existing = catalog.get(field)
+        if existing is not None and existing != provided:
+            fail(f"{field} must match the existing foundation catalog")
+        catalog[field] = provided
+
+    galas[slug] = {
+        "platform": "v1",
+        "domain": domain,
+        "instance_type": instance_type,
+        "root_volume_size_gib": root_volume_size_gib,
+        "ssh_emergency_cidrs": cidrs,
+        "create_instance": True,
+        "protect_from_destruction": True,
+    }
+
+    foundation_role = value("FOUNDATION_CODEBUILD_ROLE_ARN")
+    state_bucket = value("TERRAFORM_STATE_BUCKET")
+    state_key = value("TERRAFORM_STATE_KEY")
     output = {
         "aws_region": REGION,
         "environment": "production",
@@ -99,27 +136,23 @@ def main() -> None:
         "enable_additive_resources": True,
         "enable_backup_storage": True,
         "enable_delivery_platform": True,
+        "enable_production_pipeline": True,
+        "enable_foundation_pipeline": True,
+        "foundation_codebuild_role_arn": foundation_role,
+        "terraform_state_bucket_name": state_bucket,
+        "terraform_state_key": state_key,
         "github_connection_arn": github_connection_arn,
         "github_owner": "Rezal-KIN",
         "github_repository": "Tibillet",
         "runtime_repository_ref": source_commit,
-        "vpc_id": vpc_id,
-        "subnet_id": subnet_id,
-        "ec2_ami_id": ec2_ami_id,
-        "galas": {
-            slug: {
-                "platform": "v1",
-                "domain": domain,
-                "instance_type": instance_type,
-                "root_volume_size_gib": root_volume_size_gib,
-                "ssh_emergency_cidrs": cidrs,
-                "create_instance": True,
-                "protect_from_destruction": True,
-            }
-        },
+        "vpc_id": catalog["vpc_id"],
+        "subnet_id": catalog["subnet_id"],
+        "ec2_ami_id": catalog["ec2_ami_id"],
+        "galas": galas,
     }
-    Path(sys.argv[1]).write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
-    print(f"Foundation inputs valid: gala={slug} domain={domain} region={REGION}")
+    args.catalog_output.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.output_tfvars.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"Foundation inputs valid: new_gala={slug} total_galas={len(galas)} region={REGION}")
 
 
 if __name__ == "__main__":
