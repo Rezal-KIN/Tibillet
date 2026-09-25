@@ -67,7 +67,9 @@ nouvelle EC2 à chaque push.
 6. La pipeline initialise une seule fois les clés applicatives et mots de
    passe propres au gala dans Secrets Manager. Elle doit les conserver lors
    d'un nouvel essai ; notamment, aucune clé Fernet n'est régénérée pour une
-   base déjà utilisée.
+   base déjà utilisée. Elle vérifie ensuite via SSM que cloud-init, le contrat
+   runtime et Docker fonctionnent sur l'EC2 exacte : un simple `terraform
+   apply` réussi ne suffit pas à déclarer Foundation réussie.
 7. La création ne rend pas le gala public et ne déploie pas automatiquement
    la dernière image sur son EC2.
 

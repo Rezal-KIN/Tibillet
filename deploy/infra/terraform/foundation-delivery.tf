@@ -129,6 +129,21 @@ data "aws_iam_policy_document" "foundation_build" {
   }
 
   statement {
+    sid     = "CheckGalaBootstrapCommand"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}::document/AWS-RunShellScript",
+      "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+    ]
+  }
+
+  statement {
+    sid       = "ReadGalaBootstrapCommandStatus"
+    actions   = ["ssm:DescribeInstanceInformation", "ssm:GetCommandInvocation"]
+    resources = ["*"]
+  }
+
+  statement {
     sid     = "InitializeOnlyGeneratedGalaSecrets"
     actions = ["secretsmanager:PutSecretValue"]
     resources = [
@@ -327,7 +342,7 @@ resource "aws_codebuild_project" "foundation_apply" {
 resource "aws_codebuild_project" "foundation_finalize" {
   count          = local.foundation_pipeline_enabled ? 1 : 0
   name           = "${local.name_prefix}-foundation-finalize"
-  description    = "Initializes stable per-Gala credentials once and records the approved Gala catalog."
+  description    = "Initializes stable credentials, verifies EC2 bootstrap through SSM, and records the Gala catalog."
   service_role   = local.foundation_codebuild_role_arn
   build_timeout  = 15
   queued_timeout = 60
@@ -499,6 +514,9 @@ resource "aws_codepipeline" "foundation" {
       configuration = {
         ProjectName   = aws_codebuild_project.foundation_finalize[0].name
         PrimarySource = "SourceOutput"
+        EnvironmentVariables = jsonencode([
+          { name = "GALA_NAME", value = "#{variables.GalaName}", type = "PLAINTEXT" },
+        ])
       }
     }
   }
