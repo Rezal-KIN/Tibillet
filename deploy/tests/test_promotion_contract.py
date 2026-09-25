@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
+import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +28,48 @@ preparer = load("reconcile_runtime", ROOT / "tools/runtime/reconcile-runtime.py"
 
 
 class PromotionContractTests(unittest.TestCase):
+    def test_validation_exports_exactly_two_lines_for_codebuild(self) -> None:
+        commit = "a" * 40
+        tested = {
+            "release_id": "smoke-" + commit,
+            "gala_slug": "gala-smoke",
+            "platform": "v1",
+            "application_repository": "Rezal-KIN/Tibillet",
+            "fork_commit": commit,
+            "tibillet_upstream_commit": commit,
+            "schema_generation": "v1",
+            **{
+                key: "image@sha256:" + char * 64
+                for key, char in (("lespass_image", "a"), ("fedow_image", "b"),
+                                  ("laboutik_image", "c"), ("traefik_image", "d"))
+            },
+        }
+        production = {**tested, "release_id": "aix-v1", "gala_slug": "gala-am-aix"}
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "release.json"
+            output = Path(directory) / "validated.json"
+            manifest.write_text(json.dumps(production), encoding="utf-8")
+
+            def fake_run(command, **kwargs):
+                if command[0] == "aws":
+                    Path(command[5]).write_text(json.dumps(tested), encoding="utf-8")
+                else:
+                    self.assertIs(kwargs["stdout"], promotion.subprocess.DEVNULL)
+
+            stdout = io.StringIO()
+            argv = ["validate-promotion.py", str(manifest), "--gala", "gala-am-aix",
+                    "--bucket", "test-bucket", "--output", str(output)]
+            with patch.object(sys, "argv", argv), \
+                 patch.object(promotion.subprocess, "run", side_effect=fake_run), \
+                 patch.object(promotion.subprocess, "check_output", return_value=commit + "\n"), \
+                 redirect_stdout(stdout):
+                promotion.main()
+            lines = stdout.getvalue().splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertTrue(lines[0].startswith("manifest_git="))
+            self.assertTrue(lines[1].startswith("MANIFEST_SHA256="))
+            self.assertEqual(output.read_bytes(), manifest.read_bytes())
+
     def test_smoke_manifest_uses_the_exact_commit_and_pinned_stack(self) -> None:
         commit = "a" * 40
         candidate = {
