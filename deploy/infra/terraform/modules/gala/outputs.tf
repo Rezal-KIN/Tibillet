@@ -13,6 +13,11 @@ output "primary_eni_id" {
   description = "Primary network interface eligible for the reviewed shared-EIP switch."
 }
 
+output "runtime_security_group_id" {
+  value       = aws_security_group.runtime.id
+  description = "Gala-owned security group required when the reviewed switch changes ENI groups."
+}
+
 output "backup_prefix" {
   value = local.backup_prefix
 }
