@@ -25,7 +25,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         f'aws_iam_role_policy.production_validate["{slug}"]',
         f'aws_codebuild_project.production_validate["{slug}"]',
     }
-    allowed_updates = re.compile(r'^aws_iam_role_policy\.active_switch_build\["(plan|apply)"\]$')
+    allowed_updates = re.compile(
+        r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
+    )
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
@@ -35,6 +37,8 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
             raise ValueError("malformed Terraform resource change")
         address = item["address"]
         actions = item.get("change", {}).get("actions")
+        if item.get("mode") == "data" and actions in (["read"], ["no-op"]):
+            continue
         if actions == ["no-op"]:
             continue
         if actions == ["create"] and (
@@ -43,8 +47,18 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
             changed.append(f"create {address}")
             continue
         if actions == ["update"] and allowed_updates.fullmatch(address):
-            changed.append(f"update {address}")
-            continue
+            change = item["change"]
+            before = change.get("before")
+            after = change.get("after")
+            unknown = change.get("after_unknown")
+            if (
+                isinstance(before, dict) and isinstance(after, dict)
+                and unknown == {"policy": True}
+                and {k: v for k, v in before.items() if k != "policy"}
+                == {k: v for k, v in after.items() if k != "policy"}
+            ):
+                changed.append(f"refresh-policy {address}")
+                continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
 
