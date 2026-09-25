@@ -18,4 +18,8 @@ phases:
     commands:
       - set -euo pipefail
       - python3 deploy/tools/initialize-gala-credentials.py "$FOUNDATION_CATALOG_PROPOSAL" --project-name "$GALA_PROJECT_NAME"
+      - |
+        set -euo pipefail
+        slug="$(python3 -c 'import importlib.util,os; s=importlib.util.spec_from_file_location("v", "deploy/tools/validate-foundation-inputs.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.gala_slug(os.environ["GALA_NAME"]))')"
+        python3 deploy/tools/verify-gala-bootstrap.py "$FOUNDATION_CATALOG_PROPOSAL" --slug "$slug" --project-name "$GALA_PROJECT_NAME"
       - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_PROPOSAL" "$FOUNDATION_CATALOG_URI"
