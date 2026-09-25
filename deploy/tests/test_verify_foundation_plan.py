@@ -21,9 +21,13 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 class FoundationPlanTests(unittest.TestCase):
     def test_accepts_only_requested_gala_and_switch_policy_update(self) -> None:
         plan = {"resource_changes": [
+            {"mode": "data", **change('data.aws_iam_policy_document.active_switch_build["apply"]', ["read"])},
             change('module.gala["gala-validation"].aws_instance.runtime[0]', ["create"]),
             change('aws_codepipeline.production["gala-validation"]', ["create"]),
-            change('aws_iam_role_policy.active_switch_build["apply"]', ["update"]),
+            {"address": 'aws_iam_role_policy.active_switch_build["apply"]', "change": {
+                "actions": ["update"], "before": {"id": "same", "policy": "old"},
+                "after": {"id": "same"}, "after_unknown": {"policy": True},
+            }},
             change('module.gala["gala-smoke"].aws_instance.runtime[0]', ["no-op"]),
         ]}
         self.assertEqual(len(module.verify(plan, "gala-validation")), 3)
