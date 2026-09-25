@@ -104,7 +104,34 @@ data "aws_iam_policy_document" "foundation_build" {
       # deliberately excludes secretsmanager:GetSecretValue.
       "secretsmanager:GetResourcePolicy", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:UpdateSecret",
     ]
-    resources = ["arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*",
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/shared/integrations-*",
+    ]
+  }
+
+  statement {
+    sid = "ManageOnlyActiveGalaMarker"
+    actions = [
+      "ssm:AddTagsToResource", "ssm:DeleteParameter", "ssm:GetParameter",
+      "ssm:GetParameterHistory", "ssm:ListTagsForResource", "ssm:PutParameter",
+      "ssm:RemoveTagsFromResource",
+    ]
+    resources = ["arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/active-gala"]
+  }
+
+  statement {
+    sid     = "InitializeOnlyGeneratedGalaSecrets"
+    actions = ["secretsmanager:PutSecretValue"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*/generated-*",
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/Project"
+      values   = [var.project_name]
+    }
   }
 
   statement {
@@ -164,6 +191,12 @@ resource "aws_cloudwatch_log_group" "foundation_apply" {
   retention_in_days = var.codebuild_log_retention_days
 }
 
+resource "aws_cloudwatch_log_group" "foundation_finalize" {
+  count             = local.foundation_pipeline_enabled ? 1 : 0
+  name              = "/aws/codebuild/${local.name_prefix}-foundation-finalize"
+  retention_in_days = var.codebuild_log_retention_days
+}
+
 resource "aws_codebuild_project" "foundation_plan" {
   count          = local.foundation_pipeline_enabled ? 1 : 0
   name           = "${local.name_prefix}-foundation-plan"
@@ -204,6 +237,18 @@ resource "aws_codebuild_project" "foundation_plan" {
     environment_variable {
       name  = "GITHUB_CONNECTION_ARN"
       value = var.github_connection_arn
+    }
+    environment_variable {
+      name  = "SHARED_GALA_DOMAIN"
+      value = var.shared_public_domain
+    }
+    environment_variable {
+      name  = "FOUNDATION_INSTANCE_TYPE"
+      value = "t3.medium"
+    }
+    environment_variable {
+      name  = "FOUNDATION_ROOT_VOLUME_SIZE_GIB"
+      value = "40"
     }
   }
 
@@ -271,6 +316,46 @@ resource "aws_codebuild_project" "foundation_apply" {
   }
 }
 
+resource "aws_codebuild_project" "foundation_finalize" {
+  count          = local.foundation_pipeline_enabled ? 1 : 0
+  name           = "${local.name_prefix}-foundation-finalize"
+  description    = "Initializes stable per-Gala credentials once and records the approved Gala catalog."
+  service_role   = local.foundation_codebuild_role_arn
+  build_timeout  = 15
+  queued_timeout = 60
+
+  artifacts { type = "CODEPIPELINE" }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/amazonlinux-x86_64-standard:5.0"
+    type                        = "LINUX_CONTAINER"
+    privileged_mode             = false
+    image_pull_credentials_type = "CODEBUILD"
+
+    environment_variable {
+      name  = "FOUNDATION_CATALOG_URI"
+      value = "s3://${aws_s3_bucket.backups[0].bucket}/foundation-inputs/galas.json"
+    }
+    environment_variable {
+      name  = "GALA_PROJECT_NAME"
+      value = var.project_name
+    }
+  }
+
+  logs_config {
+    cloudwatch_logs {
+      group_name  = aws_cloudwatch_log_group.foundation_finalize[0].name
+      stream_name = "finalize"
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = file("${path.root}/../../buildspec/tibillet-foundation-finalize.yml")
+  }
+}
+
 resource "aws_iam_role" "foundation_pipeline" {
   count = local.foundation_pipeline_enabled ? 1 : 0
   name  = "${local.name_prefix}-foundation-pipeline"
@@ -296,7 +381,7 @@ data "aws_iam_policy_document" "foundation_pipeline" {
   statement {
     sid       = "RunOnlyFoundationBuilds"
     actions   = ["codebuild:StartBuild", "codebuild:BatchGetBuilds"]
-    resources = [aws_codebuild_project.foundation_plan[0].arn, aws_codebuild_project.foundation_apply[0].arn]
+    resources = [aws_codebuild_project.foundation_plan[0].arn, aws_codebuild_project.foundation_apply[0].arn, aws_codebuild_project.foundation_finalize[0].arn]
   }
 
   statement {
@@ -320,39 +405,8 @@ resource "aws_codepipeline" "foundation" {
   pipeline_type = "V2"
 
   variable {
-    name        = "GalaSlug"
-    description = "New lowercase Gala slug, for example gala-marseille. Existing slugs are rejected."
-  }
-  variable {
-    name        = "GalaDomain"
-    description = "Public Lespass apex domain for the new Gala. This value is not a secret."
-  }
-  variable {
-    name          = "InstanceType"
-    default_value = "t3.medium"
-    description   = "One of t3.small, t3.medium, t3.large, or t3.xlarge."
-  }
-  variable {
-    name          = "RootVolumeSizeGib"
-    default_value = "40"
-    description   = "Encrypted EC2 root-volume size, between 40 and 512 GiB."
-  }
-  variable {
-    name        = "VpcId"
-    description = "Approved Paris VPC ID. It must match the existing Gala catalog after its first execution."
-  }
-  variable {
-    name        = "SubnetId"
-    description = "Approved public Paris subnet ID. It must match the existing Gala catalog after its first execution."
-  }
-  variable {
-    name        = "Ec2AmiId"
-    description = "Explicit approved Ubuntu AMI ID. It must match the existing Gala catalog after its first execution."
-  }
-  variable {
-    name          = "SshEmergencyCidrs"
-    default_value = "disabled"
-    description   = "Optional comma-separated emergency SSH CIDRs; use disabled when no SSH ingress is needed."
+    name        = "GalaName"
+    description = "Human-readable new Gala name; Foundation derives its unique technical slug."
   }
 
   artifact_store {
@@ -396,36 +450,14 @@ resource "aws_codepipeline" "foundation" {
       configuration = {
         ProjectName = aws_codebuild_project.foundation_plan[0].name
         EnvironmentVariables = jsonencode([
-          { name = "GALA_SLUG", value = "#{variables.GalaSlug}", type = "PLAINTEXT" },
-          { name = "GALA_DOMAIN", value = "#{variables.GalaDomain}", type = "PLAINTEXT" },
-          { name = "INSTANCE_TYPE", value = "#{variables.InstanceType}", type = "PLAINTEXT" },
-          { name = "ROOT_VOLUME_SIZE_GIB", value = "#{variables.RootVolumeSizeGib}", type = "PLAINTEXT" },
-          { name = "VPC_ID", value = "#{variables.VpcId}", type = "PLAINTEXT" },
-          { name = "SUBNET_ID", value = "#{variables.SubnetId}", type = "PLAINTEXT" },
-          { name = "EC2_AMI_ID", value = "#{variables.Ec2AmiId}", type = "PLAINTEXT" },
-          { name = "SSH_EMERGENCY_CIDRS", value = "#{variables.SshEmergencyCidrs}", type = "PLAINTEXT" },
+          { name = "GALA_NAME", value = "#{variables.GalaName}", type = "PLAINTEXT" },
         ])
       }
     }
   }
 
   stage {
-    name = "ApproveInfrastructure"
-
-    action {
-      name     = "ReviewExactPlan"
-      category = "Approval"
-      owner    = "AWS"
-      provider = "Manual"
-      version  = "1"
-      configuration = {
-        CustomData = "Review foundation-plan.txt and foundation.auto.tfvars.json from PlanOutput. Approval applies that exact plan only."
-      }
-    }
-  }
-
-  stage {
-    name = "ApplyApprovedPlan"
+    name = "ApplyCheckedPlan"
 
     action {
       name            = "ApplyExactPlan"
@@ -440,6 +472,24 @@ resource "aws_codepipeline" "foundation" {
         # repository clone and the reviewed plan as two separate artifacts.
         # The plan remains available as CODEBUILD_SRC_DIR_PlanOutput.
         ProjectName   = aws_codebuild_project.foundation_apply[0].name
+        PrimarySource = "SourceOutput"
+      }
+    }
+  }
+
+  stage {
+    name = "InitializeGalaSecrets"
+
+    action {
+      name            = "InitializeAndRecordCatalog"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      version         = "1"
+      input_artifacts = ["SourceOutput", "PlanOutput"]
+
+      configuration = {
+        ProjectName   = aws_codebuild_project.foundation_finalize[0].name
         PrimarySource = "SourceOutput"
       }
     }

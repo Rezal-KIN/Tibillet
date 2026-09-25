@@ -201,7 +201,7 @@ data "aws_iam_policy_document" "test_pipeline" {
   statement {
     sid       = "RunOnlyGalaTestBuild"
     actions   = ["codebuild:StartBuild", "codebuild:BatchGetBuilds"]
-    resources = [aws_codebuild_project.test[0].arn]
+    resources = concat([aws_codebuild_project.test[0].arn], local.test_deploy_enabled ? [aws_codebuild_project.test_deploy[0].arn] : [])
   }
 
   statement {
@@ -227,10 +227,11 @@ resource "aws_iam_role_policy" "test_pipeline" {
 }
 
 resource "aws_codepipeline" "test" {
-  count         = local.delivery_resources_enabled ? 1 : 0
-  name          = "${local.name_prefix}-test"
-  role_arn      = aws_iam_role.test_pipeline[0].arn
-  pipeline_type = "V2"
+  count          = local.delivery_resources_enabled ? 1 : 0
+  name           = "${local.name_prefix}-test"
+  role_arn       = aws_iam_role.test_pipeline[0].arn
+  pipeline_type  = "V2"
+  execution_mode = "QUEUED"
 
   trigger {
     provider_type = "CodeStarSourceConnection"
@@ -243,9 +244,6 @@ resource "aws_codepipeline" "test" {
           includes = [var.test_source_branch]
         }
 
-        file_paths {
-          excludes = ["deploy/**"]
-        }
       }
     }
   }
@@ -290,6 +288,25 @@ resource "aws_codepipeline" "test" {
 
       configuration = {
         ProjectName = aws_codebuild_project.test[0].name
+      }
+    }
+  }
+
+  dynamic "stage" {
+    for_each = local.test_deploy_enabled ? [1] : []
+    content {
+      name = "DeploySmoke"
+      action {
+        name            = "DeployFixedCandidate"
+        category        = "Build"
+        owner           = "AWS"
+        provider        = "CodeBuild"
+        version         = "1"
+        input_artifacts = ["SourceOutput", "BuildOutput"]
+        configuration = {
+          ProjectName   = aws_codebuild_project.test_deploy[0].name
+          PrimarySource = "SourceOutput"
+        }
       }
     }
   }

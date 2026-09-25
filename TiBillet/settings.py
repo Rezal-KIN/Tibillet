@@ -405,6 +405,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "www", "media")
 MEDIA_URL = '/media/'
 
 # EMAIL
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
@@ -570,5 +571,4 @@ if DEBUG:
         #
     ]
     os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"  # only use in development
-
 

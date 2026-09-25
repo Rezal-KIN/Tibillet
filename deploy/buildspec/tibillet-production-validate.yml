@@ -1,0 +1,30 @@
+version: 0.2
+
+env:
+  exported-variables:
+    - APPROVAL_SUMMARY
+    - MANIFEST_SHA256
+
+phases:
+  build:
+    commands:
+      - |
+        set -euo pipefail
+        case "$RELEASE_MANIFEST_PATH" in
+          "releases/${EXPECTED_GALA_SLUG}/"*.json) ;;
+          *) echo "manifest path is outside this Gala" >&2; exit 1 ;;
+        esac
+        test -f "$RELEASE_MANIFEST_PATH"
+        python3 deploy/tools/validate-promotion.py "$RELEASE_MANIFEST_PATH" \
+          --gala "$EXPECTED_GALA_SLUG" --bucket "$RELEASE_BUCKET" \
+          --output validated-manifest.json > /tmp/validation-summary.txt
+        APPROVAL_SUMMARY="$(sed -n '1p' /tmp/validation-summary.txt)"
+        MANIFEST_SHA256="$(sed -n '2s/^MANIFEST_SHA256=//p' /tmp/validation-summary.txt)"
+        test -n "$APPROVAL_SUMMARY"
+        test -n "$MANIFEST_SHA256"
+        export APPROVAL_SUMMARY MANIFEST_SHA256
+        printf '%s\n' "$APPROVAL_SUMMARY"
+artifacts:
+  files:
+    - validated-manifest.json
+    - deploy/tools/runtime/validate-release.py

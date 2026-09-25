@@ -9,6 +9,9 @@ LABOUTIK_PUBLIC_DOMAIN="cashless.${domain}"
 AWS_REGION="${aws_region}"
 BACKUP_BUCKET="${backup_bucket_name}"
 RUNTIME_SECRET_ARN="${runtime_secret_arn}"
+GENERATED_SECRET_ARN="${generated_secret_arn}"
+SHARED_STRIPE_SECRET_ARN="${shared_stripe_secret_arn}"
+SHARED_MAIL_SECRET_ARN="${shared_mail_secret_arn}"
 REPOSITORY_URL="${repository_url}"
 REPOSITORY_REF="${repository_ref}"
 REPOSITORY_ROOT="/opt/tibillet-gala/repository"
@@ -57,22 +60,6 @@ fi
 git -C "$REPOSITORY_ROOT" fetch --depth 1 origin "$REPOSITORY_REF"
 git -C "$REPOSITORY_ROOT" checkout --detach FETCH_HEAD
 
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/backup-postgres.sh" "$RUNTIME_LIBRARY/backup-postgres.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/deploy-release-from-s3.sh" "$RUNTIME_LIBRARY/deploy-release-from-s3.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/deploy-release.sh" "$RUNTIME_LIBRARY/deploy-release.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/fetch-runtime-secret.sh" "$RUNTIME_LIBRARY/fetch-runtime-secret.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/healthcheck.sh" "$RUNTIME_LIBRARY/healthcheck.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/lib.sh" "$RUNTIME_LIBRARY/lib.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/preflight.sh" "$RUNTIME_LIBRARY/preflight.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/restore-postgres.sh" "$RUNTIME_LIBRARY/restore-postgres.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/start-stacks.sh" "$RUNTIME_LIBRARY/start-stacks.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/stop-stacks.sh" "$RUNTIME_LIBRARY/stop-stacks.sh"
-install -m 0755 "$REPOSITORY_ROOT/deploy/tools/runtime/validate-release.py" "$RUNTIME_LIBRARY/validate-release.py"
-
-install -m 0644 "$REPOSITORY_ROOT/deploy/systemd/tibillet-gala-stacks.service" "/etc/systemd/system/tibillet-gala-stacks@.service"
-install -m 0644 "$REPOSITORY_ROOT/deploy/systemd/tibillet-gala-backup.service" "/etc/systemd/system/tibillet-gala-backup@.service"
-install -m 0644 "$REPOSITORY_ROOT/deploy/systemd/tibillet-gala-backup.timer" "/etc/systemd/system/tibillet-gala-backup@.timer"
-
 cat > "$CONFIG_PATH" <<EOF
 GALA_SLUG="$${GALA_SLUG}"
 AWS_REGION="$${AWS_REGION}"
@@ -83,18 +70,19 @@ LESPASS_PUBLIC_DOMAIN="$${LESPASS_PUBLIC_DOMAIN}"
 BACKUP_BUCKET="$${BACKUP_BUCKET}"
 RELEASE_BUCKET="$${BACKUP_BUCKET}"
 RUNTIME_SECRET_ARN="$${RUNTIME_SECRET_ARN}"
+GENERATED_SECRET_ARN="$${GENERATED_SECRET_ARN}"
+SHARED_STRIPE_SECRET_ARN="$${SHARED_STRIPE_SECRET_ARN}"
+SHARED_MAIL_SECRET_ARN="$${SHARED_MAIL_SECRET_ARN}"
 REPO_ROOT="$${REPOSITORY_ROOT}"
 COMPOSE_FILES="$${REPOSITORY_ROOT}/deploy/traefik/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/traefik/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Fedow/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Fedow/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Laboutik/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Laboutik/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Lespass/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Lespass/docker-compose.release.yml"
 POSTGRES_CONTAINERS="fedow_postgres,lespass_postgres,laboutik_postgres"
 HEALTHCHECK_URLS="https://$${FEDOW_PUBLIC_DOMAIN}/,https://$${LABOUTIK_PUBLIC_DOMAIN}/,https://$${LESPASS_PUBLIC_DOMAIN}/"
-DEPLOYMENT_LOCKED=true
-ALLOW_INITIAL_DEPLOY=false
+DEPLOYMENT_LOCKED=false
+ALLOW_INITIAL_DEPLOY=true
 MAX_BACKUP_AGE_SECONDS=86400
 MIN_FREE_SPACE_KIB=10485760
 ALLOW_RESTORE=false
 EOF
 chmod 0600 "$CONFIG_PATH"
 
-systemctl daemon-reload
-systemctl enable "tibillet-gala-stacks@$${GALA_SLUG}.service"
-systemctl enable "tibillet-gala-backup@$${GALA_SLUG}.timer"
+"$REPOSITORY_ROOT/deploy/tools/runtime/install-runtime-contract.sh" "$CONFIG_PATH"

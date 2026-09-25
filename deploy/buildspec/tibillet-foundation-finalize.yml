@@ -1,0 +1,21 @@
+version: 0.2
+
+# Runs after the approved Terraform apply. A failure here can be retried
+# without replaying a binary Terraform plan that has already changed state.
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - python3 --version
+      - aws --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_SRC_DIR_PlanOutput:-}"
+      - export FOUNDATION_CATALOG_PROPOSAL="$CODEBUILD_SRC_DIR_PlanOutput/foundation-gala-catalog-proposal.json"
+      - test -f "$FOUNDATION_CATALOG_PROPOSAL"
+  build:
+    commands:
+      - set -euo pipefail
+      - python3 deploy/tools/initialize-gala-credentials.py "$FOUNDATION_CATALOG_PROPOSAL" --project-name "$GALA_PROJECT_NAME"
+      - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_PROPOSAL" "$FOUNDATION_CATALOG_URI"

@@ -29,4 +29,3 @@ phases:
     commands:
       - set -euo pipefail
       - terraform -chdir=deploy/infra/terraform apply -input=false "$FOUNDATION_PLAN"
-      - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_PROPOSAL" "$FOUNDATION_CATALOG_URI"

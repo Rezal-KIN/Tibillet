@@ -1,6 +1,9 @@
 module "gala" {
   source   = "./modules/gala"
   for_each = var.enable_additive_resources && var.enable_backup_storage ? var.galas : {}
+  # The existing Foundation pipeline updates its own CodeBuild role during
+  # the first maintenance run. Do that before creating generated secrets.
+  depends_on = [aws_iam_role_policy.foundation_build]
 
   project_name         = var.project_name
   aws_region           = var.aws_region
@@ -20,6 +23,8 @@ module "gala" {
   release_bucket_arn          = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].arn : null
   release_bucket_name         = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].bucket : null
   ecr_lespass_repository_arn  = local.delivery_resources_enabled ? aws_ecr_repository.lespass[0].arn : null
+  shared_stripe_secret_arn    = each.key == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn
+  shared_mail_secret_arn      = aws_secretsmanager_secret.shared_mail[0].arn
   repository_url              = "https://github.com/${var.github_owner}/${var.github_repository}.git"
   repository_ref              = var.runtime_repository_ref
   ssh_emergency_cidrs         = each.value.ssh_emergency_cidrs
