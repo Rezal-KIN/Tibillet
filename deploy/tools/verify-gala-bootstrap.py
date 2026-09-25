@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import time
@@ -54,17 +55,32 @@ def wait_online(instance_id: str) -> None:
     raise RuntimeError(f"SSM did not come online for {instance_id}")
 
 
-def verify_command(instance_id: str, slug: str) -> None:
+def previously_registered(slug: str) -> bool:
+    uri = os.environ.get("FOUNDATION_CATALOG_URI", "")
+    if not uri.startswith("s3://") or not uri.endswith("/foundation-inputs/galas.json"):
+        raise ValueError("Foundation catalog URI is missing or invalid")
+    result = subprocess.run(
+        ["aws", "s3", "cp", "--only-show-errors", uri, "-", "--region", REGION],
+        check=True, capture_output=True, text=True,
+    )
+    catalog = json.loads(result.stdout)
+    if catalog.get("version") != 1 or not isinstance(catalog.get("galas"), dict):
+        raise ValueError("previous Foundation catalog is invalid")
+    return slug in catalog["galas"]
+
+
+def verify_command(instance_id: str, slug: str, *, require_clean_cloud_init: bool = True) -> None:
     # This reads no secret values and changes no runtime state. It must run
     # after cloud-init, so a Terraform-created but unbootstrapped host fails.
     commands = [
         "set -eu",
-        "cloud-init status --wait >/dev/null",
         f"test -f /etc/tibillet-gala/{slug}.conf",
         "test -x /usr/local/lib/tibillet-gala/install-runtime-contract.sh",
         "systemctl is-active --quiet docker",
         f"systemctl is-enabled --quiet tibillet-gala-stacks@{slug}.service",
     ]
+    if require_clean_cloud_init:
+        commands.insert(1, "cloud-init status --wait >/dev/null")
     response = aws(
         "ssm", "send-command", "--document-name", "AWS-RunShellScript",
         "--instance-ids", instance_id, "--parameters", json.dumps({"commands": commands}),
@@ -105,7 +121,11 @@ def main() -> None:
         raise ValueError("wrong AWS account")
     instance_id = selected_instance(args.project_name, args.slug)
     wait_online(instance_id)
-    verify_command(instance_id, args.slug)
+    # The committed catalog is updated only after this gate succeeds. A Gala
+    # absent from it is a new/unfinished creation and must have a clean first
+    # boot. Existing Galas are checked for the installed runtime and services,
+    # without inheriting an old cloud-init error from their initial migration.
+    verify_command(instance_id, args.slug, require_clean_cloud_init=not previously_registered(args.slug))
 
 
 if __name__ == "__main__":

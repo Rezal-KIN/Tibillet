@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -40,6 +42,22 @@ class BootstrapGateTests(unittest.TestCase):
                 module.verify_command("i-0123456789abcdef0", "gala-validation")
         parameters = aws.call_args_list[0].args
         self.assertIn("cloud-init status --wait", " ".join(parameters))
+
+    def test_existing_catalog_entry_skips_only_historical_cloud_init(self) -> None:
+        catalog = {"version": 1, "galas": {"gala-am-aix": {}}}
+        with patch.dict(module.os.environ, {"FOUNDATION_CATALOG_URI":
+                     "s3://gala-backups/foundation-inputs/galas.json"}), \
+             patch.object(module.subprocess, "run", return_value=SimpleNamespace(stdout=json.dumps(catalog))):
+            self.assertTrue(module.previously_registered("gala-am-aix"))
+            self.assertFalse(module.previously_registered("gala-new"))
+
+        responses = [{"Command": {"CommandId": "command-2"}}, {"Status": "Success"}]
+        with patch.object(module, "aws", side_effect=responses) as aws:
+            module.verify_command("i-0123456789abcdef0", "gala-am-aix", require_clean_cloud_init=False)
+        parameters = " ".join(aws.call_args_list[0].args)
+        self.assertNotIn("cloud-init status --wait", parameters)
+        self.assertIn("systemctl is-enabled", parameters)
+        self.assertIn("test -f /etc/tibillet-gala/gala-am-aix.conf", parameters)
 
 
 if __name__ == "__main__":
