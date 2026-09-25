@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - python3 --version
+      - aws --version
+      - curl --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_SRC_DIR_SwitchPlan:-}"
+      - test -f "$CODEBUILD_SRC_DIR_SwitchPlan/switch-plan.json"
+  build:
+    commands:
+      - set -euo pipefail
+      - python3 deploy/tools/switch-active-gala.py apply --plan "$CODEBUILD_SRC_DIR_SwitchPlan/switch-plan.json"

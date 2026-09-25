@@ -1,9 +1,7 @@
 version: 0.2
 
-# Production deliberately does not execute docker build. It validates a
-# reviewed release manifest, uploads it to the Gala's release prefix in the
-# backup bucket, then asks a narrowly scoped SSM document to deploy the exact
-# digest using an S3 URI.
+# Production receives only the already validated artifact that was shown at
+# manual approval. It never checks out a newer Git revision or builds images.
 phases:
   install:
     commands:
@@ -13,15 +11,12 @@ phases:
   pre_build:
     commands:
       - set -euo pipefail
+      - test -f validated-manifest.json
+      - test -f deploy/tools/runtime/validate-release.py
+      - test "$(sha256sum validated-manifest.json | cut -d' ' -f1)" = "$APPROVED_MANIFEST_SHA256"
+      - python3 deploy/tools/runtime/validate-release.py validated-manifest.json
       - |
-        case "$RELEASE_MANIFEST_PATH" in
-          "releases/${EXPECTED_GALA_SLUG}/"*.json) ;;
-          *) echo "RELEASE_MANIFEST_PATH must be under releases/${EXPECTED_GALA_SLUG}/" >&2; exit 1 ;;
-        esac
-      - test -f "$RELEASE_MANIFEST_PATH"
-      - python3 tools/runtime/validate-release.py "$RELEASE_MANIFEST_PATH"
-      - |
-        python3 - "$RELEASE_MANIFEST_PATH" "$EXPECTED_GALA_SLUG" <<'PY'
+        python3 - validated-manifest.json "$EXPECTED_GALA_SLUG" <<'PY'
         import json, sys
         manifest = json.load(open(sys.argv[1], encoding="utf-8"))
         if manifest["gala_slug"] != sys.argv[2]:
@@ -35,9 +30,20 @@ phases:
         set -euo pipefail
         # Upload the validated release manifest to the Gala-only release prefix
         # in the backup bucket. The SSM document accepts only an S3 URI under this prefix.
-        release_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_id"])' "$RELEASE_MANIFEST_PATH")"
+        release_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_id"])' validated-manifest.json)"
         release_uri="s3://${RELEASE_BUCKET}/releases/${EXPECTED_GALA_SLUG}/${release_id}.json"
-        aws s3 cp --only-show-errors "$RELEASE_MANIFEST_PATH" "$release_uri"
+        if ! aws s3api put-object --bucket "$RELEASE_BUCKET" \
+          --key "releases/${EXPECTED_GALA_SLUG}/${release_id}.json" \
+          --body validated-manifest.json --if-none-match '*' >/dev/null 2>/tmp/put-manifest-error; then
+          if ! grep -Eq 'PreconditionFailed|412' /tmp/put-manifest-error; then
+            cat /tmp/put-manifest-error >&2
+            exit 1
+          fi
+          aws s3 cp --only-show-errors "$release_uri" /tmp/prior-manifest.json
+          cmp -s validated-manifest.json /tmp/prior-manifest.json || {
+            echo "immutable release ID already contains different bytes" >&2; exit 1;
+          }
+        fi
         printf 'Release manifest uploaded: %s\n' "$release_uri"
 
         command_id="$(aws ssm send-command \

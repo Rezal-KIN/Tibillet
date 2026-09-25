@@ -1,6 +1,7 @@
 locals {
   name_prefix                  = "${var.project_name}-${var.environment}"
-  delivery_resources_enabled   = var.enable_additive_resources && var.enable_backup_storage && var.enable_delivery_platform
+  gala_resources_enabled       = var.enable_additive_resources && var.enable_backup_storage
+  delivery_resources_enabled   = local.gala_resources_enabled && var.enable_delivery_platform
   production_resources_enabled = local.delivery_resources_enabled && var.enable_production_pipeline
   production_target_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala

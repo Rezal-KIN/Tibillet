@@ -11,6 +11,7 @@ PLATFORMS = {"v1", "v2-preview", "v2"}
 SHA256_IMAGE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
 SHA = re.compile(r"^[0-9a-f]{7,64}$")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
+RELEASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 REQUIRED = {
     "release_id",
     "gala_slug",
@@ -48,6 +49,8 @@ def main() -> None:
         reject("missing required release fields: " + ", ".join(sorted(missing)))
     if not SLUG.fullmatch(str(document["gala_slug"])):
         reject("gala_slug is invalid")
+    if not RELEASE_ID.fullmatch(str(document["release_id"])):
+        reject("release_id must be a safe immutable object name")
     if document["platform"] not in PLATFORMS:
         reject("platform must be v1, v2-preview, or v2")
     if not SHA.fullmatch(str(document["fork_commit"])):

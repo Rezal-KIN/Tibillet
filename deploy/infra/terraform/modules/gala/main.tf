@@ -15,7 +15,19 @@ locals {
 
 resource "aws_secretsmanager_secret" "runtime" {
   name                    = local.runtime_secret_name
-  description             = "Runtime environment for Gala ${var.gala_slug}. Secret value is injected by a human after Terraform creates this container."
+  description             = "Retained legacy per-Gala runtime container; shared external credentials now live in the account-level integrations secret."
+  recovery_window_in_days = 7
+
+  tags = local.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_secretsmanager_secret" "generated" {
+  name                    = "${var.project_name}/galas/${var.gala_slug}/generated"
+  description             = "Stable application keys and database passwords, initialized once by the Foundation pipeline."
   recovery_window_in_days = 7
 
   tags = local.tags
@@ -49,9 +61,9 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 
 data "aws_iam_policy_document" "runtime" {
   statement {
-    sid       = "ReadOnlyOwnRuntimeSecret"
+    sid       = "ReadOnlyOwnRuntimeSecrets"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_secretsmanager_secret.runtime.arn]
+    resources = compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn])
   }
 
   statement {
@@ -140,42 +152,38 @@ resource "aws_iam_instance_profile" "instance" {
 
 resource "aws_security_group" "runtime" {
   name_prefix = "${local.name_prefix}-"
+  # Keep the existing description to avoid replacing a security group still
+  # attached to its EC2. The ingress rules are removed in place.
   description = "Public HTTP/HTTPS and restricted emergency SSH for Gala ${var.gala_slug}."
   vpc_id      = var.vpc_id
 
-  ingress {
-    description = "HTTP for ACME redirect and public service"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTPS public service"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  dynamic "ingress" {
-    for_each = toset(var.ssh_emergency_cidrs)
-
-    content {
-      description = "Emergency SSH only; SSM remains the normal operational path"
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = [ingress.value]
+  ingress = [
+    for cidr in var.ssh_emergency_cidrs : {
+      description      = "Emergency SSH only; SSM remains the normal operational path"
+      from_port        = 22
+      to_port          = 22
+      protocol         = "tcp"
+      cidr_blocks      = [cidr]
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
     }
-  }
+  ]
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  dynamic "egress" {
+    for_each = var.gala_slug == "gala-smoke" ? [
+      { port = 53, protocol = "tcp" },
+      { port = 53, protocol = "udp" },
+      { port = 80, protocol = "tcp" },
+      { port = 443, protocol = "tcp" },
+    ] : [{ port = 0, protocol = "-1" }]
+    content {
+      from_port   = egress.value.port
+      to_port     = egress.value.port
+      protocol    = egress.value.protocol
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   tags = local.tags
@@ -194,14 +202,17 @@ resource "aws_instance" "runtime" {
   vpc_security_group_ids = [aws_security_group.runtime.id]
   iam_instance_profile   = aws_iam_instance_profile.instance.name
   user_data = templatefile("${path.module}/bootstrap-runtime.sh.tftpl", {
-    aws_region         = var.aws_region
-    backup_bucket_name = var.backup_bucket_name
-    domain             = var.domain
-    gala_slug          = var.gala_slug
-    platform           = var.platform
-    repository_ref     = var.repository_ref
-    repository_url     = var.repository_url
-    runtime_secret_arn = aws_secretsmanager_secret.runtime.arn
+    aws_region               = var.aws_region
+    backup_bucket_name       = var.backup_bucket_name
+    domain                   = var.domain
+    gala_slug                = var.gala_slug
+    platform                 = var.platform
+    repository_ref           = var.repository_ref
+    repository_url           = var.repository_url
+    runtime_secret_arn       = aws_secretsmanager_secret.runtime.arn
+    generated_secret_arn     = aws_secretsmanager_secret.generated.arn
+    shared_stripe_secret_arn = var.shared_stripe_secret_arn
+    shared_mail_secret_arn   = var.shared_mail_secret_arn
   })
   # Cloud-init is first-boot only. Runtime upgrades are rerun through the
   # versioned SSM installer, never by replacing an already managed EC2.
@@ -234,7 +245,7 @@ resource "aws_instance" "runtime" {
     # Existing hosts are upgraded through the idempotent SSM installer. Do not
     # turn a bootstrap-template revision into an EC2 replacement or a surprise
     # user-data mutation on a live Gala.
-    ignore_changes = [user_data]
+    ignore_changes = [user_data, vpc_security_group_ids]
 
     precondition {
       condition     = var.ami_id != "" && var.subnet_id != "" && var.vpc_id != ""
@@ -246,18 +257,6 @@ resource "aws_instance" "runtime" {
       error_message = "A live Gala instance requires at least 40 GiB until measured image optimization proves a smaller size safe."
     }
 
-    prevent_destroy = true
-  }
-}
-
-resource "aws_eip" "runtime" {
-  count = var.create_instance ? 1 : 0
-
-  domain   = "vpc"
-  instance = aws_instance.runtime[0].id
-  tags     = local.tags
-
-  lifecycle {
     prevent_destroy = true
   }
 }

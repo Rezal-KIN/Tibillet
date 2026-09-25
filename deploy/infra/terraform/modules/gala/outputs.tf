@@ -1,6 +1,11 @@
 output "runtime_secret_arn" {
   value       = aws_secretsmanager_secret.runtime.arn
-  description = "Only the target Gala EC2 may read this runtime secret."
+  description = "External credentials secret read by the target Gala EC2."
+}
+
+output "generated_secret_arn" {
+  value       = aws_secretsmanager_secret.generated.arn
+  description = "Generated application keys and database credentials for the target Gala."
 }
 
 output "instance_id" {
@@ -8,9 +13,9 @@ output "instance_id" {
   description = "Newly created instance ID. Existing instances are imported separately before management."
 }
 
-output "public_ip" {
-  value       = var.create_instance ? aws_eip.runtime[0].public_ip : null
-  description = "Stable public address for this Gala when Terraform created it."
+output "primary_eni_id" {
+  value       = var.create_instance ? aws_instance.runtime[0].primary_network_interface_id : null
+  description = "Primary network interface eligible for the reviewed shared-EIP switch."
 }
 
 output "backup_prefix" {

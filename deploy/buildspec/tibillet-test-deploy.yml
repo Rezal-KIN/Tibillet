@@ -1,0 +1,17 @@
+version: 0.2
+
+# Runs only after BuildAndPublishCandidate. A failed Smoke deployment leaves
+# the Test pipeline red; no Production pipeline or EIP switch is triggered.
+phases:
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_SRC_DIR_BuildOutput:-}"
+      - test -f "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json"
+      - test -f deploy/test-images.json
+  build:
+    commands:
+      - set -euo pipefail
+      - python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json
+      - python3 deploy/tools/runtime/validate-release.py /tmp/smoke-manifest.json
+      - python3 deploy/tools/deploy-smoke-candidate.py /tmp/smoke-manifest.json

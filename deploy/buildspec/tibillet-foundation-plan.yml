@@ -36,9 +36,17 @@ phases:
       - set -euo pipefail
       - terraform -chdir=deploy/infra/terraform plan -input=false -lock-timeout=5m -out="$CODEBUILD_SRC_DIR/foundation.tfplan" -var-file="$FOUNDATION_TFVARS"
       - terraform -chdir=deploy/infra/terraform show -no-color "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.txt"
+      - terraform -chdir=deploy/infra/terraform show -json "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.json"
+      - |
+        set -euo pipefail
+        # The exact requested slug is derived from the operator's name by the
+        # same validator that produced the plan, not from an editable plan file.
+        slug="$(python3 -c 'import importlib.util,os; s=importlib.util.spec_from_file_location("v", "deploy/tools/validate-foundation-inputs.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.gala_slug(os.environ["GALA_NAME"]))')"
+        python3 deploy/tools/verify-foundation-plan.py "$CODEBUILD_SRC_DIR/foundation-plan.json" --slug "$slug"
 artifacts:
   files:
     - foundation.auto.tfvars.json
     - foundation-gala-catalog-proposal.json
     - foundation.tfplan
     - foundation-plan.txt
+    - foundation-plan.json

@@ -16,11 +16,31 @@ output "artifact_bucket_name" {
 output "galas" {
   value = {
     for slug, gala in module.gala : slug => {
-      instance_id        = gala.instance_id
-      public_ip          = gala.public_ip
-      runtime_secret_arn = gala.runtime_secret_arn
-      backup_prefix      = gala.backup_prefix
+      instance_id          = gala.instance_id
+      runtime_secret_arn   = gala.runtime_secret_arn
+      generated_secret_arn = gala.generated_secret_arn
+      backup_prefix        = gala.backup_prefix
     }
   }
-  description = "Derived per-gala fields (instance, IP, secret ARN, backup prefix). The registry (registry/galas.json, see docs/operations/gala-registry.md) holds only what Terraform cannot derive: platform, release, retention, status."
+  description = "Derived per-gala fields (instance, secret ARN, backup prefix). Public traffic uses one shared EIP."
+}
+
+output "shared_public_ip" {
+  value       = local.gala_resources_enabled ? aws_eip.shared_public[0].public_ip : null
+  description = "The one stable public IPv4 address used by the active Gala."
+}
+
+output "shared_eip_allocation_id" {
+  value       = local.gala_resources_enabled ? aws_eip.shared_public[0].id : null
+  description = "Allocation ID used by the explicit active-Gala switch workflow."
+}
+
+output "active_public_security_group_id" {
+  value       = local.gala_resources_enabled ? aws_security_group.active_public[0].id : null
+  description = "Public ingress security group attached only to the active Gala."
+}
+
+output "active_gala_parameter_name" {
+  value       = local.gala_resources_enabled ? aws_ssm_parameter.active_gala[0].name : null
+  description = "SSM Parameter Store key recording the Gala currently holding the shared EIP."
 }

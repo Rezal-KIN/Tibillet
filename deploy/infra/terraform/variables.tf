@@ -38,6 +38,17 @@ variable "project_name" {
   default     = "tibillet-gala-paris"
 }
 
+variable "shared_public_domain" {
+  description = "The one Lespass apex domain routed through the shared Gala EIP."
+  type        = string
+  default     = "galas-am-aix.rezal.fr"
+
+  validation {
+    condition     = var.shared_public_domain == "galas-am-aix.rezal.fr"
+    error_message = "Only galas-am-aix.rezal.fr is approved as the shared public domain."
+  }
+}
+
 variable "environment" {
   description = "Infrastructure environment: test or production."
   type        = string

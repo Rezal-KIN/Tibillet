@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import ipaddress
 import json
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 
 REGION = "eu-west-3"
+SHARED_DOMAIN = "galas-am-aix.rezal.fr"
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$")
 INSTANCE_TYPE = re.compile(r"^t3\.(small|medium|large|xlarge)$")
@@ -32,6 +33,15 @@ def value(name: str) -> str:
     if not result:
         fail(f"{name} is required")
     return result
+
+
+def gala_slug(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
+    if not SLUG.fullmatch(slug) or slug in {"bapts", "gala-smoke"}:
+        fail("GALA_NAME must produce a safe, unique non-Smoke Gala identifier")
+    return slug
 
 
 def read_catalog(path: Path) -> dict[str, object]:
@@ -56,32 +66,32 @@ def main() -> None:
     if value("AWS_DEFAULT_REGION") != REGION:
         fail(f"AWS_DEFAULT_REGION must be {REGION}")
 
-    slug = value("GALA_SLUG")
-    if not SLUG.fullmatch(slug) or slug == "bapts":
-        fail("GALA_SLUG must be a safe non-Bapts lowercase slug")
-
-    domain = value("GALA_DOMAIN")
+    slug = gala_slug(value("GALA_NAME"))
+    domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
-        fail("GALA_DOMAIN must be a lowercase public hostname")
+        fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
+    if domain != SHARED_DOMAIN:
+        fail("SHARED_GALA_DOMAIN must equal the approved shared public domain")
 
-    instance_type = value("INSTANCE_TYPE")
+    instance_type = value("FOUNDATION_INSTANCE_TYPE")
     if not INSTANCE_TYPE.fullmatch(instance_type):
-        fail("INSTANCE_TYPE must be one of t3.small, t3.medium, t3.large, t3.xlarge")
+        fail("FOUNDATION_INSTANCE_TYPE must be one of t3.small, t3.medium, t3.large, t3.xlarge")
 
     try:
-        root_volume_size_gib = int(value("ROOT_VOLUME_SIZE_GIB"))
+        root_volume_size_gib = int(value("FOUNDATION_ROOT_VOLUME_SIZE_GIB"))
     except ValueError:
-        fail("ROOT_VOLUME_SIZE_GIB must be an integer")
+        fail("FOUNDATION_ROOT_VOLUME_SIZE_GIB must be an integer")
     if not 40 <= root_volume_size_gib <= 512:
-        fail("ROOT_VOLUME_SIZE_GIB must be between 40 and 512")
+        fail("FOUNDATION_ROOT_VOLUME_SIZE_GIB must be between 40 and 512")
 
-    vpc_id, subnet_id, ec2_ami_id = value("VPC_ID"), value("SUBNET_ID"), value("EC2_AMI_ID")
-    if not VPC.fullmatch(vpc_id):
-        fail("VPC_ID is invalid")
-    if not SUBNET.fullmatch(subnet_id):
-        fail("SUBNET_ID is invalid")
-    if not AMI.fullmatch(ec2_ami_id):
-        fail("EC2_AMI_ID is invalid")
+    catalog = read_catalog(args.catalog)
+    vpc_id, subnet_id, ec2_ami_id = (catalog.get(field) for field in ("vpc_id", "subnet_id", "ec2_ami_id"))
+    if not isinstance(vpc_id, str) or not VPC.fullmatch(vpc_id):
+        fail("catalog vpc_id is missing or invalid")
+    if not isinstance(subnet_id, str) or not SUBNET.fullmatch(subnet_id):
+        fail("catalog subnet_id is missing or invalid")
+    if not isinstance(ec2_ami_id, str) or not AMI.fullmatch(ec2_ami_id):
+        fail("catalog ec2_ami_id is missing or invalid")
 
     github_connection_arn = value("GITHUB_CONNECTION_ARN")
     if not CONNECTION.fullmatch(github_connection_arn):
@@ -92,46 +102,39 @@ def main() -> None:
         fail("FOUNDATION_SOURCE_COMMIT must be a full 40-character Git SHA")
 
     cidrs = []
-    raw_cidrs = os.environ.get("SSH_EMERGENCY_CIDRS", "disabled").strip()
-    if raw_cidrs.lower() == "disabled":
-        raw_cidrs = ""
-    for raw_cidr in raw_cidrs.split(","):
-        cidr = raw_cidr.strip()
-        if not cidr:
-            continue
-        try:
-            network = ipaddress.ip_network(cidr, strict=False)
-        except ValueError:
-            fail(f"SSH_EMERGENCY_CIDRS contains an invalid CIDR: {cidr}")
-        if network.prefixlen == 0:
-            fail("SSH_EMERGENCY_CIDRS must not allow the whole Internet")
-        cidrs.append(str(network))
-
-    catalog = read_catalog(args.catalog)
     galas = catalog["galas"]
     assert isinstance(galas, dict)
-    if slug in galas:
-        fail(f"GALA_SLUG {slug} already exists in the foundation catalog; use a reviewed Terraform change for an existing Gala")
+    if slug in galas and not isinstance(galas[slug], dict):
+        fail(f"invalid catalog entry for {slug}")
 
-    for field, provided in (("vpc_id", vpc_id), ("subnet_id", subnet_id), ("ec2_ami_id", ec2_ami_id)):
-        existing = catalog.get(field)
-        if existing is not None and existing != provided:
-            fail(f"{field} must match the existing foundation catalog")
-        catalog[field] = provided
+    for existing_slug, existing in galas.items():
+        if not isinstance(existing, dict):
+            fail(f"invalid catalog entry for {existing_slug}")
+        historical_smoke = existing_slug == "gala-smoke" and existing.get("domain") == "smoke.galas-am-aix.rezal.fr"
+        if existing.get("domain") != SHARED_DOMAIN and not historical_smoke:
+            fail(f"unexpected public domain for {existing_slug}; review the catalog before adding a Gala")
+        if historical_smoke:
+            # The reviewed one-IP migration makes Smoke use the same public
+            # hostnames. No existing EC2 is replaced: user_data is ignored.
+            existing["domain"] = SHARED_DOMAIN
 
-    galas[slug] = {
+    new_gala = {
         "platform": "v1",
         "domain": domain,
         "instance_type": instance_type,
         "root_volume_size_gib": root_volume_size_gib,
         "ssh_emergency_cidrs": cidrs,
-        # A Gala is served publicly through its dedicated EIP. Keeping this
-        # true also matches the public subnet's initial EC2 configuration, so
-        # a failed run can be resumed without proposing an instance replacement.
+        # An ephemeral outbound IP is assigned at launch; only the active
+        # Gala receives the separately managed shared public EIP.
         "associate_public_ip_address": True,
         "create_instance": True,
         "protect_from_destruction": True,
     }
+    if slug in galas:
+        if galas[slug] != new_gala:
+            fail(f"existing Gala {slug} differs from the permanent configuration; use a reviewed migration")
+    else:
+        galas[slug] = new_gala
 
     foundation_role = value("FOUNDATION_CODEBUILD_ROLE_ARN")
     state_bucket = value("TERRAFORM_STATE_BUCKET")
@@ -163,7 +166,7 @@ def main() -> None:
     }
     args.catalog_output.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.output_tfvars.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"Foundation inputs valid: new_gala={slug} total_galas={len(galas)} region={REGION}")
+    print(f"Foundation inputs valid: operation={slug} total_galas={len(galas)} region={REGION}")
 
 
 if __name__ == "__main__":

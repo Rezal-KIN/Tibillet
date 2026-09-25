@@ -23,6 +23,18 @@ resource "aws_ssm_document" "production_deploy" {
       name   = "DeployApprovedRelease"
       inputs = {
         runCommand = [
+          "set -eu",
+          "manifest=$(mktemp)",
+          "trap 'rm -f \"$manifest\"' EXIT",
+          "aws s3 cp --only-show-errors '{{ ReleaseManifestUri }}' \"$manifest\" --region ${var.aws_region}",
+          "commit=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"fork_commit\"])' \"$manifest\")",
+          "case \"$commit\" in *[!0-9a-f]*|'') echo 'invalid release commit' >&2; exit 1;; esac",
+          "test \"$(printf %s \"$commit\" | wc -c | tr -d ' ')\" -eq 40",
+          "repo=/opt/tibillet-gala/repository",
+          "git -C \"$repo\" fetch --depth 1 origin \"$commit\"",
+          "git -C \"$repo\" checkout --detach FETCH_HEAD",
+          "python3 \"$repo/deploy/tools/runtime/reconcile-runtime.py\" /etc/tibillet-gala/${each.key}.conf ${each.key} '${module.gala[each.key].generated_secret_arn}' '${each.key == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn}' '${aws_secretsmanager_secret.shared_mail[0].arn}'",
+          "bash \"$repo/deploy/tools/runtime/install-runtime-contract.sh\" /etc/tibillet-gala/${each.key}.conf",
           "/usr/local/lib/tibillet-gala/deploy-release-from-s3.sh /etc/tibillet-gala/${each.key}.conf '{{ ReleaseManifestUri }}'",
         ]
       }
@@ -47,6 +59,12 @@ data "aws_iam_policy_document" "production_build" {
   for_each = local.production_target_galas
 
   statement {
+    sid       = "ReadValidatedPipelineArtifact"
+    actions   = ["s3:GetObject", "s3:GetObjectVersion"]
+    resources = ["${aws_s3_bucket.artifacts[0].arn}/*"]
+  }
+
+  statement {
     sid       = "WriteShortLivedBuildLogs"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["${aws_cloudwatch_log_group.production_deploy[each.key].arn}:*"]
@@ -54,7 +72,7 @@ data "aws_iam_policy_document" "production_build" {
 
   statement {
     sid       = "WriteOnlyTargetGalaReleaseManifest"
-    actions   = ["s3:PutObject", "s3:PutObjectTagging"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${aws_s3_bucket.backups[0].arn}/releases/${each.key}/*"]
   }
 
@@ -101,10 +119,6 @@ resource "aws_codebuild_project" "production" {
     environment_variable {
       name  = "EXPECTED_GALA_SLUG"
       value = each.key
-    }
-    environment_variable {
-      name  = "RELEASE_MANIFEST_PATH"
-      value = "releases/${each.key}/production.json"
     }
     environment_variable {
       name  = "RELEASE_BUCKET"
@@ -158,7 +172,7 @@ data "aws_iam_policy_document" "production_pipeline" {
   statement {
     sid       = "RunOnlyThisGalaProductionBuild"
     actions   = ["codebuild:StartBuild", "codebuild:BatchGetBuilds"]
-    resources = [aws_codebuild_project.production[each.key].arn]
+    resources = [aws_codebuild_project.production_validate[each.key].arn, aws_codebuild_project.production[each.key].arn]
   }
 
   statement {
@@ -214,6 +228,32 @@ resource "aws_codepipeline" "production" {
   }
 
   stage {
+    name = "ValidatePromotion"
+
+    action {
+      name             = "ProveTestedImages"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      namespace        = "ValidatedRelease"
+      input_artifacts  = ["SourceOutput"]
+      output_artifacts = ["ValidatedOutput"]
+
+      configuration = {
+        ProjectName = aws_codebuild_project.production_validate[each.key].name
+        EnvironmentVariables = jsonencode([
+          {
+            name  = "RELEASE_MANIFEST_PATH"
+            value = "#{variables.ReleaseManifestPath}"
+            type  = "PLAINTEXT"
+          },
+        ])
+      }
+    }
+  }
+
+  stage {
     name = "ApprovePromotion"
 
     action {
@@ -222,6 +262,9 @@ resource "aws_codepipeline" "production" {
       owner    = "AWS"
       provider = "Manual"
       version  = "1"
+      configuration = {
+        CustomData = "Validation automatique réussie. Artefact exact : #{ValidatedRelease.APPROVAL_SUMMARY}"
+      }
     }
   }
 
@@ -234,14 +277,14 @@ resource "aws_codepipeline" "production" {
       owner           = "AWS"
       provider        = "CodeBuild"
       version         = "1"
-      input_artifacts = ["SourceOutput"]
+      input_artifacts = ["ValidatedOutput"]
 
       configuration = {
         ProjectName = aws_codebuild_project.production[each.key].name
         EnvironmentVariables = jsonencode([
           {
-            name  = "RELEASE_MANIFEST_PATH"
-            value = "#{variables.ReleaseManifestPath}"
+            name  = "APPROVED_MANIFEST_SHA256"
+            value = "#{ValidatedRelease.MANIFEST_SHA256}"
             type  = "PLAINTEXT"
           },
         ])

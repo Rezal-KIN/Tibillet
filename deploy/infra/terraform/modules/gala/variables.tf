@@ -22,6 +22,14 @@ variable "ecr_lespass_repository_arn" {
   type    = string
   default = null
 }
+variable "shared_stripe_secret_arn" {
+  type    = string
+  default = null
+}
+variable "shared_mail_secret_arn" {
+  type    = string
+  default = null
+}
 variable "repository_url" { type = string }
 variable "repository_ref" { type = string }
 variable "ssh_emergency_cidrs" { type = list(string) }
