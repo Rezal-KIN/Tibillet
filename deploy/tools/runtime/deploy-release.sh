@@ -45,6 +45,10 @@ prepare_writable_mounts() {
     [[ "$path" == "$REPO_ROOT/deploy/"* && ! -L "$path" ]] \
       || fail "unsafe application bind mount path"
     install -d -m 0755 -o "$uid" -g "$gid" "$path"
+    # Git may already contain nested static files, and an earlier failed boot
+    # may have left root-owned children. Stay within these application-only
+    # mounts; -h does not follow symlinks into unrelated host paths.
+    chown -hR "$uid:$gid" "$path"
   done
 }
 
