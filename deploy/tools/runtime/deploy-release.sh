@@ -58,16 +58,44 @@ done
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
   "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs"
 prepare_writable_mounts "$LABOUTIK_IMAGE" tibillet \
-  "$REPO_ROOT/deploy/Laboutik/www" "$REPO_ROOT/deploy/Laboutik/logs"
+  "$REPO_ROOT/deploy/Laboutik/www" "$REPO_ROOT/deploy/Laboutik/logs" \
+  "$REPO_ROOT/deploy/Laboutik/backup"
 prepare_writable_mounts "$LESPASS_IMAGE" tibillet \
-  "$REPO_ROOT/deploy/Lespass/www" "$REPO_ROOT/deploy/Lespass/logs"
+  "$REPO_ROOT/deploy/Lespass/www" "$REPO_ROOT/deploy/Lespass/logs" \
+  "$REPO_ROOT/deploy/Lespass/backup"
 
 for group in "${compose_groups[@]}"; do
   compose_group_args "$group"
+  app_service=""
+  case "$group" in
+    *"/deploy/Fedow/docker-compose.yml"*) app_service="fedow_django" ;;
+    *"/deploy/Laboutik/docker-compose.yml"*) app_service="laboutik_django" ;;
+  esac
+  previous_id=""
+  if [[ -n "$app_service" ]]; then
+    previous_id="$(docker inspect --format '{{.Id}}' "$app_service" 2>/dev/null || true)"
+  fi
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --remove-orphans
+  # Fedow and Laboutik images can remain pinned while their versioned bind-
+  # mounted code changes. Restart only an existing, reused app container; on a
+  # fresh host Compose starts it once. Never restart its database for this.
+  if [[ -n "$previous_id" ]]; then
+    current_id="$(docker inspect --format '{{.Id}}' "$app_service")"
+    if [[ "$previous_id" == "$current_id" ]]; then
+      docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" restart "$app_service"
+    fi
+  fi
 done
 
-"$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"
+healthy=false
+for attempt in {1..30}; do
+  if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then
+    healthy=true
+    break
+  fi
+  if (( attempt < 30 )); then sleep 5; fi
+done
+[[ "$healthy" == true ]] || fail "local healthcheck did not pass after 30 attempts"
 install -d -m 0750 "$(release_dir)"
 manifest_copy="$(mktemp "$(release_dir)/deployed-manifest.json.XXXXXX")"
 cleanup() { rm -f "$manifest_copy"; }
