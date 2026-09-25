@@ -1,8 +1,3 @@
-output "runtime_secret_arn" {
-  value       = aws_secretsmanager_secret.runtime.arn
-  description = "External credentials secret read by the target Gala EC2."
-}
-
 output "generated_secret_arn" {
   value       = aws_secretsmanager_secret.generated.arn
   description = "Generated application keys and database credentials for the target Gala."
