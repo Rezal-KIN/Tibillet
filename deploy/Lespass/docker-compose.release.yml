@@ -13,6 +13,12 @@ services:
   lespass_django:
     image: ${LESPASS_IMAGE}
     build: !reset null
+    # Every Gala uses the same public names, even while inactive. Resolve
+    # inter-service HTTPS through this host's Traefik instead of the active EIP.
+    extra_hosts:
+      - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
   lespass_celery:
     image: ${LESPASS_IMAGE}
     build: !reset null
+    extra_hosts:
+      - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
