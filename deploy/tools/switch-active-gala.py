@@ -213,6 +213,42 @@ def verify_target_local(plan: dict[str, object]) -> None:
     raise RuntimeError("target local healthcheck timed out")
 
 
+def restart_target_proxy(plan: dict[str, object]) -> None:
+    # An inactive Gala may have tried ACME while its public security group was
+    # closed. Once ingress is open, restart its existing Traefik container so
+    # it requests real certificates before the strict HTTPS gate. This is part
+    # of the reviewed switch, not a one-off repair on the instance.
+    script = (
+        "set -eu; "
+        "test \"$(docker inspect --format '{{.Name}}' traefik)\" = /traefik; "
+        "docker restart traefik >/dev/null; "
+        "test \"$(docker inspect --format '{{.State.Running}}' traefik)\" = true"
+    )
+    response = aws(
+        "ssm", "send-command", "--document-name", "AWS-RunShellScript",
+        "--instance-ids", plan["target_instance_id"],
+        "--parameters", json.dumps({"commands": [script]}),
+        "--comment", "Restart target Traefik after public ingress opens for ACME",
+    )
+    command_id = response["Command"]["CommandId"]
+    for _ in range(36):
+        time.sleep(5)
+        try:
+            result = aws(
+                "ssm", "get-command-invocation", "--command-id", command_id,
+                "--instance-id", plan["target_instance_id"],
+            )
+        except RuntimeError as error:
+            if "InvocationDoesNotExist" in str(error):
+                continue
+            raise
+        if result["Status"] == "Success":
+            return
+        if result["Status"] not in {"Pending", "InProgress", "Delayed"}:
+            raise RuntimeError(f"target Traefik restart failed: {result['Status']}")
+    raise RuntimeError("target Traefik restart timed out")
+
+
 def set_groups(interface_id: str, group_ids: list[str]) -> None:
     aws("ec2", "modify-network-interface-attribute", "--network-interface-id", interface_id, "--groups", *sorted(group_ids))
 
@@ -260,6 +296,7 @@ def apply_plan(plan: dict[str, object], settings: dict[str, str]) -> None:
             set_groups(old_eni, [group for group in plan["current_groups"] if group != public_group])
         if address(plan["eip_allocation_id"]).get("InstanceId") != plan["target_instance_id"]:
             raise RuntimeError("shared EIP did not reach the target instance")
+        restart_target_proxy(plan)
         check_public(plan)
         aws(
             "ssm", "put-parameter", "--name", plan["active_parameter"],
