@@ -65,10 +65,14 @@ Foundation est une pipeline d'ajout, pas un éditeur générique de production.
 Les essais `gala-validation` et `gala-validation-2` ont chacun laissé une
 pipeline Production inutilisée. Le code Terraform versionné exclut uniquement
 ces deux slugs des ressources de livraison Production, sans retirer leurs EC2,
-secrets, sauvegardes ou groupes CloudWatch Logs. Le contrôle du plan Foundation
+secrets, sauvegardes ou groupes CloudWatch Logs. Leurs anciens rôles IAM restent
+gérés sans politiques de permissions : la première exécution a révélé qu'il
+manquait `iam:ListInstanceProfilesForRole` au rôle Foundation pour les supprimer.
+Le contrôle du plan Foundation
 autorise la suppression de ces ressources de livraison précises seulement si
 `GalaName` vaut `Gala Validation` ou `Gala Validation 2`. Après fusion du code
 sur `main`, lancer Foundation avec `GalaName=Gala Validation`, contrôler que le
 plan ne contient que ces suppressions et les rafraîchissements de politique IAM
-admis, puis attendre la réussite de la pipeline entière. Ce retrait n'est pas
-une opération générique de suppression de gala.
+admis (ou aucun changement si l'apply précédent les a déjà effectuées), puis
+attendre la réussite de la pipeline entière. Ce retrait n'est pas une opération
+générique de suppression de gala.
