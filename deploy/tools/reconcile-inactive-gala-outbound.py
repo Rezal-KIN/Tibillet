@@ -4,7 +4,8 @@
 Older EC2s launched while their own EIP was attached may have auto-assignment
 disabled on their primary ENI. After the EIP is released, enable that ENI
 attribute and verify that EC2 receives a temporary public IP and SSM access.
-The operation never edits or restarts the guest.
+The operation never edits the guest; it can restart this inactive instance once
+if the old SSM agent remains offline after the address returns.
 """
 from __future__ import annotations
 
@@ -57,9 +58,6 @@ def main() -> None:
     eni_id = instance["NetworkInterfaces"][0]["NetworkInterfaceId"]
     if instance["State"]["Name"] != "running":
         raise ValueError("instance must be running before migration")
-    if instance.get("PublicIpAddress"):
-        print(f"Gala already has outbound public IPv4: {args.gala}")
-        return
     addresses = aws("ec2", "describe-addresses", "--filters", f"Name=instance-id,Values={args.instance_id}")["Addresses"]
     if addresses:
         raise ValueError("instance still holds an EIP")
@@ -69,12 +67,23 @@ def main() -> None:
         print(f"Enabling automatic public IPv4 on inactive legacy Gala {args.gala} primary ENI", flush=True)
         aws("ec2", "modify-network-interface-attribute", "--network-interface-id", eni_id,
             "--associate-public-ip-address")
-    for _ in range(36):
+    for attempt in range(36):
         instance = host(args.instance_id)
         online = aws("ssm", "describe-instance-information", "--filters", f"Key=InstanceIds,Values={args.instance_id}")["InstanceInformationList"]
         if instance.get("PublicIpAddress") and len(online) == 1 and online[0]["PingStatus"] == "Online":
             print(f"Outbound IPv4 and SSM restored for {args.gala}")
             return
+        if attempt == 11 and instance.get("PublicIpAddress"):
+            # The old SSM agent can remain in its offline backoff after its
+            # network address is restored. Restart only the already validated
+            # inactive EC2 once, then require a live SSM heartbeat.
+            print(f"Restarting inactive legacy Gala {args.gala} after ENI repair", flush=True)
+            aws("ec2", "stop-instances", "--instance-ids", args.instance_id)
+            subprocess.run(["aws", "ec2", "wait", "instance-stopped", "--instance-ids", args.instance_id,
+                            "--region", REGION], check=True)
+            aws("ec2", "start-instances", "--instance-ids", args.instance_id)
+            subprocess.run(["aws", "ec2", "wait", "instance-running", "--instance-ids", args.instance_id,
+                            "--region", REGION], check=True)
         time.sleep(10)
     raise RuntimeError("instance restarted but public IPv4 or SSM did not recover")
 
