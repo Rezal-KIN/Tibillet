@@ -95,6 +95,27 @@ class FoundationPlanTests(unittest.TestCase):
             with self.subTest(item=item), self.assertRaises(ValueError):
                 module.verify({"resource_changes": [item]}, "gala-validation")
 
+    def test_validation_pipeline_retirement_preserves_hosts_and_logs(self) -> None:
+        pipeline = 'aws_codepipeline.production["gala-validation"]'
+        build = 'aws_codebuild_project.production_validate["gala-validation-2"]'
+        self.assertEqual(module.verify({"resource_changes": [
+            change(pipeline, ["delete"]), change(build, ["delete"]),
+        ]}, "gala-validation"), [
+            f"retire-validation-pipeline {pipeline}",
+            f"retire-validation-pipeline {build}",
+        ])
+        for forbidden in (
+            'module.gala["gala-validation"].aws_instance.runtime[0]',
+            'aws_cloudwatch_log_group.production_validate["gala-validation"]',
+            'aws_secretsmanager_secret.gala["gala-validation"]',
+            'aws_codepipeline.production["gala-am-aix"]',
+            'aws_codepipeline.production["gala-smoke"]',
+        ):
+            with self.subTest(address=forbidden), self.assertRaises(ValueError):
+                module.verify({"resource_changes": [change(forbidden, ["delete"])]}, "gala-validation")
+        with self.assertRaises(ValueError):
+            module.verify({"resource_changes": [change(pipeline, ["delete"])]}, "gala-am-aix")
+
 
 if __name__ == "__main__":
     unittest.main()

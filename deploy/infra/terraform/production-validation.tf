@@ -1,6 +1,6 @@
 # Pre-approval validation has no deployment or release-write permissions.
 resource "aws_cloudwatch_log_group" "production_validate" {
-  for_each          = local.production_target_galas
+  for_each          = local.production_log_galas
   name              = "/aws/codebuild/${local.name_prefix}-production-${each.key}-validate"
   retention_in_days = var.codebuild_log_retention_days
 }

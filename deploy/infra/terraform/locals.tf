@@ -3,7 +3,14 @@ locals {
   gala_resources_enabled       = var.enable_additive_resources && var.enable_backup_storage
   delivery_resources_enabled   = local.gala_resources_enabled && var.enable_delivery_platform
   production_resources_enabled = local.delivery_resources_enabled && var.enable_production_pipeline
+  # These two from-scratch Foundation trial hosts remain managed, but their
+  # failed trial Production pipelines are retired. Keep the EC2s and logs.
+  retired_validation_pipeline_slugs = toset(["gala-validation", "gala-validation-2"])
   production_target_galas = local.production_resources_enabled ? {
+    for slug, gala in var.galas : slug => gala
+    if gala.create_instance && !contains(local.retired_validation_pipeline_slugs, slug)
+  } : {}
+  production_log_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
     if gala.create_instance
   } : {}

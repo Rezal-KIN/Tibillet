@@ -59,3 +59,16 @@ Une relance avec le même nom et la même configuration est un *no-op* sûr ou
 reprend l'échec partiel. Une collision avec une configuration différente est
 refusée. Pour modifier un gala existant, ouvrir une PR Terraform revue :
 Foundation est une pipeline d'ajout, pas un éditeur générique de production.
+
+## Retrait des deux pipelines de validation historiques
+
+Les essais `gala-validation` et `gala-validation-2` ont chacun laissé une
+pipeline Production inutilisée. Le code Terraform versionné exclut uniquement
+ces deux slugs des ressources de livraison Production, sans retirer leurs EC2,
+secrets, sauvegardes ou groupes CloudWatch Logs. Le contrôle du plan Foundation
+autorise la suppression de ces ressources de livraison précises seulement si
+`GalaName` vaut `Gala Validation` ou `Gala Validation 2`. Après fusion du code
+sur `main`, lancer Foundation avec `GalaName=Gala Validation`, contrôler que le
+plan ne contient que ces suppressions et les rafraîchissements de politique IAM
+admis, puis attendre la réussite de la pipeline entière. Ce retrait n'est pas
+une opération générique de suppression de gala.
