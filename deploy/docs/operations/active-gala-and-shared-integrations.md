@@ -127,5 +127,13 @@ de chaque EC2 doit alors contenir les deux ARN non secrets
 `SHARED_MAIL_SECRET_ARN`.
 
 Avant de supprimer l'ancienne EIP Smoke, le plan Terraform doit confirmer
-qu'elle n'est visée par aucun DNS et que l'instance restera SSM Online après
-sa libération. L'EIP Aix devient l'unique adresse fixe du Gala Paris.
+qu'elle n'est visée par aucun DNS. Après libération, vérifier l'IPv4 temporaire
+et SSM `Online`. L'EIP Aix devient l'unique adresse fixe du Gala Paris.
+Si l'ancienne EC2 Smoke, lancée avec son EIP propre, ne reçoit pas d'adresse
+IPv4 temporaire après cette libération, utiliser le script versionné
+`deploy/tools/reconcile-inactive-gala-outbound.py` avec son ID exact et
+`--gala gala-smoke`. Il refuse l'instance active, vérifie les tags Terraform,
+effectue un stop/start EC2 (sans modification dans l'invité), puis exige une
+adresse temporaire et SSM `Online`. Ce rattrapage concerne la migration des
+anciennes EC2 ; les nouveaux galas sont créés directement avec une IPv4
+temporaire et sans EIP dédiée.
