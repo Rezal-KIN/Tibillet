@@ -19,6 +19,28 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_accepts_only_production_buildspec_refresh(self) -> None:
+        address = 'aws_codebuild_project.production["gala-am-aix"]'
+        before = {
+            "name": "gala-am-aix-build", "service_role": "same-role",
+            "source": [{"type": "CODEPIPELINE", "buildspec": "old"}],
+        }
+        after = {**before, "source": [{"type": "CODEPIPELINE", "buildspec": "new"}]}
+        update = {"address": address, "change": {
+            "actions": ["update"], "before": before, "after": after, "after_unknown": {},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [update]}, "gala-am-aix"),
+                         [f"update-production-buildspec {address}"])
+        for invalid_after, unknown in (
+            ({**after, "service_role": "another-role"}, {}),
+            ({**after, "source": [{"type": "NO_SOURCE", "buildspec": "new"}]}, {}),
+            (after, {"environment": [{"image": True}]}),
+        ):
+            with self.subTest(after=invalid_after, unknown=unknown), self.assertRaises(ValueError):
+                module.verify({"resource_changes": [{**update, "change": {
+                    **update["change"], "after": invalid_after, "after_unknown": unknown,
+                }}]}, "gala-am-aix")
+
     def test_accepts_only_requested_gala_and_switch_policy_update(self) -> None:
         plan = {"resource_changes": [
             {"mode": "data", **change('data.aws_iam_policy_document.active_switch_build["apply"]', ["read"])},
