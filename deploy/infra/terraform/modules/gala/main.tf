@@ -1,8 +1,7 @@
 locals {
-  name_prefix         = "${var.project_name}-${var.gala_slug}"
-  runtime_secret_name = "${var.project_name}/galas/${var.gala_slug}/runtime"
-  backup_prefix       = "galas/${var.gala_slug}/"
-  release_prefix      = "releases/${var.gala_slug}/"
+  name_prefix    = "${var.project_name}-${var.gala_slug}"
+  backup_prefix  = "galas/${var.gala_slug}/"
+  release_prefix = "releases/${var.gala_slug}/"
 
   tags = merge({
     Project       = var.project_name
@@ -11,18 +10,6 @@ locals {
     ManagedBy     = "terraform"
     DataIsolation = "gala-only"
   }, var.extra_tags)
-}
-
-resource "aws_secretsmanager_secret" "runtime" {
-  name                    = local.runtime_secret_name
-  description             = "Retained legacy per-Gala runtime container; shared external credentials now live in the account-level integrations secret."
-  recovery_window_in_days = 7
-
-  tags = local.tags
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_secretsmanager_secret" "generated" {
@@ -209,7 +196,6 @@ resource "aws_instance" "runtime" {
     platform                 = var.platform
     repository_ref           = var.repository_ref
     repository_url           = var.repository_url
-    runtime_secret_arn       = aws_secretsmanager_secret.runtime.arn
     generated_secret_arn     = aws_secretsmanager_secret.generated.arn
     shared_stripe_secret_arn = var.shared_stripe_secret_arn
     shared_mail_secret_arn   = var.shared_mail_secret_arn

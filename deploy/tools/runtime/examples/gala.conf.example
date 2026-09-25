@@ -16,7 +16,6 @@ LESPASS_PUBLIC_DOMAIN="example.org"
 
 # From `terraform -chdir=infra/terraform output -json galas` for this slug.
 BACKUP_BUCKET="tibillet-gala-production-123456789012-backups"
-RUNTIME_SECRET_ARN="arn:aws:secretsmanager:eu-west-3:123456789012:secret:tibillet-gala/galas/gala-am-aix-2027/runtime-AbCdEf"
 RELEASE_BUCKET="$BACKUP_BUCKET"
 
 # Absolute path to this repository checkout on the gala EC2.

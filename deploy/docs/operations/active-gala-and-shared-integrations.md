@@ -92,8 +92,9 @@ automatiquement. Smoke configure le backend e-mail Django « dummy » et son
 groupe réseau bloque les ports SMTP sortants : aucun mail aux participants ne
 part. `test_recipient` reste la destination prévue pour un futur relais de
 test ; l'envoi effectif vers cette boîte n'est **pas encore implémenté**. Les
-anciens conteneurs `<slug>/runtime` sont conservés comme archives vides ; les
-EC2 ne les lisent plus.
+anciens conteneurs `<slug>/runtime`, vides et non lus par les EC2, ont été
+retirés de la configuration Terraform ; leur suppression AWS est planifiée
+avec la fenêtre de récupération Secrets Manager.
 
 ## Déploiement et bascule du trafic
 

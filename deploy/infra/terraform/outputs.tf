@@ -17,7 +17,6 @@ output "galas" {
   value = {
     for slug, gala in module.gala : slug => {
       instance_id          = gala.instance_id
-      runtime_secret_arn   = gala.runtime_secret_arn
       generated_secret_arn = gala.generated_secret_arn
       backup_prefix        = gala.backup_prefix
     }
