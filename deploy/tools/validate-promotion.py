@@ -32,7 +32,13 @@ def main() -> None:
     parser.add_argument("--bucket", required=True)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    subprocess.run(["python3", "deploy/tools/runtime/validate-release.py", str(args.manifest)], check=True)
+    # The buildspec consumes exactly two stdout lines: approval summary and
+    # MANIFEST_SHA256. Keep the preliminary syntax check from shifting them.
+    subprocess.run(
+        ["python3", "deploy/tools/runtime/validate-release.py", str(args.manifest)],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     commit = manifest["fork_commit"]
     with tempfile.TemporaryDirectory() as directory:
