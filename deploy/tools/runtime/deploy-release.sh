@@ -91,6 +91,17 @@ for group in "${compose_groups[@]}"; do
   fi
 done
 
+# The upstream Lespass image explicitly ships MIGRATE=0 and comments out its
+# install command. A newly provisioned Gala therefore needs both steps in the
+# reviewed release workflow before its public tenant can answer requests.
+# The install command exits harmlessly when domains already exist. During this
+# one-time local Fedow handshake only, DEBUG disables verification of Traefik's
+# temporary self-signed certificate; the web process remains DEBUG=0.
+timeout 600s docker exec lespass_django bash -lc \
+  'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py migrate_schemas --executor=multiprocessing'
+timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
+  'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
+
 healthy=false
 for attempt in {1..30}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then

@@ -6,3 +6,5 @@
 services:
   laboutik_django:
     image: ${LABOUTIK_IMAGE}
+    extra_hosts:
+      - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
