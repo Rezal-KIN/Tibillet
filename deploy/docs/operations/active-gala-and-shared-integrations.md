@@ -133,7 +133,8 @@ Si l'ancienne EC2 Smoke, lancée avec son EIP propre, ne reçoit pas d'adresse
 IPv4 temporaire après cette libération, utiliser le script versionné
 `deploy/tools/reconcile-inactive-gala-outbound.py` avec son ID exact et
 `--gala gala-smoke`. Il refuse l'instance active, vérifie les tags Terraform,
-effectue un stop/start EC2 (sans modification dans l'invité), puis exige une
-adresse temporaire et SSM `Online`. Ce rattrapage concerne la migration des
+active l'auto-attribution IPv4 sur son interface primaire (sans modification
+ni redémarrage dans l'invité), puis exige une adresse temporaire et SSM
+`Online`. Ce rattrapage concerne la migration des
 anciennes EC2 ; les nouveaux galas sont créés directement avec une IPv4
 temporaire et sans EIP dédiée.
