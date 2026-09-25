@@ -8,6 +8,10 @@ locals {
   active_switch_instances = compact([
     for gala in module.gala : gala.instance_id
   ])
+  active_switch_security_groups = concat(
+    [aws_security_group.active_public[0].id],
+    [for gala in module.gala : gala.runtime_security_group_id],
+  )
 }
 
 resource "aws_cloudwatch_log_group" "active_switch" {
@@ -93,6 +97,21 @@ data "aws_iam_policy_document" "active_switch_build" {
       resources = [
         for eni in local.active_switch_enis :
         "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/${eni}"
+      ]
+      # EC2 evaluates ModifyNetworkInterfaceAttribute against every referenced
+      # security group as well as the ENI. Keep both sets bounded to Terraform-
+      # managed Gala resources; otherwise the first public switch is denied.
+    }
+  }
+
+  dynamic "statement" {
+    for_each = each.key == "apply" ? [1] : []
+    content {
+      sid     = "ReferenceOnlyKnownGalaSecurityGroups"
+      actions = ["ec2:ModifyNetworkInterfaceAttribute"]
+      resources = [
+        for sg in local.active_switch_security_groups :
+        "arn:${data.aws_partition.current.partition}:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:security-group/${sg}"
       ]
     }
   }
