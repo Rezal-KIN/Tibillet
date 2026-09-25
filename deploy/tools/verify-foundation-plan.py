@@ -28,6 +28,7 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
     allowed_updates = re.compile(
         r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
     )
+    production_project = re.compile(r'^aws_codebuild_project\.production\["[a-z0-9-]+"\]$')
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
@@ -59,8 +60,36 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
             ):
                 changed.append(f"refresh-policy {address}")
                 continue
+        if actions == ["update"] and production_project.fullmatch(address):
+            change = item["change"]
+            before = change.get("before")
+            after = change.get("after")
+            unknown = change.get("after_unknown", {})
+            if isinstance(before, dict) and isinstance(after, dict) and not has_unknown(unknown):
+                old_source = before.get("source")
+                new_source = after.get("source")
+                if (
+                    {k: v for k, v in before.items() if k != "source"}
+                    == {k: v for k, v in after.items() if k != "source"}
+                    and isinstance(old_source, list) and isinstance(new_source, list)
+                    and len(old_source) == len(new_source) == 1
+                    and isinstance(old_source[0], dict) and isinstance(new_source[0], dict)
+                    and old_source[0].get("buildspec") != new_source[0].get("buildspec")
+                    and {k: v for k, v in old_source[0].items() if k != "buildspec"}
+                    == {k: v for k, v in new_source[0].items() if k != "buildspec"}
+                ):
+                    changed.append(f"update-production-buildspec {address}")
+                    continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
+
+
+def has_unknown(value: object) -> bool:
+    if isinstance(value, dict):
+        return any(has_unknown(item) for item in value.values())
+    if isinstance(value, list):
+        return any(has_unknown(item) for item in value)
+    return value is True
 
 
 def main() -> None:
