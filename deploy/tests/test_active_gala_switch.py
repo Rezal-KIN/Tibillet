@@ -60,11 +60,13 @@ class ActiveGalaSwitchTests(unittest.TestCase):
         with (
             mock.patch.object(switch, "build_plan", return_value=PLAN),
             mock.patch.object(switch, "verify_target_local"),
+            mock.patch.object(switch, "restart_target_proxy") as restart,
             mock.patch.object(switch, "check_public"),
             mock.patch.object(switch, "aws", side_effect=fake_aws),
         ):
             switch.apply_plan(PLAN, SETTINGS)
 
+        restart.assert_called_once_with(PLAN)
         self.assertTrue(any(args[:2] == ("ec2", "associate-address") and "eni-target" in args for args in calls))
         self.assertTrue(any(args[:2] == ("ssm", "put-parameter") and "gala-smoke" in args for args in calls))
         self.assertTrue(any(args[:2] == ("ec2", "modify-network-interface-attribute") and "eni-old" in args for args in calls))
@@ -81,6 +83,7 @@ class ActiveGalaSwitchTests(unittest.TestCase):
         with (
             mock.patch.object(switch, "build_plan", return_value=PLAN),
             mock.patch.object(switch, "verify_target_local"),
+            mock.patch.object(switch, "restart_target_proxy"),
             mock.patch.object(switch, "check_public", side_effect=RuntimeError("TLS failed")),
             mock.patch.object(switch, "aws", side_effect=fake_aws),
         ):
@@ -92,6 +95,17 @@ class ActiveGalaSwitchTests(unittest.TestCase):
         self.assertIn("eni-target", associations[0])
         self.assertIn("eni-old", associations[1])
         self.assertFalse(any(args[:2] == ("ssm", "put-parameter") for args in calls))
+
+    def test_proxy_restart_uses_only_the_planned_instance(self) -> None:
+        responses = [
+            {"Command": {"CommandId": "command-1"}},
+            {"Status": "Success"},
+        ]
+        with mock.patch.object(switch, "aws", side_effect=responses) as aws, \
+             mock.patch.object(switch.time, "sleep"):
+            switch.restart_target_proxy(PLAN)
+        self.assertIn(PLAN["target_instance_id"], aws.call_args_list[0].args)
+        self.assertIn("docker restart traefik", aws.call_args_list[0].args[7])
 
 
 if __name__ == "__main__":
