@@ -245,7 +245,7 @@ resource "aws_instance" "runtime" {
     # Existing hosts are upgraded through the idempotent SSM installer. Do not
     # turn a bootstrap-template revision into an EC2 replacement or a surprise
     # user-data mutation on a live Gala.
-    ignore_changes = [user_data, vpc_security_group_ids]
+    ignore_changes = [user_data, vpc_security_group_ids, associate_public_ip_address]
 
     precondition {
       condition     = var.ami_id != "" && var.subnet_id != "" && var.vpc_id != ""

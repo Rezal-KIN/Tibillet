@@ -7,6 +7,12 @@ locals {
     for slug, gala in var.galas : slug => gala
     if gala.create_instance
   } : {}
+  production_iam_role_prefix = {
+    for slug, gala in local.production_target_galas :
+    slug => length("${local.name_prefix}-production-${slug}-pipeline") <= 64 ?
+    "${local.name_prefix}-production-${slug}" :
+    "${var.project_name}-p-${substr(slug, 0, 20)}-${substr(sha1(slug), 0, 8)}"
+  }
   foundation_codebuild_role_arn = var.foundation_codebuild_role_arn != "" ? var.foundation_codebuild_role_arn : try(aws_iam_role.foundation_build[0].arn, "")
   foundation_pipeline_enabled   = local.delivery_resources_enabled && var.enable_foundation_pipeline
 

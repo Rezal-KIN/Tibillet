@@ -51,7 +51,7 @@ resource "aws_ssm_document" "production_deploy" {
 
 resource "aws_iam_role" "production_build" {
   for_each           = local.production_target_galas
-  name               = "${local.name_prefix}-production-${each.key}-build"
+  name               = "${local.production_iam_role_prefix[each.key]}-build"
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role.json
 }
 
@@ -149,7 +149,7 @@ resource "aws_codebuild_project" "production" {
 
 resource "aws_iam_role" "production_pipeline" {
   for_each = local.production_target_galas
-  name     = "${local.name_prefix}-production-${each.key}-pipeline"
+  name     = "${local.production_iam_role_prefix[each.key]}-pipeline"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
