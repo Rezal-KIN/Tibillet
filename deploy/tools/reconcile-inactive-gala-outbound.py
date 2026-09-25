@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """One-time migration: restore outbound IP on an inactive legacy Gala host.
 
-Older EC2s launched while their own EIP was attached may not obtain an
-automatic public IPv4 when that EIP is released. This operation never edits
-the guest: it restarts only the exact inactive Terraform-managed instance and
-verifies that the subnet gives it a temporary public IP and SSM connectivity.
+Older EC2s launched while their own EIP was attached may have auto-assignment
+disabled on their primary ENI. After the EIP is released, enable that ENI
+attribute and verify that EC2 receives a temporary public IP and SSM access.
+The operation never edits or restarts the guest.
 """
 from __future__ import annotations
 
@@ -54,6 +54,7 @@ def main() -> None:
         raise ValueError("instance is not the requested Terraform Gala")
     if len(instance["NetworkInterfaces"]) != 1 or instance["NetworkInterfaces"][0]["Attachment"]["DeviceIndex"] != 0:
         raise ValueError("instance must have exactly one primary network interface")
+    eni_id = instance["NetworkInterfaces"][0]["NetworkInterfaceId"]
     if instance["State"]["Name"] != "running":
         raise ValueError("instance must be running before migration")
     if instance.get("PublicIpAddress"):
@@ -62,11 +63,12 @@ def main() -> None:
     addresses = aws("ec2", "describe-addresses", "--filters", f"Name=instance-id,Values={args.instance_id}")["Addresses"]
     if addresses:
         raise ValueError("instance still holds an EIP")
-    print(f"Restarting inactive legacy Gala {args.gala} to restore temporary outbound IPv4", flush=True)
-    aws("ec2", "stop-instances", "--instance-ids", args.instance_id)
-    subprocess.run(["aws", "ec2", "wait", "instance-stopped", "--instance-ids", args.instance_id, "--region", REGION], check=True)
-    aws("ec2", "start-instances", "--instance-ids", args.instance_id)
-    subprocess.run(["aws", "ec2", "wait", "instance-running", "--instance-ids", args.instance_id, "--region", REGION], check=True)
+    attribute = aws("ec2", "describe-network-interface-attribute", "--network-interface-id", eni_id,
+                    "--attribute", "associatePublicIpAddress")
+    if attribute.get("AssociatePublicIpAddress") is not True:
+        print(f"Enabling automatic public IPv4 on inactive legacy Gala {args.gala} primary ENI", flush=True)
+        aws("ec2", "modify-network-interface-attribute", "--network-interface-id", eni_id,
+            "--associate-public-ip-address")
     for _ in range(36):
         instance = host(args.instance_id)
         online = aws("ssm", "describe-instance-information", "--filters", f"Key=InstanceIds,Values={args.instance_id}")["InstanceInformationList"]

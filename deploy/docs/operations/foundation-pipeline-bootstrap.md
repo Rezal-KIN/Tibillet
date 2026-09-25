@@ -9,7 +9,8 @@ avant toute nouvelle exécution.
 La pipeline **Foundation** est le point d'entrée manuel pour ajouter un gala.
 Elle crée l'EC2, son conteneur de clés, ses préfixes S3, puis la pipeline
 Production verrouillée sur cette EC2. Après l'apply, une étape Finalize génère
-les clés une seule fois et enregistre le catalogue. Elle ne reçoit jamais de
+les clés une seule fois, vérifie cloud-init et le runtime sur l'EC2 exacte via
+SSM, puis enregistre le catalogue. Elle ne reçoit jamais de
 secret Stripe ou SMTP.
 
 ## Pré-requis uniques
@@ -49,8 +50,9 @@ La pipeline valide le nom, fusionne le gala dans le catalogue, calcule le
 plan Terraform et refuse toute suppression, remplacement, modification d'un
 autre gala ou changement de plateforme inattendu. Elle applique ensuite le
 plan binaire exactement produit. Une étape Finalize indépendante initialise les
-clés stables du nouveau gala (et préserve celles des galas existants), puis
-seulement enregistre le nouveau catalogue. Finalize peut être réessayée sans
+clés stables du nouveau gala (et préserve celles des galas existants), vérifie
+le bootstrap via SSM, puis seulement enregistre le nouveau catalogue.
+Finalize peut être réessayée sans
 rejouer un plan Terraform déjà appliqué.
 
 Une relance avec le même nom et la même configuration est un *no-op* sûr ou
