@@ -60,6 +60,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
             ):
                 changed.append(f"refresh-policy {address}")
                 continue
+            if address == 'aws_iam_role_policy.active_switch_build["apply"]' and safe_group_permission_addition(change):
+                changed.append(f"add-managed-gala-group-permission {address}")
+                continue
         if actions == ["update"] and production_project.fullmatch(address):
             change = item["change"]
             before = change.get("before")
@@ -90,6 +93,42 @@ def has_unknown(value: object) -> bool:
     if isinstance(value, list):
         return any(has_unknown(item) for item in value)
     return value is True
+
+
+def safe_group_permission_addition(change: dict[str, object]) -> bool:
+    before = change.get("before")
+    after = change.get("after")
+    if not isinstance(before, dict) or not isinstance(after, dict) or has_unknown(change.get("after_unknown", {})):
+        return False
+    if {k: v for k, v in before.items() if k != "policy"} != {k: v for k, v in after.items() if k != "policy"}:
+        return False
+    try:
+        old_policy = json.loads(before["policy"])
+        new_policy = json.loads(after["policy"])
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return False
+    if {k: v for k, v in old_policy.items() if k != "Statement"} != {k: v for k, v in new_policy.items() if k != "Statement"}:
+        return False
+    old_statements = old_policy.get("Statement")
+    new_statements = new_policy.get("Statement")
+    if not isinstance(old_statements, list) or not isinstance(new_statements, list):
+        return False
+    sid = "ReferenceOnlyKnownGalaSecurityGroups"
+    added = [item for item in new_statements if isinstance(item, dict) and item.get("Sid") == sid]
+    if len(added) != 1 or [item for item in new_statements if item not in added] != old_statements:
+        return False
+    statement = added[0]
+    resources = statement.get("Resource")
+    return (
+        set(statement) == {"Sid", "Effect", "Action", "Resource"}
+        and statement["Effect"] == "Allow"
+        and statement["Action"] == "ec2:ModifyNetworkInterfaceAttribute"
+        and isinstance(resources, list) and 2 <= len(resources) <= 20
+        and all(isinstance(resource, str) for resource in resources)
+        and len(resources) == len(set(resources))
+        and all(re.fullmatch(r"arn:aws:ec2:eu-west-3:318629836660:security-group/sg-[0-9a-f]{8,17}", resource)
+                for resource in resources)
+    )
 
 
 def main() -> None:

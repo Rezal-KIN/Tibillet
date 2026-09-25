@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 
@@ -19,6 +20,37 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_accepts_only_managed_security_group_permission_addition(self) -> None:
+        address = 'aws_iam_role_policy.active_switch_build["apply"]'
+        existing = {"Sid": "Existing", "Effect": "Allow", "Action": "ec2:DescribeInstances", "Resource": "*"}
+        added = {
+            "Sid": "ReferenceOnlyKnownGalaSecurityGroups", "Effect": "Allow",
+            "Action": "ec2:ModifyNetworkInterfaceAttribute",
+            "Resource": [
+                "arn:aws:ec2:eu-west-3:318629836660:security-group/sg-08328acbe9b056521",
+                "arn:aws:ec2:eu-west-3:318629836660:security-group/sg-0de7c48b099d4caaa",
+            ],
+        }
+        before = {"id": "same", "policy": json.dumps({"Version": "2012-10-17", "Statement": [existing]})}
+        after = {"id": "same", "policy": json.dumps({"Version": "2012-10-17", "Statement": [existing, added]})}
+        update = {"address": address, "change": {
+            "actions": ["update"], "before": before, "after": after, "after_unknown": {},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [update]}, "gala-am-aix"),
+                         [f"add-managed-gala-group-permission {address}"])
+        for invalid in (
+            {**added, "Action": "ec2:*"},
+            {**added, "Resource": ["*"]},
+            {**added, "Resource": ["arn:aws:ec2:eu-west-3:318629836660:security-group/sg-08328acbe9b056521"]},
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                changed_after = {**after, "policy": json.dumps({
+                    "Version": "2012-10-17", "Statement": [existing, invalid],
+                })}
+                module.verify({"resource_changes": [{**update, "change": {
+                    **update["change"], "after": changed_after,
+                }}]}, "gala-am-aix")
+
     def test_accepts_only_production_buildspec_refresh(self) -> None:
         address = 'aws_codebuild_project.production["gala-am-aix"]'
         before = {
