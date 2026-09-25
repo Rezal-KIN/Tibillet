@@ -51,11 +51,14 @@ prepare_writable_mounts() {
 IFS=':' read -r -a compose_groups <<< "$COMPOSE_FILES"
 for group in "${compose_groups[@]}"; do
   compose_group_args "$group"
-  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" pull
+  # SSM truncates noisy stderr at 24 KB; keep the actual deployment error visible.
+  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" pull --quiet
 done
 
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
   "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs"
+prepare_writable_mounts "$LABOUTIK_IMAGE" tibillet \
+  "$REPO_ROOT/deploy/Laboutik/www" "$REPO_ROOT/deploy/Laboutik/logs"
 prepare_writable_mounts "$LESPASS_IMAGE" tibillet \
   "$REPO_ROOT/deploy/Lespass/www" "$REPO_ROOT/deploy/Lespass/logs"
 
