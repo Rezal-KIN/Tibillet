@@ -6,7 +6,7 @@ resource "aws_cloudwatch_log_group" "production_validate" {
 }
 
 resource "aws_iam_role" "production_validate" {
-  for_each           = local.production_target_galas
+  for_each           = local.production_log_galas
   name               = "${local.production_iam_role_prefix[each.key]}-validate"
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role.json
 }

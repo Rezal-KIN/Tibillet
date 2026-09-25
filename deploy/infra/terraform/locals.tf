@@ -14,8 +14,10 @@ locals {
     for slug, gala in var.galas : slug => gala
     if gala.create_instance
   } : {}
+  # Keep the historical validation IAM roles without permissions until a
+  # separately reviewed IAM-deletion migration is available in Foundation.
   production_iam_role_prefix = {
-    for slug, gala in local.production_target_galas :
+    for slug, gala in local.production_log_galas :
     slug => length("${local.name_prefix}-production-${slug}-pipeline") <= 64 ?
     "${local.name_prefix}-production-${slug}" :
     "${var.project_name}-p-${substr(slug, 0, 20)}-${substr(sha1(slug), 0, 8)}"
