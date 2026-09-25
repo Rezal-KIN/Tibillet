@@ -14,6 +14,22 @@ from pathlib import Path
 REGION = "eu-west-3"
 ACCOUNT = "318629836660"
 SLUG = re.compile(r"[a-z0-9][a-z0-9-]{1,62}\Z")
+RETIRED_VALIDATION_SLUGS = {"gala-validation", "gala-validation-2"}
+
+
+def is_validation_retirement(plan: dict[str, object], slug: str) -> bool:
+    """A historical pipeline cleanup must not depend on application health."""
+    if slug not in RETIRED_VALIDATION_SLUGS:
+        return False
+    changes = plan.get("resource_changes")
+    if not isinstance(changes, list):
+        raise ValueError("Foundation plan has no resource_changes array")
+    prefix = f'module.gala["{slug}"].'
+    return all(
+        not (isinstance(item, dict) and str(item.get("address", "")).startswith(prefix)
+             and item.get("change", {}).get("actions") != ["no-op"])
+        for item in changes
+    )
 
 
 def aws(*args: str) -> dict[str, object]:
@@ -111,6 +127,7 @@ def main() -> None:
     parser.add_argument("catalog", type=Path)
     parser.add_argument("--slug", required=True)
     parser.add_argument("--project-name", required=True)
+    parser.add_argument("--foundation-plan", type=Path)
     args = parser.parse_args()
     if not SLUG.fullmatch(args.slug) or not SLUG.fullmatch(args.project_name):
         raise ValueError("invalid Gala slug or project name")
@@ -121,6 +138,11 @@ def main() -> None:
         raise ValueError("wrong AWS account")
     instance_id = selected_instance(args.project_name, args.slug)
     wait_online(instance_id)
+    if args.foundation_plan and is_validation_retirement(
+        json.loads(args.foundation_plan.read_text(encoding="utf-8")), args.slug
+    ):
+        print(f"Historical pipeline retirement: EC2 {instance_id} remains online; bootstrap check not applicable", flush=True)
+        return
     # The committed catalog is updated only after this gate succeeds. A Gala
     # absent from it is a new/unfinished creation and must have a clean first
     # boot. Existing Galas are checked for the installed runtime and services,

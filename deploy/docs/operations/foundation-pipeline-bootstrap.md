@@ -75,4 +75,7 @@ sur `main`, lancer Foundation avec `GalaName=Gala Validation`, contrôler que le
 plan ne contient que ces suppressions et les rafraîchissements de politique IAM
 admis (ou aucun changement si l'apply précédent les a déjà effectuées), puis
 attendre la réussite de la pipeline entière. Ce retrait n'est pas une opération
-générique de suppression de gala.
+générique de suppression de gala. Pour cette maintenance seulement, Finalize
+vérifie que l'EC2 historique est joignable sans exiger que ses services
+applicatifs soient sains ; la vérification complète de bootstrap reste exigée
+dès que le plan crée ou modifie l'EC2 du gala demandé.

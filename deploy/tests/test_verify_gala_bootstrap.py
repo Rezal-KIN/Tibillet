@@ -16,6 +16,23 @@ SPEC.loader.exec_module(module)
 
 
 class BootstrapGateTests(unittest.TestCase):
+    def test_only_historical_validation_maintenance_skips_runtime_gate(self) -> None:
+        unchanged = {"resource_changes": [
+            {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',
+             "change": {"actions": ["no-op"]}},
+            {"address": 'aws_iam_role_policy.test_deploy[0]',
+             "change": {"actions": ["update"]}},
+        ]}
+        self.assertTrue(module.is_validation_retirement(unchanged, "gala-validation"))
+        self.assertFalse(module.is_validation_retirement(unchanged, "gala-am-aix"))
+        changed_host = {"resource_changes": [
+            {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',
+             "change": {"actions": ["create"]}},
+        ]}
+        self.assertFalse(module.is_validation_retirement(changed_host, "gala-validation"))
+        with self.assertRaises(ValueError):
+            module.is_validation_retirement({}, "gala-validation")
+
     def test_selects_only_exact_tagged_instance(self) -> None:
         instance = {
             "InstanceId": "i-0123456789abcdef0",
