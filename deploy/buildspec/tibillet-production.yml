@@ -54,7 +54,10 @@ phases:
           --output text)"
         test -n "$command_id"
         printf 'SSM deployment command submitted: %s\n' "$command_id"
-        for attempt in $(seq 1 72); do
+        # A first boot initializes multiple databases and may take longer than
+        # six minutes. Keep the CodeBuild gate open for up to twenty minutes;
+        # the project itself has a thirty-minute timeout.
+        for attempt in $(seq 1 240); do
           status="$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$TARGET_INSTANCE_ID" --query Status --output text 2>/dev/null || true)"
           case "$status" in
             Success) exit 0 ;;
