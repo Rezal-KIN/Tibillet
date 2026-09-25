@@ -14,6 +14,7 @@ phases:
       - test -n "${CODEBUILD_SRC_DIR_PlanOutput:-}"
       - export FOUNDATION_CATALOG_PROPOSAL="$CODEBUILD_SRC_DIR_PlanOutput/foundation-gala-catalog-proposal.json"
       - test -f "$FOUNDATION_CATALOG_PROPOSAL"
+      - test -f "$CODEBUILD_SRC_DIR_PlanOutput/foundation-plan.json"
   build:
     commands:
       - set -euo pipefail
@@ -21,5 +22,5 @@ phases:
       - |
         set -euo pipefail
         slug="$(python3 -c 'import importlib.util,os; s=importlib.util.spec_from_file_location("v", "deploy/tools/validate-foundation-inputs.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.gala_slug(os.environ["GALA_NAME"]))')"
-        python3 deploy/tools/verify-gala-bootstrap.py "$FOUNDATION_CATALOG_PROPOSAL" --slug "$slug" --project-name "$GALA_PROJECT_NAME"
+        python3 deploy/tools/verify-gala-bootstrap.py "$FOUNDATION_CATALOG_PROPOSAL" --slug "$slug" --project-name "$GALA_PROJECT_NAME" --foundation-plan "$CODEBUILD_SRC_DIR_PlanOutput/foundation-plan.json"
       - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_PROPOSAL" "$FOUNDATION_CATALOG_URI"
