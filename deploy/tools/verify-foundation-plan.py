@@ -25,6 +25,25 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         f'aws_iam_role_policy.production_validate["{slug}"]',
         f'aws_codebuild_project.production_validate["{slug}"]',
     }
+    # A reviewed, one-time Foundation run may retire only the two obsolete
+    # validation delivery chains. EC2s, secrets, backups and logs are excluded.
+    retired_slugs = {"gala-validation", "gala-validation-2"}
+    retired_types = {
+        "aws_ssm_document.production_deploy",
+        "aws_iam_role.production_build",
+        "aws_iam_role_policy.production_build",
+        "aws_codebuild_project.production",
+        "aws_iam_role.production_pipeline",
+        "aws_iam_role_policy.production_pipeline",
+        "aws_codepipeline.production",
+        "aws_iam_role.production_validate",
+        "aws_iam_role_policy.production_validate",
+        "aws_codebuild_project.production_validate",
+    }
+    allowed_retire = {
+        f'{kind}["{retired_slug}"]'
+        for kind in retired_types for retired_slug in retired_slugs
+    } if slug in retired_slugs else set()
     allowed_updates = re.compile(
         r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
     )
@@ -41,6 +60,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if item.get("mode") == "data" and actions in (["read"], ["no-op"]):
             continue
         if actions == ["no-op"]:
+            continue
+        if actions == ["delete"] and address in allowed_retire:
+            changed.append(f"retire-validation-pipeline {address}")
             continue
         if actions == ["create"] and (
             address.startswith(f'module.gala["{slug}"].') or address in allowed_new
