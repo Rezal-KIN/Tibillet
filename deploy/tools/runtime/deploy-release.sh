@@ -32,10 +32,35 @@ lespass_registry="${LESPASS_IMAGE%%/*}"
 [[ "$lespass_registry" == *.dkr.ecr.*.amazonaws.com ]] || fail "LESPASS_IMAGE must use the Gala ECR registry"
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$lespass_registry" >/dev/null
 
+prepare_writable_mounts() {
+  local image="$1" app_user="$2" path uid gid
+  shift 2
+  # The application images run unprivileged. Docker creates absent bind-mount
+  # directories as root, so first boot must set ownership before Compose up.
+  uid="$(docker run --rm --network none --user "$app_user" --entrypoint id "$image" -u)"
+  gid="$(docker run --rm --network none --user "$app_user" --entrypoint id "$image" -g)"
+  [[ "$uid" =~ ^[1-9][0-9]{0,5}$ && "$gid" =~ ^[1-9][0-9]{0,5}$ ]] \
+    || fail "invalid non-root identity for $app_user image"
+  for path in "$@"; do
+    [[ "$path" == "$REPO_ROOT/deploy/"* && ! -L "$path" ]] \
+      || fail "unsafe application bind mount path"
+    install -d -m 0755 -o "$uid" -g "$gid" "$path"
+  done
+}
+
 IFS=':' read -r -a compose_groups <<< "$COMPOSE_FILES"
 for group in "${compose_groups[@]}"; do
   compose_group_args "$group"
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" pull
+done
+
+prepare_writable_mounts "$FEDOW_IMAGE" fedow \
+  "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs"
+prepare_writable_mounts "$LESPASS_IMAGE" tibillet \
+  "$REPO_ROOT/deploy/Lespass/www" "$REPO_ROOT/deploy/Lespass/logs"
+
+for group in "${compose_groups[@]}"; do
+  compose_group_args "$group"
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --remove-orphans
 done
 
