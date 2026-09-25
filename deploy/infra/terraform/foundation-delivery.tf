@@ -74,6 +74,7 @@ data "aws_iam_policy_document" "foundation_build" {
     ]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-p-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${local.name_prefix}-*",
       # Gala EC2 roles deliberately omit the environment segment (for example
       # tibillet-gala-paris-gala-smoke-ec2), but remain confined to this project.
@@ -87,6 +88,7 @@ data "aws_iam_policy_document" "foundation_build" {
     actions = ["iam:PassRole"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-p-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-gala-*-*",
     ]
     condition {
@@ -118,6 +120,12 @@ data "aws_iam_policy_document" "foundation_build" {
       "ssm:RemoveTagsFromResource",
     ]
     resources = ["arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/active-gala"]
+  }
+
+  statement {
+    sid       = "DiscoverActiveGalaParameterMetadata"
+    actions   = ["ssm:DescribeParameters"]
+    resources = ["*"]
   }
 
   statement {
