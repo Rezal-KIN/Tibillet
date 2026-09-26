@@ -1,0 +1,13 @@
+{
+  "application_repository": "Rezal-KIN/Tibillet",
+  "fedow_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+  "fork_commit": "8e59429d1f09005dea019531a744ab84e80f1f10",
+  "gala_slug": "gala-verification",
+  "laboutik_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:5af7f8fc2be499473bc376808f68e25283beddcd78ec53b4278646925858570d",
+  "platform": "v1",
+  "release_id": "verification-8e59429d",
+  "schema_generation": "v1",
+  "tibillet_upstream_commit": "8e59429d1f09005dea019531a744ab84e80f1f10",
+  "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+}
