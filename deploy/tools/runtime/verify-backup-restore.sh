@@ -54,13 +54,15 @@ for source_container in "${source_containers[@]}"; do
 
   # No host volume, published port, or network access; the restored data is
   # confined to container tmpfs and disappears when the drill ends.
+  # Every supported PostgreSQL image has the default postgres database;
+  # older Laboutik images do not reliably create a custom POSTGRES_DB here.
   drill_container="$(docker run --rm -d --network none --memory 512m --cpus 0.5 \
     --tmpfs /tmp:rw,size=256m -e PGDATA=/tmp/pgdata \
     -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_USER=postgres \
-    -e POSTGRES_DB=restoretest "$image")"
+    -e POSTGRES_DB=postgres "$image")"
   ready=false
   for attempt in {1..30}; do
-    if docker exec "$drill_container" pg_isready -U postgres -d restoretest >/dev/null 2>&1; then
+    if docker exec "$drill_container" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
       ready=true
       break
     fi
@@ -68,8 +70,8 @@ for source_container in "${source_containers[@]}"; do
   done
   [[ "$ready" == true ]] || fail "isolated PostgreSQL did not start for $source_container"
   gzip -dc "$dump_file" | timeout 120s docker exec -i "$drill_container" \
-    psql -v ON_ERROR_STOP=1 -U postgres -d restoretest >/dev/null
-  table_count="$(docker exec "$drill_container" psql -At -U postgres -d restoretest \
+    psql -v ON_ERROR_STOP=1 -U postgres -d postgres >/dev/null
+  table_count="$(docker exec "$drill_container" psql -At -U postgres -d postgres \
     -c "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')")"
   [[ "$table_count" =~ ^[0-9]+$ && "$table_count" -gt 0 ]] \
     || fail "restore produced no application tables for $source_container"
