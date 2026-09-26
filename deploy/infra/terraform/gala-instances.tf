@@ -33,3 +33,15 @@ module "gala" {
   protect_from_destruction    = each.value.protect_from_destruction
   extra_tags                  = var.extra_tags
 }
+
+# Move only the two disposable trial hosts to a resource without the
+# production prevent_destroy rule. Aix and Smoke keep that rule unchanged.
+moved {
+  from = module.gala["gala-validation"].aws_instance.runtime[0]
+  to   = module.gala["gala-validation"].aws_instance.retirable[0]
+}
+
+moved {
+  from = module.gala["gala-validation-2"].aws_instance.runtime[0]
+  to   = module.gala["gala-validation-2"].aws_instance.retirable[0]
+}

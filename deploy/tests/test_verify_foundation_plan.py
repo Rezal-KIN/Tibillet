@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import copy
 import unittest
 from pathlib import Path
 
@@ -20,6 +21,46 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_validation_retirement_requires_two_exact_phases(self) -> None:
+        def instance(slug: str, phase: str) -> dict[str, object]:
+            before = {
+                "id": "i-0123456789abcdef0",
+                "primary_network_interface_id": "eni-0123456789abcdef0",
+                "disable_api_termination": phase == "prepare",
+                "tags": {"Project": "tibillet-gala-paris", "Gala": slug, "ManagedBy": "terraform"},
+                "root_block_device": [{"volume_size": 40, "delete_on_termination": phase != "prepare"}],
+            }
+            item = {
+                "address": f'module.gala["{slug}"].aws_instance.retirable[0]',
+                "change": {"actions": ["delete"] if phase == "retire" else ["update"],
+                           "before": before, "after": None, "after_unknown": {}},
+            }
+            if phase == "prepare":
+                after = copy.deepcopy(before)
+                after["disable_api_termination"] = False
+                after["root_block_device"][0]["delete_on_termination"] = True
+                item["previous_address"] = f'module.gala["{slug}"].aws_instance.runtime[0]'
+                item["change"]["after"] = after
+            return item
+
+        for phase in ("prepare", "retire"):
+            plan = {"resource_changes": [instance(slug, phase)
+                                         for slug in module.VALIDATION_SLUGS]}
+            self.assertEqual(len(module.verify_validation_retirement_plan(plan, phase)), 2)
+            bad = copy.deepcopy(plan)
+            bad["resource_changes"][0]["change"]["before"]["tags"]["Gala"] = "gala-am-aix"
+            with self.assertRaises(ValueError):
+                module.verify_validation_retirement_plan(bad, phase)
+            bad = copy.deepcopy(plan)
+            bad["resource_changes"].append(change('module.gala["gala-am-aix"].aws_instance.runtime[0]', ["delete"]))
+            with self.assertRaises(ValueError):
+                module.verify_validation_retirement_plan(bad, phase)
+        premature = {"resource_changes": [instance("gala-validation", "prepare")]}
+        premature["resource_changes"][0]["change"]["actions"] = ["delete"]
+        premature["resource_changes"][0]["change"]["after"] = None
+        with self.assertRaises(ValueError):
+            module.verify_validation_retirement_plan(premature, "retire")
+
     def test_accepts_only_managed_security_group_permission_addition(self) -> None:
         address = 'aws_iam_role_policy.active_switch_build["apply"]'
         existing = {"Sid": "Existing", "Effect": "Allow", "Action": "ec2:DescribeInstances", "Resource": "*"}

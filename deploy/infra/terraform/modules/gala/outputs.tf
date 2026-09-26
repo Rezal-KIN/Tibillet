@@ -4,12 +4,12 @@ output "generated_secret_arn" {
 }
 
 output "instance_id" {
-  value       = var.create_instance ? aws_instance.runtime[0].id : null
+  value       = var.create_instance ? (var.protect_from_destruction ? aws_instance.runtime[0].id : aws_instance.retirable[0].id) : null
   description = "Newly created instance ID. Existing instances are imported separately before management."
 }
 
 output "primary_eni_id" {
-  value       = var.create_instance ? aws_instance.runtime[0].primary_network_interface_id : null
+  value       = var.create_instance ? (var.protect_from_destruction ? aws_instance.runtime[0].primary_network_interface_id : aws_instance.retirable[0].primary_network_interface_id) : null
   description = "Primary network interface eligible for the reviewed shared-EIP switch."
 }
 

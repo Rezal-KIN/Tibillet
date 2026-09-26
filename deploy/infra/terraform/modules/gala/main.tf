@@ -181,7 +181,7 @@ resource "aws_security_group" "runtime" {
 }
 
 resource "aws_instance" "runtime" {
-  count = var.create_instance ? 1 : 0
+  count = var.create_instance && var.protect_from_destruction ? 1 : 0
 
   ami                    = var.ami_id
   instance_type          = var.instance_type
@@ -244,5 +244,61 @@ resource "aws_instance" "runtime" {
     }
 
     prevent_destroy = true
+  }
+}
+
+# Used only for the two historical Foundation trials during retirement. The
+# live Gala and shared Smoke hosts always remain on the protected resource.
+resource "aws_instance" "retirable" {
+  count = var.create_instance && !var.protect_from_destruction && contains(["gala-validation", "gala-validation-2"], var.gala_slug) ? 1 : 0
+
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.runtime.id]
+  iam_instance_profile   = aws_iam_instance_profile.instance.name
+  user_data = templatefile("${path.module}/bootstrap-runtime.sh.tftpl", {
+    aws_region               = var.aws_region
+    backup_bucket_name       = var.backup_bucket_name
+    domain                   = var.domain
+    gala_slug                = var.gala_slug
+    platform                 = var.platform
+    repository_ref           = var.repository_ref
+    repository_url           = var.repository_url
+    generated_secret_arn     = aws_secretsmanager_secret.generated.arn
+    shared_stripe_secret_arn = var.shared_stripe_secret_arn
+    shared_mail_secret_arn   = var.shared_mail_secret_arn
+  })
+  user_data_replace_on_change = false
+  associate_public_ip_address = var.associate_public_ip_address
+  monitoring                  = false
+  disable_api_termination     = false
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted             = true
+    volume_type           = "gp3"
+    volume_size           = var.root_volume_size_gib
+    delete_on_termination = true
+    tags                  = local.tags
+  }
+
+  tags = merge(local.tags, {
+    Name             = local.name_prefix
+    LifecycleState   = "preparation"
+    DeploymentLocked = "false"
+  })
+
+  lifecycle {
+    ignore_changes = [user_data, vpc_security_group_ids, associate_public_ip_address]
+    precondition {
+      condition     = contains(["gala-validation", "gala-validation-2"], var.gala_slug)
+      error_message = "Only the two historical validation EC2s can use the retirable resource."
+    }
   }
 }
