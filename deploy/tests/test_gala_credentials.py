@@ -56,6 +56,13 @@ SHARED_MAIL = {
 
 
 class GeneratedGalaSecretTests(unittest.TestCase):
+    def test_laboutik_bootstrap_uses_this_galas_local_services(self) -> None:
+        compose = (ROOT / "Laboutik/docker-compose.yml").read_text(encoding="utf-8")
+        release = (ROOT / "tools/runtime/deploy-release.sh").read_text(encoding="utf-8")
+        self.assertIn('"${LESPASS_PUBLIC_DOMAIN}:host-gateway"', compose)
+        self.assertIn('"${FEDOW_PUBLIC_DOMAIN}:host-gateway"', compose)
+        self.assertLess(release.index("configure_gala_apex"), release.index("docker exec -e DEBUG=1 laboutik_django"))
+
     def test_generated_keys_have_the_required_shapes(self) -> None:
         payload = generator.generated_payload()
         self.assertEqual(set(payload), renderer.GENERATED_FIELDS)
