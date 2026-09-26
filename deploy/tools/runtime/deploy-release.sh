@@ -17,6 +17,8 @@ require_command python3
 require_var AWS_REGION
 require_var COMPOSE_FILES
 
+"$SCRIPT_DIR/reclaim-deployment-space.sh" "$CONFIG_PATH"
+
 # Materialize the three app-specific secrets before Compose reads their env_file
 # paths. This is also required for the first release, before systemd has ever
 # started the stacks.

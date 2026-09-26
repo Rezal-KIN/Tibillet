@@ -29,7 +29,7 @@ install -d -m 0755 "$runtime_library" /etc/tibillet-gala /var/lib/tibillet-gala
 for script in \
   backup-postgres.sh deploy-release-from-s3.sh deploy-release.sh \
   fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
-  materialize-runtime-env.py preflight.sh restore-postgres.sh \
+  materialize-runtime-env.py preflight.sh reclaim-deployment-space.sh restore-postgres.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do
   install -m 0755 "$REPO_ROOT/deploy/tools/runtime/$script" "$runtime_library/$script"
 done

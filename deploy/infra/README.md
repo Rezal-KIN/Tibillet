@@ -87,6 +87,12 @@ contrôle du plan. Le bootstrap initial ou une migration d'infrastructure
 existante suit un plan séparé et revu. Une release Production garde son
 approbation humaine après la validation des images testées.
 
+Avant chaque déploiement, le runtime conserve 10 Gio libres sur le disque. Si
+la réserve est insuffisante, il supprime automatiquement **uniquement les images
+Docker inutilisées par tous les conteneurs** puis refait la mesure. Il ne
+supprime ni conteneur ni volume. Si la réserve reste insuffisante, le
+déploiement s'arrête avant les migrations et les redémarrages applicatifs.
+
 ### Retrait des deux EC2 de validation historiques
 
 Cette opération exceptionnelle passe elle aussi par Foundation, jamais par une
