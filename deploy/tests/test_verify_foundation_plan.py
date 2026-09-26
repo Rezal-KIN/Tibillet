@@ -21,6 +21,44 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_only_own_nested_backup_and_release_listing_updates_are_allowed(self) -> None:
+        def update(slug: str) -> dict[str, object]:
+            statements = [
+                {"Sid": "ReadOnlyOwnRuntimeSecrets", "Effect": "Allow",
+                 "Action": "secretsmanager:GetSecretValue", "Resource": "same-secret"},
+                {"Sid": "ListBackupBucketOnly", "Effect": "Allow", "Action": "s3:ListBucket",
+                 "Resource": "same-bucket", "Condition": {"StringLike": {"s3:prefix": f"galas/{slug}/"}}},
+                {"Sid": "ListReleaseBucketOnly", "Effect": "Allow", "Action": "s3:ListBucket",
+                 "Resource": "same-bucket", "Condition": {"StringLike": {"s3:prefix": f"releases/{slug}/"}}},
+            ]
+            later = copy.deepcopy(statements)
+            for statement in later[1:]:
+                statement["Condition"]["StringLike"]["s3:prefix"] += "*"
+            return {
+                "address": f'module.gala["{slug}"].aws_iam_role_policy.runtime',
+                "change": {"actions": ["update"], "after_unknown": {},
+                           "before": {"id": "same", "policy": json.dumps({"Version": "2012-10-17", "Statement": statements})},
+                           "after": {"id": "same", "policy": json.dumps({"Version": "2012-10-17", "Statement": later})}},
+            }
+
+        plan = {"resource_changes": [update("gala-am-aix"), update("gala-verification")]}
+        self.assertEqual(len(module.verify(plan, "gala-verification")), 2)
+        for mutated in (
+            lambda item: item["change"]["after"].update(id="different"),
+            lambda item: item["change"].update(after_unknown={"policy": True}),
+            lambda item: item["change"]["after"].update(policy=json.dumps({
+                "Version": "2012-10-17", "Statement": [
+                    {**statement, "Resource": "*"} if statement["Sid"] == "ListBackupBucketOnly" else statement
+                    for statement in json.loads(item["change"]["after"]["policy"])["Statement"]
+                ],
+            })),
+            lambda item: item["change"]["after"].update(policy=item["change"]["before"]["policy"]),
+        ):
+            bad = copy.deepcopy(plan)
+            mutated(bad["resource_changes"][0])
+            with self.assertRaises(ValueError):
+                module.verify(bad, "gala-verification")
+
     def test_validation_retirement_requires_two_exact_phases(self) -> None:
         def instance(slug: str, phase: str) -> dict[str, object]:
             before = {

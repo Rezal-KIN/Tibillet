@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import re
@@ -210,6 +211,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         ):
             changed.append(f"create {address}")
             continue
+        if actions == ["update"] and safe_gala_list_prefix_update(item["change"], address):
+            changed.append(f"allow-own-backup-restore {address}")
+            continue
         if actions == ["update"] and (
             allowed_updates.fullmatch(address) or address == 'aws_iam_role_policy.foundation_pipeline[0]'
         ):
@@ -265,6 +269,60 @@ def has_unknown(value: object) -> bool:
     if isinstance(value, list):
         return any(has_unknown(item) for item in value)
     return value is True
+
+
+def safe_gala_list_prefix_update(change: dict[str, object], address: str) -> bool:
+    match = re.fullmatch(r'module\.gala\["([a-z0-9][a-z0-9-]{1,62})"\]\.aws_iam_role_policy\.runtime', address)
+    if not match:
+        return False
+    gala_slug = match.group(1)
+    before = change.get("before")
+    after = change.get("after")
+    if not isinstance(before, dict) or not isinstance(after, dict) or has_unknown(change.get("after_unknown", {})):
+        return False
+    if {k: v for k, v in before.items() if k != "policy"} != {k: v for k, v in after.items() if k != "policy"}:
+        return False
+    try:
+        old_policy = json.loads(before["policy"])
+        new_policy = json.loads(after["policy"])
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return False
+    if not isinstance(old_policy, dict) or not isinstance(new_policy, dict):
+        return False
+    if {k: v for k, v in old_policy.items() if k != "Statement"} != {k: v for k, v in new_policy.items() if k != "Statement"}:
+        return False
+    old_statements = old_policy.get("Statement")
+    new_statements = new_policy.get("Statement")
+    if not isinstance(old_statements, list) or not isinstance(new_statements, list) or len(old_statements) != len(new_statements):
+        return False
+    changed_sids: set[str] = set()
+    expected_prefixes = {
+        "ListBackupBucketOnly": f"galas/{gala_slug}/",
+        "ListReleaseBucketOnly": f"releases/{gala_slug}/",
+    }
+    for prior, later in zip(old_statements, new_statements):
+        if prior == later:
+            continue
+        if not isinstance(prior, dict) or not isinstance(later, dict):
+            return False
+        sid = prior.get("Sid")
+        if not isinstance(sid, str):
+            return False
+        prefix = expected_prefixes.get(sid)
+        if prefix is None:
+            return False
+        expected = copy.deepcopy(prior)
+        try:
+            old_prefix = expected["Condition"]["StringLike"]["s3:prefix"]
+        except (KeyError, TypeError):
+            return False
+        if old_prefix != prefix:
+            return False
+        expected["Condition"]["StringLike"]["s3:prefix"] = prefix + "*"
+        if later != expected:
+            return False
+        changed_sids.add(sid)
+    return changed_sids == set(expected_prefixes)
 
 
 def safe_group_permission_addition(change: dict[str, object]) -> bool:
