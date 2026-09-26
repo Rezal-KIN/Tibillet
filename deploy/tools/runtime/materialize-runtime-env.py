@@ -166,7 +166,9 @@ def assemble(
         # payment methods, terminals and the first staff account. Use the
         # shared, stable public name rather than a per-host manual setting.
         "MAIN_ASSET_NAME": text_field(site, "public_name"),
-        "FEDOW_URL": f"https://{fedow_domain}",
+        # Laboutik's upstream install command appends paths directly to the
+        # environment value (for example FEDOW_URL + "helloworld/").
+        "FEDOW_URL": f"https://{fedow_domain}/",
         "LESPASS_TENANT_URL": f"https://{lespass_domain}/",
         "LANGUAGE_CODE": "fr", **common, **mail_lines,
     }

@@ -86,7 +86,7 @@ class GeneratedGalaSecretTests(unittest.TestCase):
         )
         self.assertIn("DOMAIN='fedow.galas-am-aix.rezal.fr'", files["fedow.env"])
         self.assertIn("STRIPE_KEY_TEST='sk_test_example'", files["fedow.env"])
-        self.assertIn("FEDOW_URL='https://fedow.galas-am-aix.rezal.fr'", files["laboutik.env"])
+        self.assertIn("FEDOW_URL='https://fedow.galas-am-aix.rezal.fr/'", files["laboutik.env"])
         self.assertIn("MAIN_ASSET_NAME='Gala Example'", files["laboutik.env"])
         self.assertIn("EMAIL_HOST_PASSWORD='sample$#\\'password'", files["lespass.env"])
         self.assertIn("EMAIL_USE_TLS='1'", files["lespass.env"])
