@@ -31,7 +31,11 @@ if [[ -s "$last_backup_file" ]]; then
   [[ -n "$backup_epoch" ]] || fail "cannot parse backup timestamp"
   (( now_epoch - backup_epoch <= ${MAX_BACKUP_AGE_SECONDS:-86400} )) || fail "latest backup is too old"
 else
-  [[ "${ALLOW_INITIAL_DEPLOY:-false}" == "true" ]] || fail "no successful backup marker exists"
+  # A missing backup is acceptable only before the first successful release.
+  # The bootstrap keeps ALLOW_INITIAL_DEPLOY=true in its immutable config, so
+  # that flag alone must never bypass backup checks on later deployments.
+  [[ "${ALLOW_INITIAL_DEPLOY:-false}" == "true" && ! -e "$(deployed_manifest_path)" ]] \
+    || fail "no successful backup marker exists"
   last_backup="initial-deployment"
 fi
 
