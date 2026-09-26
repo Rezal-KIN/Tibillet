@@ -21,6 +21,51 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_temporary_gala_retirement_targets_only_verified_ec2_and_pipeline(self) -> None:
+        address = 'module.gala["gala-verification"].aws_instance.retirable[0]'
+        before = {
+            "id": module.VERIFICATION_INSTANCE_ID,
+            "primary_network_interface_id": "eni-0123456789abcdef0",
+            "disable_api_termination": True,
+            "tags": {"Project": "tibillet-gala-paris", "Gala": "gala-verification", "ManagedBy": "terraform"},
+            "root_block_device": [{"volume_id": module.VERIFICATION_VOLUME_ID,
+                                   "volume_size": 40, "delete_on_termination": False}],
+        }
+        after = copy.deepcopy(before)
+        after["disable_api_termination"] = False
+        after["root_block_device"][0]["delete_on_termination"] = True
+        prepare = {"address": address,
+                   "previous_address": 'module.gala["gala-verification"].aws_instance.runtime[0]',
+                   "change": {"actions": ["update"], "before": before, "after": after,
+                              "after_unknown": {}}}
+        self.assertEqual(len(module.verify_verification_retirement_plan(
+            {"resource_changes": [prepare]}, "prepare")), 1)
+        wrong = copy.deepcopy(prepare)
+        wrong["change"]["before"]["id"] = "i-00000000000000000"
+        with self.assertRaises(ValueError):
+            module.verify_verification_retirement_plan({"resource_changes": [wrong]}, "prepare")
+        with self.assertRaises(ValueError):
+            module.verify_verification_retirement_plan({"resource_changes": [prepare, change(
+                'module.gala["gala-am-aix"].aws_instance.runtime[0]', ["delete"])]}, "prepare")
+
+        retire = {"address": address, "change": {"actions": ["delete"],
+                  "before": after, "after": None, "after_unknown": {}}}
+        pipeline = {"address": 'aws_codepipeline.production["gala-verification"]',
+                    "change": {"actions": ["delete"], "before": {"id": "same"}, "after": None}}
+        self.assertEqual(len(module.verify_verification_retirement_plan(
+            {"resource_changes": [retire, pipeline]}, "retire")), 2)
+        for forbidden in (
+            'aws_cloudwatch_log_group.production_deploy["gala-verification"]',
+            'module.gala["gala-verification"].aws_secretsmanager_secret.generated',
+            'aws_codepipeline.production["gala-am-aix"]',
+        ):
+            with self.subTest(address=forbidden), self.assertRaises(ValueError):
+                module.verify_verification_retirement_plan({"resource_changes": [
+                    retire, {"address": forbidden, "change": {
+                        "actions": ["delete"], "before": {"id": "same"}, "after": None,
+                    }},
+                ]}, "retire")
+
     def test_only_own_nested_backup_and_release_listing_updates_are_allowed(self) -> None:
         def update(slug: str) -> dict[str, object]:
             statements = [

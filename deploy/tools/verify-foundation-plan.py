@@ -15,10 +15,19 @@ RETIREMENT_OPERATIONS = {
     "Prepare Validation Retirement": "prepare",
     "Retire Validation Instances": "retire",
 }
+VERIFICATION_RETIREMENT_OPERATIONS = {
+    "Prepare Gala Verification Retirement": "prepare",
+    "Retire Gala Verification": "retire",
+}
+VERIFICATION_SLUG = "gala-verification"
+VERIFICATION_INSTANCE_ID = "i-0f8d460abd9ba41d9"
+VERIFICATION_VOLUME_ID = "vol-0643159830aff7cd1"
 
 
-def verify_validation_retirement_plan(plan: dict[str, object], phase: str) -> list[str]:
-    """Permit only the two exact validation hosts through the two-step retirement."""
+def verify_validation_retirement_plan(
+    plan: dict[str, object], phase: str, targets: tuple[str, ...] = VALIDATION_SLUGS,
+) -> list[str]:
+    """Permit only exact disposable hosts through the two-step retirement."""
     if phase not in {"prepare", "retire"}:
         raise ValueError("invalid validation retirement phase")
     changes = plan.get("resource_changes")
@@ -43,7 +52,7 @@ def verify_validation_retirement_plan(plan: dict[str, object], phase: str) -> li
                 raise ValueError("duplicate active switch policy update")
             policy_change = change
             continue
-        slug = next((value for value in VALIDATION_SLUGS
+        slug = next((value for value in targets
                      if address == f'module.gala["{value}"].aws_instance.retirable[0]'), None)
         if slug is None or slug in seen:
             raise ValueError(f"validation retirement refuses {actions} on {address}")
@@ -54,6 +63,13 @@ def verify_validation_retirement_plan(plan: dict[str, object], phase: str) -> li
             raise ValueError(f"missing existing EC2 state on {address}")
         tags = before.get("tags")
         blocks = before.get("root_block_device")
+        if slug == VERIFICATION_SLUG and (
+            before.get("id") != VERIFICATION_INSTANCE_ID
+            or not isinstance(blocks, list) or len(blocks) != 1
+            or not isinstance(blocks[0], dict)
+            or blocks[0].get("volume_id") != VERIFICATION_VOLUME_ID
+        ):
+            raise ValueError("temporary Gala verification EC2 or root volume identity changed")
         if (not isinstance(tags, dict) or tags.get("Project") != "tibillet-gala-paris"
                 or tags.get("Gala") != slug or tags.get("ManagedBy") != "terraform"
                 or not isinstance(blocks, list) or len(blocks) != 1
@@ -96,6 +112,51 @@ def verify_validation_retirement_plan(plan: dict[str, object], phase: str) -> li
         if not safe_validation_policy_removal(policy_change, removed_resources):
             raise ValueError("unsafe active switch policy update during validation retirement")
         accepted.append('remove-retired-host-permissions aws_iam_role_policy.active_switch_build["apply"]')
+    if seen != set(targets):
+        raise ValueError("retirement plan does not contain every exact target EC2")
+    return accepted
+
+
+def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> list[str]:
+    changes = plan.get("resource_changes")
+    if not isinstance(changes, list):
+        raise ValueError("Terraform plan has no resource_changes array")
+    instance_address = f'module.gala["{VERIFICATION_SLUG}"].aws_instance.retirable[0]'
+    switch_policy = 'aws_iam_role_policy.active_switch_build["apply"]'
+    allowed_delivery_deletions = {
+        f'{kind}["{VERIFICATION_SLUG}"]' for kind in (
+            "aws_ssm_document.production_deploy",
+            "aws_iam_role_policy.production_build",
+            "aws_codebuild_project.production",
+            "aws_iam_role_policy.production_pipeline",
+            "aws_codepipeline.production",
+            "aws_iam_role_policy.production_validate",
+            "aws_codebuild_project.production_validate",
+        )
+    }
+    core: list[dict[str, object]] = []
+    accepted: list[str] = []
+    for item in changes:
+        if not isinstance(item, dict) or not isinstance(item.get("address"), str):
+            raise ValueError("malformed Terraform resource change")
+        address = item["address"]
+        change = item.get("change")
+        if not isinstance(change, dict):
+            raise ValueError(f"malformed Terraform change on {address}")
+        actions = change.get("actions")
+        if actions == ["no-op"] or (item.get("mode") == "data" and actions == ["read"]):
+            continue
+        if address in {instance_address, switch_policy}:
+            core.append(item)
+        elif (phase == "retire" and address in allowed_delivery_deletions
+              and actions == ["delete"] and change.get("after") is None
+              and isinstance(change.get("before"), dict)):
+            accepted.append(f"retire-temporary-delivery {address}")
+        else:
+            raise ValueError(f"temporary Gala retirement refuses {actions} on {address}")
+    accepted.extend(verify_validation_retirement_plan(
+        {"resource_changes": core}, phase, targets=(VERIFICATION_SLUG,),
+    ))
     return accepted
 
 
@@ -368,10 +429,15 @@ def main() -> None:
     args = parser.parse_args()
     plan = json.loads(args.plan_json.read_text(encoding="utf-8"))
     phase = RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    verification_phase = VERIFICATION_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     if phase:
         if args.slug != "gala-validation":
             raise ValueError("validation retirement requires the exact validation slug")
         changed = verify_validation_retirement_plan(plan, phase)
+    elif verification_phase:
+        if args.slug != VERIFICATION_SLUG:
+            raise ValueError("temporary Gala retirement requires the exact verification slug")
+        changed = verify_verification_retirement_plan(plan, verification_phase)
     else:
         changed = verify(plan, args.slug)
     print(f"Foundation plan accepted: {len(changed)} resource changes")
