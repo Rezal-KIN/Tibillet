@@ -49,6 +49,22 @@ sur le réseau Docker local, avec le `Host` public et les signatures d'API
 inchangées. Les autres installations TiBillet conservent leur HTTPS public ;
 aucune désactivation globale de la vérification TLS n'a été ajoutée.
 
+## Mise en ligne contrôlée sur Aix
+
+La release immuable `releases/gala-am-aix/gala-am-aix-v1.0.3.json` fixe le commit
+applicatif `1b0740fe99cccfd9e872be27c2266e37cd50751c` et les quatre images
+effectivement déployées par Test sur Smoke. La pipeline Production Aix
+`8d43612d-2c8f-450f-a634-0b2e13d888b0` a réussi avec sa validation des
+digests et son approbation manuelle. L'Elastic IP `51.44.90.200` est restée
+sur l'EC2 Aix. Les trois services publics (Lespass, Fedow, cashless) ont répondu
+`200` avec certificat HTTPS valide ; l'accueil Lespass inclut le guide cashless.
+
+Une comparaison HTTP en lecture seule avec l'ancienne instance a retrouvé le
+guide, mais pas d'image de fond configurée sur l'ancienne page. Le titre H1
+historique était « Gala-am-Aix », alors que la configuration initiale du
+nouveau tenant affiche encore « Festival ». Ce libellé et les contenus propres
+au gala sont des données de configuration, pas du code de template déjà porté.
+
 ## Validation avant activation publique
 
 1. **Fait sur Smoke le 26 septembre :** 9 tests ciblés ; E2E avec une carte Fedow
@@ -64,6 +80,6 @@ aucune désactivation globale de la vérification TLS n'a été ajoutée.
    Brevo et le retour du lien signé ; une carte déjà liée dans un autre
    navigateur, un autre compte et une deuxième carte ; comparer le rendu
    mobile et les images/réglages de l'ancien accueil.
-4. Promouvoir un manifeste immuable via la pipeline Production et son
-   approbation manuelle ; ne pas modifier directement l'EC2 Aix ni déplacer
-   l'IP publique pour ce test.
+4. **Fait :** promouvoir le manifeste immuable par la pipeline Production et
+   son approbation manuelle. La validation publique ne prouve pas encore un
+   paiement live ni la délivrabilité d'un email Brevo.
