@@ -40,6 +40,10 @@ timeout 30s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_apex --check \
   >/dev/null || fail "Lespass apex is not mapped to the Gala tenant"
 
+timeout 15s docker exec lespass_django curl --fail --silent --show-error \
+  --header "Host: $FEDOW_PUBLIC_DOMAIN" http://fedow_nginx/helloworld/ \
+  >/dev/null || fail "Lespass cannot reach its local Fedow service"
+
 # HTTP can stay healthy while the Lespass background worker crashes. A release
 # is only healthy when the worker is running and responds through its broker.
 [[ "$(docker inspect --format '{{.State.Running}}' lespass_celery 2>/dev/null || true)" == "true" ]] \

@@ -43,6 +43,12 @@ restait sous `festival.`. Le contrat de déploiement réconcilie désormais ce m
 `install`, et le healthcheck vérifie le propriétaire du domaine. La correction est
 versionnée dans la pipeline, pas appliquée manuellement à l'EC2.
 
+Sur un gala inactif, le certificat HTTPS local de Fedow est temporairement
+auto-signé. Les appels serveur de Lespass utilisent donc le service `fedow_nginx`
+sur le réseau Docker local, avec le `Host` public et les signatures d'API
+inchangées. Les autres installations TiBillet conservent leur HTTPS public ;
+aucune désactivation globale de la vérification TLS n'a été ajoutée.
+
 ## Validation avant activation publique
 
 1. Faire passer les tests de `tests/pytest/test_qr_card_onboarding.py` dans l'image applicative.
