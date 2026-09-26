@@ -71,7 +71,9 @@ data "aws_iam_policy_document" "runtime" {
     condition {
       test     = "StringLike"
       variable = "s3:prefix"
-      values   = [local.backup_prefix]
+      # Recursive downloads list the exact backup ID under this Gala prefix.
+      # Keep the grant Gala-scoped, but include nested keys and prefixes.
+      values = ["${local.backup_prefix}*"]
     }
   }
 
@@ -96,7 +98,7 @@ data "aws_iam_policy_document" "runtime" {
       condition {
         test     = "StringLike"
         variable = "s3:prefix"
-        values   = [local.release_prefix]
+        values   = ["${local.release_prefix}*"]
       }
     }
   }
