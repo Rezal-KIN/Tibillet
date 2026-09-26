@@ -8,6 +8,7 @@
             <div class="row">
                 <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
                     <h1>{% trans 'Linking my TiBillet card' %}</h1>
+                    <p class="lead">{% trans 'One step to refill your card: enter your email, then use the Refill button.' %}</p>
                     <p>
                         {% blocktranslate %}
                             In order to use my TiBillet account, refill my card and as a way
@@ -17,6 +18,7 @@
                     </p>
                     <form id="linkform" role="form" hx-post="/qr/link/"
                           hx-indicator="#tibillet-spinner">
+                        {% csrf_token %}
                         <div class="form-floating mb-3">
                             <input name="email" id="link_email" type="email" class="form-control"
                                    placeholder="adresse@exemple.fr"
@@ -86,10 +88,8 @@
     <script>
         document.getElementById("linkform").addEventListener("htmx:configRequest", function (event) {
             const email = document.getElementById("link_email").value;
-            console.log(email);
             const confirmEmail = document.getElementById("confirm-email").value;
             const errorDiv = document.getElementById("email-error");
-            console.log(confirmEmail);
 
             if (email !== confirmEmail) {
                 event.preventDefault(); // empêche l’envoi de la requête HTMX

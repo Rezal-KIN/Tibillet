@@ -8,6 +8,11 @@
 > `Lespass/app`, et ne pas le charger par un import Python. Son objectif est de préserver le
 > comportement métier avant sa réimplémentation explicite contre V2.
 
+Une adaptation sécurisée du parcours QR est désormais suivie dans
+[`100j-port-status.md`](../../docs/platform/100j-port-status.md). L'archive ci-dessous reste
+une source historique, non exécutée : l'ancien auto-login pour un email déjà existant n'a
+pas été repris.
+
 ## Provenance vérifiée
 
 | Élément | Valeur |

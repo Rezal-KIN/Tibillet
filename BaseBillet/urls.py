@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from rest_framework import routers
 from BaseBillet import views as base_view
+from BaseBillet import views_qr_card
 from BaseBillet.views_robots import robots_txt
 from BaseBillet.views_humans import humans_txt
 from BaseBillet.test_error_views import test_404, test_500
@@ -112,6 +113,10 @@ urlpatterns = [
     path("event/propose/", lambda r: redirect("event-wizard-place"), name="event-propose"),
 
     path('', base_view.index, name="index"),
+    # Literal QR routes must precede the DRF router's /qr/<pk>/ pattern.
+    path('qr/link/', views_qr_card.qr_card_link, name='qr_card_link'),
+    path('qr/check-email/<uuid:pk>/', views_qr_card.qr_check_email, name='qr_check_email'),
+    path('qr/<uuid:pk>/', views_qr_card.qr_card_landing, name='qr_card_landing'),
 ]
 
 # Wizards d'evenement AVANT le routeur principal : leurs chemins litteraux

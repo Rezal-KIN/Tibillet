@@ -1251,12 +1251,10 @@ def connexion_celery_mailer(self, user_email,
     user = User.objects.get(email=user_email)
     connexion_url = forge_connexion_url(user, base_url)
     if next_url:
-        logger.info(f"next_url : {next_url}")
         connexion_url += f"?next={next_url}"
 
 
     logger.info(f"connexion_celery_mailer -> connection.tenant.schema_name : {connection.tenant.schema_name}")
-    logger.info(f"{connexion_url}")
 
     config = Configuration.get_solo()
     activate(config.language)

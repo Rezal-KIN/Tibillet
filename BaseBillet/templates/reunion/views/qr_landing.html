@@ -1,0 +1,32 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% block title %}{% translate 'My Pass card' %}{% endblock %}
+
+{% block main %}
+<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
+  <div class="container" style="max-width:500px;">
+    <div class="text-center text-white mb-4">
+      <div class="display-3" aria-hidden="true">💳</div>
+      <h1>{% translate 'Card linked!' %}</h1>
+      <p class="text-white-50">{% blocktranslate with name=user.first_name|default:user.email %}Hello {{ name }}, what would you like to do?{% endblocktranslate %}</p>
+    </div>
+    {% if show_refill_button %}
+    <a href="/my_account/balance/" hx-get="/my_account/refill_wallet/" hx-indicator="#tibillet-spinner"
+       class="btn btn-primary w-100 text-start p-4 mb-3 rounded-4 shadow">
+      <span class="fs-3 me-2" aria-hidden="true">⚡</span>
+      <span class="fs-4 fw-bold">{% translate 'Refill my card' %}</span>
+      <small class="d-block ms-5">{% translate 'Online payment via Stripe' %}</small>
+    </a>
+    {% endif %}
+    <a href="/my_account/" class="btn btn-outline-light w-100 text-start p-4 rounded-4">
+      <span class="fs-3 me-2" aria-hidden="true">👤</span>
+      <span class="fs-4 fw-bold">{% translate 'Go to my account' %}</span>
+      <small class="d-block ms-5">{% translate 'Balance, history and refunds' %}</small>
+    </a>
+    {% if not user.email_valid %}
+    <p class="text-white-50 text-center mt-4">{% translate 'Please confirm your email to secure your account.' %}</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
