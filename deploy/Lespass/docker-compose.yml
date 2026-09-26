@@ -59,6 +59,9 @@ services:
     restart: always
     container_name: lespass_celery
     hostname: lespass_celery
+    volumes:
+      - ./www:/DjangoFiles/www
+      - ./logs:/DjangoFiles/logs
     env_file: ${LESPASS_RUNTIME_ENV_FILE:-.env}
     depends_on:
       - lespass_postgres
