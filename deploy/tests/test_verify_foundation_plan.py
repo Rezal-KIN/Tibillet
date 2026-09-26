@@ -54,6 +54,32 @@ class FoundationPlanTests(unittest.TestCase):
                     "change": {"actions": ["delete"], "before": {"id": "same"}, "after": None}}
         self.assertEqual(len(module.verify_verification_retirement_plan(
             {"resource_changes": [retire, pipeline]}, "retire")), 2)
+        policy_addresses = (
+            'aws_iam_role_policy.production_build["gala-am-aix"]',
+            'aws_iam_role_policy.production_pipeline["gala-am-aix"]',
+            'aws_iam_role_policy.test_deploy[0]',
+        )
+        policy_refreshes = [
+            {"address": policy_address, "change": {
+                "actions": ["update"],
+                "before": {"id": "same", "name": "same", "policy": "old-policy"},
+                "after": {"id": "same", "name": "same", "policy": None},
+                "after_unknown": {"policy": True},
+            }} for policy_address in policy_addresses
+        ]
+        self.assertEqual(len(module.verify_verification_retirement_plan(
+            {"resource_changes": [retire, pipeline, *policy_refreshes]}, "retire")), 5)
+        for mutation in (
+            lambda item: item["change"]["after"].update(name="different"),
+            lambda item: item["change"].update(after_unknown={"policy": True, "role": True}),
+            lambda item: item["change"]["after"].update(policy="broader-policy"),
+            lambda item: item.update(address='aws_iam_role_policy.production_build["gala-smoke"]'),
+        ):
+            bad = copy.deepcopy(policy_refreshes[0])
+            mutation(bad)
+            with self.assertRaises(ValueError):
+                module.verify_verification_retirement_plan(
+                    {"resource_changes": [retire, pipeline, bad]}, "retire")
         for forbidden in (
             'aws_cloudwatch_log_group.production_deploy["gala-verification"]',
             'module.gala["gala-verification"].aws_secretsmanager_secret.generated',
