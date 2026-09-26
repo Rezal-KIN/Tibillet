@@ -24,10 +24,17 @@ pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 def test_new_qr_card_links_and_opens_refill_landing():
     if os.environ.get('RUN_QR_CARD_E2E') != '1':
         pytest.skip('explicit Smoke E2E opt-in required')
+    # Django's test runner replaces the runtime dummy backend with its own
+    # in-memory backend. Check both the deployed configuration and the backend
+    # actually used by this test so a real SMTP send can never slip through.
     if not (os.environ.get('STRIPE_TEST') == '1'
             and os.environ.get('GALA_APEX_TENANT') == '1'
-            and settings.EMAIL_BACKEND == 'django.core.mail.backends.dummy.EmailBackend'):
-        pytest.skip('requires Smoke Stripe test mode and dummy mail backend')
+            and os.environ.get('EMAIL_BACKEND') == 'django.core.mail.backends.dummy.EmailBackend'
+            and settings.EMAIL_BACKEND in {
+                'django.core.mail.backends.dummy.EmailBackend',
+                'django.core.mail.backends.locmem.EmailBackend',
+            }):
+        pytest.skip('requires Smoke Stripe test mode and non-SMTP mail backend')
 
     domain = os.environ['DOMAIN']
     tenant = Client.objects.get(schema_name=os.environ['SUB'])
