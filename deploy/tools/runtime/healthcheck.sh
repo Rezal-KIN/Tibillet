@@ -40,6 +40,20 @@ timeout 30s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_apex --check \
   >/dev/null || fail "Lespass apex is not mapped to the Gala tenant"
 
+# A healthy HTTP response is insufficient when email login cannot send its
+# activation link. Django expects real booleans, not truthy strings like "0".
+timeout 15s docker exec -w /DjangoFiles lespass_django \
+  /home/tibillet/.local/bin/poetry run python manage.py shell -c \
+  'from django.conf import settings; assert isinstance(settings.EMAIL_USE_TLS, bool) and isinstance(settings.EMAIL_USE_SSL, bool) and not (settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL)' \
+  >/dev/null || fail "Lespass SMTP TLS/SSL settings are invalid"
+
+# Laboutik's upstream entrypoint can keep serving its login page even if its
+# install command failed. Require the seeded payment setup and admin account.
+timeout 15s docker exec -w /DjangoFiles laboutik_django \
+  /home/tibillet/.local/bin/poetry run python manage.py shell -c \
+  'import os; from django.contrib.auth import get_user_model; from APIcashless.models import PointDeVente; assert PointDeVente.objects.exists() and get_user_model().objects.filter(email=os.environ["ADMIN_EMAIL"], is_staff=True).exists()' \
+  >/dev/null || fail "Laboutik installation or admin account is missing"
+
 timeout 15s docker exec lespass_django curl --fail --silent --show-error \
   --header "Host: $FEDOW_PUBLIC_DOMAIN" http://fedow_nginx/helloworld/ \
   >/dev/null || fail "Lespass cannot reach its local Fedow service"

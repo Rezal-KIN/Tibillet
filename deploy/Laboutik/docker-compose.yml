@@ -31,6 +31,11 @@ services:
     image: tibillet/laboutik:${LABOUTIK_VERSION:-latest}
     restart: "no"
     env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
+    # Every Gala uses the same public hostnames. During bootstrap an inactive
+    # Gala must handshake with its own Lespass/Fedow, not the active EC2.
+    extra_hosts:
+      - "${LESPASS_PUBLIC_DOMAIN}:host-gateway"
+      - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
     container_name: laboutik_django
     hostname: laboutik_django
     volumes:

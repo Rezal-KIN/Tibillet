@@ -162,6 +162,10 @@ def assemble(
         "POSTGRES_DB": "laboutik", "POSTGRES_USER": "laboutik_user",
         "POSTGRES_PASSWORD": text_field(generated, "laboutik_postgres_password"),
         "DOMAIN": laboutik_domain,
+        # The upstream Laboutik installer requires this before it can create
+        # payment methods, terminals and the first staff account. Use the
+        # shared, stable public name rather than a per-host manual setting.
+        "MAIN_ASSET_NAME": text_field(site, "public_name"),
         "FEDOW_URL": f"https://{fedow_domain}",
         "LESPASS_TENANT_URL": f"https://{lespass_domain}/",
         "LANGUAGE_CODE": "fr", **common, **mail_lines,

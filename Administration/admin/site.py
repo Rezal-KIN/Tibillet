@@ -29,10 +29,11 @@ def sanitize_textfields(instance: models.Model) -> None:
 class StaffAdminSite(UnfoldAdminSite):
     def login(self, request, extra_context=None):
         """
-        Redirect admin login to the root URL for better security.
+        Open the tenant's email-login panel instead of showing an admin
+        password form that cannot authenticate TiBillet users.
         """
         messages.add_message(request, messages.WARNING, _("Please login to access this page."))
-        return HttpResponseRedirect('/')
+        return HttpResponseRedirect('/?login=1')
 
     def has_permission(self, request):
         return TenantAdminPermissionWithRequest(request)
