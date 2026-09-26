@@ -109,6 +109,8 @@ timeout 600s docker exec lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py migrate_schemas --executor=multiprocessing'
 timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
+timeout 120s docker exec lespass_django bash -lc \
+  'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py configure_gala_apex'
 
 healthy=false
 for attempt in {1..30}; do

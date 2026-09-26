@@ -34,6 +34,12 @@ for url in "${urls[@]}"; do
   esac
 done
 
+# A 200 response from the generic TiBillet public homepage is not a healthy
+# Gala site. Verify the Django tenant mapping as well as the HTTP endpoint.
+timeout 30s docker exec -w /DjangoFiles lespass_django \
+  /home/tibillet/.local/bin/poetry run python manage.py configure_gala_apex --check \
+  >/dev/null || fail "Lespass apex is not mapped to the Gala tenant"
+
 # HTTP can stay healthy while the Lespass background worker crashes. A release
 # is only healthy when the worker is running and responds through its broker.
 [[ "$(docker inspect --format '{{.State.Running}}' lespass_celery 2>/dev/null || true)" == "true" ]] \

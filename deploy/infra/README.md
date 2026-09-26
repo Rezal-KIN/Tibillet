@@ -44,9 +44,12 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
 ## Conventions de nommage — domaines
 
 - **Production** : les mêmes noms pour tous les galas, ex. `fedow.galas-am-aix.rezal.fr`
-  (Fedow), `cashless.galas-am-aix.rezal.fr` (Laboutik). Lespass est SANS sous-domaine sur
-  le domaine apex commun (`galas-am-aix.rezal.fr`), ses tenants vivant en
-  sous-domaines de celui-ci (`festival.galas-am-aix.rezal.fr`).
+  (Fedow), `cashless.galas-am-aix.rezal.fr` (Laboutik). Le site Lespass du gala est servi
+  directement sur `galas-am-aix.rezal.fr`. Le premier tenant conserve aussi son alias
+  technique `festival.galas-am-aix.rezal.fr`, mais sa route primaire est l'apex. La commande
+  idempotente `configure_gala_apex`, exécutée après `install` dans chaque déploiement,
+  corrige le mapping initial de l'installateur TiBillet ; le healthcheck refuse le site
+  générique `public` même s'il répond HTTP 200.
 - **Smoke** : les mêmes noms publics que Production. Un seul environnement
   reçoit l'IP fixe à la fois ; la pipeline manuelle Gala actif fait la bascule.
   Les images Fedow, Laboutik et Traefik de Smoke sont épinglées dans
