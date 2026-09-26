@@ -22,6 +22,17 @@ VERIFICATION_RETIREMENT_OPERATIONS = {
 VERIFICATION_SLUG = "gala-verification"
 VERIFICATION_INSTANCE_ID = "i-0f8d460abd9ba41d9"
 VERIFICATION_VOLUME_ID = "vol-0643159830aff7cd1"
+FIRST_RUN_SLUG = "gala-first-run-20260926"
+FIRST_RUN_INSTANCE_ID = "i-0f32df17b219428dd"
+FIRST_RUN_VOLUME_ID = "vol-06682cc1dace8854f"
+FIRST_RUN_RETIREMENT_OPERATIONS = {
+    "Prepare Gala First Run Retirement": "prepare",
+    "Retire Gala First Run": "retire",
+}
+TEMPORARY_IDENTITIES = {
+    VERIFICATION_SLUG: (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
+    FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
+}
 
 
 def verify_validation_retirement_plan(
@@ -63,13 +74,13 @@ def verify_validation_retirement_plan(
             raise ValueError(f"missing existing EC2 state on {address}")
         tags = before.get("tags")
         blocks = before.get("root_block_device")
-        if slug == VERIFICATION_SLUG and (
-            before.get("id") != VERIFICATION_INSTANCE_ID
+        if slug in TEMPORARY_IDENTITIES and (
+            before.get("id") != TEMPORARY_IDENTITIES[slug][0]
             or not isinstance(blocks, list) or len(blocks) != 1
             or not isinstance(blocks[0], dict)
-            or blocks[0].get("volume_id") != VERIFICATION_VOLUME_ID
+            or blocks[0].get("volume_id") != TEMPORARY_IDENTITIES[slug][1]
         ):
-            raise ValueError("temporary Gala verification EC2 or root volume identity changed")
+            raise ValueError("temporary Gala EC2 or root volume identity changed")
         if (not isinstance(tags, dict) or tags.get("Project") != "tibillet-gala-paris"
                 or tags.get("Gala") != slug or tags.get("ManagedBy") != "terraform"
                 or not isinstance(blocks, list) or len(blocks) != 1
@@ -117,14 +128,18 @@ def verify_validation_retirement_plan(
     return accepted
 
 
-def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> list[str]:
+def verify_verification_retirement_plan(
+    plan: dict[str, object], phase: str, slug: str = VERIFICATION_SLUG,
+) -> list[str]:
+    if slug not in TEMPORARY_IDENTITIES:
+        raise ValueError("unknown temporary Gala retirement target")
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
-    instance_address = f'module.gala["{VERIFICATION_SLUG}"].aws_instance.retirable[0]'
+    instance_address = f'module.gala["{slug}"].aws_instance.retirable[0]'
     switch_policy = 'aws_iam_role_policy.active_switch_build["apply"]'
     allowed_delivery_deletions = {
-        f'{kind}["{VERIFICATION_SLUG}"]' for kind in (
+        f'{kind}["{slug}"]' for kind in (
             "aws_ssm_document.production_deploy",
             "aws_iam_role_policy.production_build",
             "aws_codebuild_project.production",
@@ -166,7 +181,7 @@ def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> 
         else:
             raise ValueError(f"temporary Gala retirement refuses {actions} on {address}")
     accepted.extend(verify_validation_retirement_plan(
-        {"resource_changes": core}, phase, targets=(VERIFICATION_SLUG,),
+        {"resource_changes": core}, phase, targets=(slug,),
     ))
     return accepted
 
@@ -454,6 +469,7 @@ def main() -> None:
     plan = json.loads(args.plan_json.read_text(encoding="utf-8"))
     phase = RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     verification_phase = VERIFICATION_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     if phase:
         if args.slug != "gala-validation":
             raise ValueError("validation retirement requires the exact validation slug")
@@ -462,6 +478,10 @@ def main() -> None:
         if args.slug != VERIFICATION_SLUG:
             raise ValueError("temporary Gala retirement requires the exact verification slug")
         changed = verify_verification_retirement_plan(plan, verification_phase)
+    elif first_run_phase:
+        if args.slug != FIRST_RUN_SLUG:
+            raise ValueError("first-run retirement requires the exact temporary slug")
+        changed = verify_verification_retirement_plan(plan, first_run_phase, slug=FIRST_RUN_SLUG)
     else:
         changed = verify(plan, args.slug)
     print(f"Foundation plan accepted: {len(changed)} resource changes")

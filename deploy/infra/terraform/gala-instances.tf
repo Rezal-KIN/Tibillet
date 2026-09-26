@@ -52,3 +52,9 @@ moved {
   from = module.gala["gala-verification"].aws_instance.runtime[0]
   to   = module.gala["gala-verification"].aws_instance.retirable[0]
 }
+
+# Exact disposable host created for the automatic first-execution test.
+moved {
+  from = module.gala["gala-first-run-20260926"].aws_instance.runtime[0]
+  to   = module.gala["gala-first-run-20260926"].aws_instance.retirable[0]
+}
