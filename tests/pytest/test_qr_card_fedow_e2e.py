@@ -6,6 +6,8 @@ SMTP message or live Stripe mode even if invoked from another environment.
 
 import os
 import secrets
+from unittest.mock import patch
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
@@ -14,6 +16,7 @@ from django.test import Client as DjangoClient
 from django_tenants.utils import tenant_context
 
 from AuthBillet.models import TibilletUser
+from BaseBillet.models import Configuration
 from Customers.models import Client
 from fedow_connect.fedow_api import FedowAPI
 
@@ -77,9 +80,20 @@ def test_new_qr_card_links_and_opens_refill_landing():
             assert user.email_valid is False
             assert FedowAPI().NFCcard.qr_retrieve(card_id)['is_wallet_ephemere'] is False
 
-        landing = browser.get(f'/qr/{card_id}/')
+        # The freshly installed Smoke tenant may have its refill button
+        # disabled until cashless configuration is reconciled. Exercise the
+        # QR landing UI with the feature enabled without changing EC2 data.
+        with patch.object(Configuration, 'show_refill_button', return_value=True):
+            landing = browser.get(f'/qr/{card_id}/')
         assert landing.status_code == 200
         assert b'/my_account/refill_wallet/' in landing.content
+
+        # A Checkout creation is safe in STRIPE_TEST mode: no payment is made.
+        # This checks the Fedow-to-Stripe leg, not just the presence of a CTA.
+        checkout = browser.get('/my_account/refill_wallet/', HTTP_HX_REQUEST='true')
+        assert checkout.status_code == 200
+        checkout_url = urlparse(checkout['HX-Redirect'])
+        assert (checkout_url.scheme, checkout_url.hostname) == ('https', 'checkout.stripe.com')
     finally:
         if user is not None:
             with tenant_context(tenant):
