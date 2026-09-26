@@ -2,6 +2,9 @@ locals {
   name_prefix    = "${var.project_name}-${var.gala_slug}"
   backup_prefix  = "galas/${var.gala_slug}/"
   release_prefix = "releases/${var.gala_slug}/"
+  # One allowlist powers both count and the lifecycle precondition, so a
+  # newly approved disposable host cannot pass one gate and fail the other.
+  retirable_gala_slugs = ["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926"]
 
   tags = merge({
     Project       = var.project_name
@@ -252,7 +255,7 @@ resource "aws_instance" "runtime" {
 # Used only for explicitly approved disposable validation hosts during
 # two-phase retirement. The live Gala and shared Smoke remain protected.
 resource "aws_instance" "retirable" {
-  count = var.create_instance && !var.protect_from_destruction && contains(["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926"], var.gala_slug) ? 1 : 0
+  count = var.create_instance && !var.protect_from_destruction && contains(local.retirable_gala_slugs, var.gala_slug) ? 1 : 0
 
   ami                    = var.ami_id
   instance_type          = var.instance_type
@@ -299,7 +302,7 @@ resource "aws_instance" "retirable" {
   lifecycle {
     ignore_changes = [user_data, vpc_security_group_ids, associate_public_ip_address]
     precondition {
-      condition     = contains(["gala-validation", "gala-validation-2", "gala-verification"], var.gala_slug)
+      condition     = contains(local.retirable_gala_slugs, var.gala_slug)
       error_message = "Only explicitly approved disposable validation EC2s can use the retirable resource."
     }
   }

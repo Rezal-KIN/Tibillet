@@ -60,6 +60,13 @@ def run(catalog: dict[str, object], **overrides: str) -> tuple[subprocess.Comple
 
 
 class FoundationInputTests(unittest.TestCase):
+    def test_retirable_ec2_count_and_precondition_share_one_allowlist(self) -> None:
+        module = (ROOT / "infra/terraform/modules/gala/main.tf").read_text(encoding="utf-8")
+        self.assertIn('retirable_gala_slugs = ["gala-validation", "gala-validation-2", '
+                      '"gala-verification", "gala-first-run-20260926"]', module)
+        retirable = module.split('resource "aws_instance" "retirable" {', 1)[1]
+        self.assertEqual(retirable.count("contains(local.retirable_gala_slugs, var.gala_slug)"), 2)
+
     def test_temporary_gala_retirement_is_two_phase_and_preserves_aix(self) -> None:
         base = {
             "platform": "v1", "domain": "galas-am-aix.rezal.fr",
