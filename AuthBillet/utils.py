@@ -25,7 +25,7 @@ def get_client_ip(request):
 
 
 
-def sender_mail_connect(email, subject_mail=None, next_url=None):
+def sender_mail_connect(email, subject_mail=None, next_url=None, template=None):
     # Mail de confirmation de création de compte
     try :
         base_url = connection.tenant.get_primary_domain().domain
@@ -47,7 +47,8 @@ def sender_mail_connect(email, subject_mail=None, next_url=None):
         #   Outside a transaction (public views), the callback runs immediately.
         transaction.on_commit(
             lambda: connexion_celery_mailer.delay(
-                email, f"https://{base_url}", subject_mail, next_url=next_url
+                email, f"https://{base_url}", subject_mail,
+                template=template, next_url=next_url
             )
         )
     except Exception as e:
@@ -60,6 +61,7 @@ def get_or_create_user(email: str,
                        send_mail=True,
                        force_mail=False,
                        next_url=None,
+                       return_created=False,
                        ) -> "TibilletUser" or None:
     """
     If user not created, set it inactive.
@@ -103,7 +105,7 @@ def get_or_create_user(email: str,
     else:
         if user.email_error:
             logger.info("utilisateur n'a pas un email valide")
-            return None
+            return (None, False) if return_created else None
 
         if force_mail:
             sender_mail_connect(user.email, next_url=next_url)
@@ -114,7 +116,5 @@ def get_or_create_user(email: str,
                 logger.info("utilisateur est inactif, il n'a pas encore validé son mail, on lance le mail de validation")
                 sender_mail_connect(user.email, next_url=next_url)
 
-    return user
-
-
+    return (user, created) if return_created else user
 

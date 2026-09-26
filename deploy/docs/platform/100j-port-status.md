@@ -1,0 +1,39 @@
+# Portage des personnalisations `Tibillet100J_OG`
+
+État au 26 septembre 2026. Source : inventaire SSH du 22 septembre
+([inventaire détaillé](tibillet100j-customizations-inventory.md)), archive exacte
+[`legacy-100j-qr-flow`](../../Lespass/legacy-100j-qr-flow/README.md) et comparaison avec
+`origin/main`. L'ancienne EC2 n'a pas été modifiée.
+
+| Fonction historique | État dans la nouvelle base | Suite |
+| --- | --- | --- |
+| QR d'une carte neuve → email/prénom/nom → liaison → session immédiate → bouton « Recharger » | Porté dans `BaseBillet/views_qr_card.py`, routes et templates. L'email reste non vérifié et un courriel de validation est envoyé. | Vérifier sur une carte Fedow de test et un vrai email de test. |
+| QR d'une carte déjà liée → notification/lien de connexion par email → page carte | Porté avec email QR dédié, limite d'un email par 5 minutes/carte et URL de retour signée. Un QR seul ne connecte plus le propriétaire. | Vérifier la délivrabilité Brevo et le retour après clic. |
+| Email déjà connu + nouvelle carte | Adapté : lien de connexion obligatoire *avant* de lier la carte. | Vérifier compte sans carte, compte avec carte et refus de seconde carte. |
+| Page QR « Carte liée ! » + accès direct au rechargement Stripe et à l'espace personnel | Portée dans le template `qr_landing.html`; le rechargement respecte `show_refill_button`. | Vérifier la redirection Stripe en mode test. |
+| Page d'accueil principale et identité visuelle du gala 100 jours | La V2 a un système de skins, mais les contenus/images/réglages de l'ancienne base ne sont pas dans l'archive QR. Aucun portage visuel prétendu. | Récupérer les fichiers et réglages non secrets depuis l'EC2 ou une sauvegarde, puis comparer visuellement. |
+| Actions adhésion : facture, paiement hors ligne, annulation, renouvellement | Déjà présentes dans `BaseBillet/views.py` V2 (`MembershipMVT`). | Tests métier ciblés, sans recopier V1. |
+| Limite par tarif, espace admin, page Faire Festival, permission d'initiation paiement | Déjà présents dans la V2 actuelle. | Vérifier le comportement gala, pas de portage source nécessaire. |
+| Solde total fédéré/local, remboursement local par IBAN/BIC | Absent de V2 ; archive V1 disponible. Flux financier et documentaire non porté dans ce lot. | Spécifier données, permissions et tests avant migration. |
+| Fedow `register_nfc_card` + outil `card_printer/` | Absent ; l'outil physique historique contient un ancien jeton en clair. | Récupérer le code sans la configuration, roter le jeton, sécuriser l'API et tester avec matériel. |
+| Noms de bars historiques, ancien domaine nginx Laboutik | Spécifiques au gala précédent ; non repris tels quels. | Paramétrer par gala seulement si requis. |
+
+## Écart de sécurité assumé
+
+Le code historique ouvrait une session après la saisie d'un email même pour un compte déjà
+existant. La V2 connectait aussi directement le propriétaire lors du scan d'une carte déjà
+liée. Un QR imprimé et une adresse email ne prouvent pas l'identité du propriétaire : cette
+reprise littérale aurait permis une usurpation. Le portage garde l'accès immédiat seulement
+pour **un compte réellement nouveau** et demande un magic link pour tout compte ou toute
+carte déjà liés. La confirmation de l'email reste nécessaire pour les opérations qui
+l'exigent.
+
+## Validation avant activation publique
+
+1. Faire passer les tests de `tests/pytest/test_qr_card_onboarding.py` dans l'image applicative.
+2. Sur Test/Smoke, employer une carte et un compte Fedow de test : inscription, liaison,
+   session, recharge Stripe test, email Brevo et retour signé.
+3. Tester une carte déjà liée, un autre navigateur, un autre compte et une deuxième carte.
+4. Faire vérifier le rendu mobile et l'identité visuelle par le propriétaire du gala.
+5. Promouvoir un commit immuable via la pipeline Production et son approbation manuelle ;
+   ne pas modifier directement l'EC2 Aix ni déplacer l'IP publique pour ce test.

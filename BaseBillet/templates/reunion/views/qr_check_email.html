@@ -1,0 +1,15 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% block title %}{% translate 'Check your email' %}{% endblock %}
+
+{% block main %}
+<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
+  <div class="container text-center text-white" style="max-width:440px;">
+    <div class="display-2" aria-hidden="true">📧</div>
+    <h1>{% translate 'Check your email' %}</h1>
+    <p>{% translate 'We sent you a secure sign-in link. Open it to access your card.' %}</p>
+    <p class="text-white-50">{% translate 'Remember to check your spam folder.' %}</p>
+  </div>
+</main>
+{% endblock %}
