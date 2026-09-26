@@ -23,15 +23,21 @@ class BootstrapGateTests(unittest.TestCase):
             {"address": 'aws_iam_role_policy.test_deploy[0]',
              "change": {"actions": ["update"]}},
         ]}
-        self.assertTrue(module.is_validation_retirement(unchanged, "gala-validation"))
-        self.assertFalse(module.is_validation_retirement(unchanged, "gala-am-aix"))
+        self.assertTrue(module.is_delivery_retirement(unchanged, "gala-validation"))
+        self.assertTrue(module.is_delivery_retirement(unchanged, "gala-smoke"))
+        self.assertFalse(module.is_delivery_retirement(unchanged, "gala-am-aix"))
         changed_host = {"resource_changes": [
             {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',
              "change": {"actions": ["create"]}},
         ]}
-        self.assertFalse(module.is_validation_retirement(changed_host, "gala-validation"))
+        self.assertFalse(module.is_delivery_retirement(changed_host, "gala-validation"))
+        changed_smoke = {"resource_changes": [
+            {"address": 'module.gala["gala-smoke"].aws_instance.runtime[0]',
+             "change": {"actions": ["update"]}},
+        ]}
+        self.assertFalse(module.is_delivery_retirement(changed_smoke, "gala-smoke"))
         with self.assertRaises(ValueError):
-            module.is_validation_retirement({}, "gala-validation")
+            module.is_delivery_retirement({}, "gala-validation")
 
     def test_selects_only_exact_tagged_instance(self) -> None:
         instance = {

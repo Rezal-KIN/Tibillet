@@ -129,8 +129,8 @@ class FoundationPlanTests(unittest.TestCase):
         self.assertEqual(module.verify({"resource_changes": [
             change(pipeline, ["delete"]), change(build, ["delete"]),
         ]}, "gala-validation"), [
-            f"retire-validation-pipeline {pipeline}",
-            f"retire-validation-pipeline {build}",
+            f"retire-production-pipeline {pipeline}",
+            f"retire-production-pipeline {build}",
         ])
         for forbidden in (
             'module.gala["gala-validation"].aws_instance.runtime[0]',
@@ -143,6 +143,24 @@ class FoundationPlanTests(unittest.TestCase):
                 module.verify({"resource_changes": [change(forbidden, ["delete"])]}, "gala-validation")
         with self.assertRaises(ValueError):
             module.verify({"resource_changes": [change(pipeline, ["delete"])]}, "gala-am-aix")
+
+    def test_smoke_pipeline_retirement_preserves_test_document(self) -> None:
+        pipeline = 'aws_codepipeline.production["gala-smoke"]'
+        build = 'aws_codebuild_project.production_validate["gala-smoke"]'
+        self.assertEqual(module.verify({"resource_changes": [
+            change(pipeline, ["delete"]), change(build, ["delete"]),
+        ]}, "gala-smoke"), [
+            f"retire-production-pipeline {pipeline}",
+            f"retire-production-pipeline {build}",
+        ])
+        for forbidden in (
+            'aws_ssm_document.production_deploy["gala-smoke"]',
+            'module.gala["gala-smoke"].aws_instance.runtime[0]',
+            'aws_codepipeline.test[0]',
+            'aws_codepipeline.production["gala-am-aix"]',
+        ):
+            with self.subTest(address=forbidden), self.assertRaises(ValueError):
+                module.verify({"resource_changes": [change(forbidden, ["delete"])]}, "gala-smoke")
 
 
 if __name__ == "__main__":

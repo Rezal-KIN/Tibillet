@@ -3,7 +3,7 @@
 # selects a release manifest, never an EC2 target.
 
 resource "aws_ssm_document" "production_deploy" {
-  for_each        = local.production_target_galas
+  for_each        = local.production_deploy_document_galas
   name            = "${local.name_prefix}-production-${each.key}-deploy"
   document_type   = "Command"
   document_format = "JSON"

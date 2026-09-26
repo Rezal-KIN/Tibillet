@@ -79,3 +79,17 @@ générique de suppression de gala. Pour cette maintenance seulement, Finalize
 vérifie que l'EC2 historique est joignable sans exiger que ses services
 applicatifs soient sains ; la vérification complète de bootstrap reste exigée
 dès que le plan crée ou modifie l'EC2 du gala demandé.
+
+## Retrait de l'ancienne pipeline Production de Smoke
+
+Smoke est déployé par la pipeline Test, pas par une promotion Production. Après
+fusion du code de retrait sur `main`, lancer Foundation avec la valeur exacte
+`GalaName=Retire Smoke Production Pipeline`. Cette opération n'est acceptée que
+si l'EC2 Smoke existe déjà dans le catalogue. Le plan ne peut supprimer que la
+pipeline Production Smoke, ses projets CodeBuild et leurs politiques IAM. Le
+document SSM de déploiement utilisé par Test, l'EC2, les secrets, les journaux
+et les rôles IAM historiques restent gérés. Finalize vérifie que Smoke est
+joignable sans imposer un contrôle de services applicatifs pour cette opération
+de maintenance. Attendre la réussite de toute la pipeline, puis vérifier que
+Test conserve son document SSM et que les pipelines Foundation, Test, Active
+Gala et Production Aix sont présentes.
