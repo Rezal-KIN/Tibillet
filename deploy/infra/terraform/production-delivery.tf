@@ -194,6 +194,14 @@ resource "aws_codepipeline" "production" {
   name          = "${local.name_prefix}-production-${each.key}"
   role_arn      = aws_iam_role.production_pipeline[each.key].arn
   pipeline_type = "V2"
+  # CodePipeline starts an initial execution when it is created. The role ARN
+  # alone does not order its inline policy (nor the CodeBuild role policies),
+  # so Source can otherwise race IAM attachment on a fresh Gala.
+  depends_on = [
+    aws_iam_role_policy.production_pipeline,
+    aws_iam_role_policy.production_validate,
+    aws_iam_role_policy.production_build,
+  ]
 
   variable {
     name          = "ReleaseManifestPath"
