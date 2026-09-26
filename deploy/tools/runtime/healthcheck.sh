@@ -9,6 +9,8 @@ CONFIG_PATH="${1:-}"
 [[ -n "$CONFIG_PATH" ]] || fail "usage: $0 CONFIG"
 load_gala_config "$CONFIG_PATH"
 require_command curl
+require_command docker
+require_command timeout
 require_var HEALTHCHECK_URLS
 
 IFS=',' read -r -a urls <<< "$HEALTHCHECK_URLS"
@@ -31,3 +33,12 @@ for url in "${urls[@]}"; do
     *) fail "healthcheck failed url=$url status=$status" ;;
   esac
 done
+
+# HTTP can stay healthy while the Lespass background worker crashes. A release
+# is only healthy when the worker is running and responds through its broker.
+[[ "$(docker inspect --format '{{.State.Running}}' lespass_celery 2>/dev/null || true)" == "true" ]] \
+  || fail "Lespass Celery worker is not running"
+timeout 15s docker exec -w /DjangoFiles lespass_django \
+  /home/tibillet/.local/bin/poetry run celery -A TiBillet inspect ping --timeout=5 \
+  >/dev/null 2>&1 || fail "Lespass Celery worker did not answer broker ping"
+printf 'local healthy service=lespass_celery status=responsive\n'
