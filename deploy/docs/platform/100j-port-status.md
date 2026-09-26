@@ -7,10 +7,10 @@
 
 | Fonction historique | État dans la nouvelle base | Suite |
 | --- | --- | --- |
-| QR d'une carte neuve → email/prénom/nom → liaison → session immédiate → bouton « Recharger » | Porté dans `BaseBillet/views_qr_card.py`, routes et templates. L'email reste non vérifié et un courriel de validation est envoyé. | Vérifier sur une carte Fedow de test et un vrai email de test. |
+| QR d'une carte neuve → email/prénom/nom → liaison → session immédiate → bouton « Recharger » | Porté dans `BaseBillet/views_qr_card.py`, routes et templates. L'email reste non vérifié et un courriel de validation est envoyé. Le parcours carte Fedow réelle → session → Checkout Stripe test a réussi sur Smoke. | Le bouton reste masqué par la configuration actuelle sur Smoke **et Aix** (`stripe_payouts_enabled=false`, `force_show_refill_button=false`). Vérifier le webhook et l'encaissement live avant de l'activer en production ; vérifier aussi un vrai email. |
 | QR d'une carte déjà liée → notification/lien de connexion par email → page carte | Porté avec email QR dédié, limite d'un email par 5 minutes/carte et URL de retour signée. Un QR seul ne connecte plus le propriétaire. | Vérifier la délivrabilité Brevo et le retour après clic. |
 | Email déjà connu + nouvelle carte | Adapté : lien de connexion obligatoire *avant* de lier la carte. | Vérifier compte sans carte, compte avec carte et refus de seconde carte. |
-| Page QR « Carte liée ! » + accès direct au rechargement Stripe et à l'espace personnel | Portée dans le template `qr_landing.html`; le rechargement respecte `show_refill_button`. | Vérifier la redirection Stripe en mode test. |
+| Page QR « Carte liée ! » + accès direct au rechargement Stripe et à l'espace personnel | Portée dans le template `qr_landing.html`; le rechargement respecte `show_refill_button`. L'URL Checkout Stripe test a été créée avec succès, sans paiement. | Activer le bouton via une configuration reproductible seulement après vérification du webhook live et d'un paiement/remboursement contrôlé. |
 | Page d'accueil principale et identité visuelle du gala 100 jours | Le rendu HTTP public de l'ancienne EC2 a permis de retrouver le panneau « carte cashless en 3 étapes » et l'ouverture de la connexion depuis le bouton d'adhésion ; ces éléments sont portés dans `reunion/views/home.html`. Les images/réglages de l'ancienne base restent hors archive QR. | Comparer visuellement les deux pages et récupérer les images/réglages non secrets si nécessaires. |
 | Actions adhésion : facture, paiement hors ligne, annulation, renouvellement | Déjà présentes dans `BaseBillet/views.py` V2 (`MembershipMVT`). | Tests métier ciblés, sans recopier V1. |
 | Limite par tarif, espace admin, page Faire Festival, permission d'initiation paiement | Déjà présents dans la V2 actuelle. | Vérifier le comportement gala, pas de portage source nécessaire. |
@@ -51,10 +51,19 @@ aucune désactivation globale de la vérification TLS n'a été ajoutée.
 
 ## Validation avant activation publique
 
-1. Faire passer les tests de `tests/pytest/test_qr_card_onboarding.py` dans l'image applicative.
-2. Sur Test/Smoke, employer une carte et un compte Fedow de test : inscription, liaison,
-   session, recharge Stripe test, email Brevo et retour signé.
-3. Tester une carte déjà liée, un autre navigateur, un autre compte et une deuxième carte.
-4. Faire vérifier le rendu mobile et l'identité visuelle par le propriétaire du gala.
-5. Promouvoir un commit immuable via la pipeline Production et son approbation manuelle ;
-   ne pas modifier directement l'EC2 Aix ni déplacer l'IP publique pour ce test.
+1. **Fait sur Smoke le 26 septembre :** 9 tests ciblés ; E2E avec une carte Fedow
+   créée pour le test, inscription, liaison wallet, session immédiate, bouton
+   simulé activé et création d'un Checkout Stripe test sans paiement. La
+   pipeline Test du commit `1b0740fe99cccfd9e872be27c2266e37cd50751c`
+   a réussi. Aucun réglage d'EC2 n'a été modifié manuellement.
+2. **À faire avant d'exposer la recharge live :** vérifier la configuration
+   du webhook Stripe live, effectuer un paiement réel contrôlé, confirmer le
+   crédit cashless et un remboursement, puis activer le bouton via une
+   configuration versionnée. La présence d'une clé live ne prouve pas ce flux.
+3. **À faire avant de déclarer le portage complet :** tester la délivrabilité
+   Brevo et le retour du lien signé ; une carte déjà liée dans un autre
+   navigateur, un autre compte et une deuxième carte ; comparer le rendu
+   mobile et les images/réglages de l'ancien accueil.
+4. Promouvoir un manifeste immuable via la pipeline Production et son
+   approbation manuelle ; ne pas modifier directement l'EC2 Aix ni déplacer
+   l'IP publique pour ce test.
