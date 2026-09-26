@@ -50,6 +50,7 @@ services:
       - lespass_redis:redis
       - lespass_memcached:memcached
     networks:
+      - frontend
       - lespass_backend
 
   lespass_celery:

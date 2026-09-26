@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -27,13 +28,25 @@ from fedow_public.models import AssetFedowPublic
 logger = logging.getLogger(__name__)
 
 
+def _fedow_base_url(fedow_config: FedowConfig) -> str:
+    """Use the local Docker bridge on Gala hosts without a public certificate.
+
+    API requests are already signed and authenticated. The internal endpoint
+    is a fixed Compose service name, never a user-controlled URL. Other TiBillet
+    installations keep the usual verified public HTTPS transport.
+    """
+    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
+        return 'http://fedow_nginx'
+    return f'https://{fedow_config.fedow_domain()}'
+
+
 ### GENERIC GET AND POST ###
 def _post(fedow_config: FedowConfig = None,
           user: TibilletUser = None,
           data: dict = None,
           path: str = None,
           apikey: str = None):
-    fedow_domain = fedow_config.fedow_domain()
+    fedow_base_url = _fedow_base_url(fedow_config)
     now = f"{datetime.now().isoformat()}"
 
     # Pour la création, on prend la clé api de Root. On rempli apikey
@@ -47,6 +60,8 @@ def _post(fedow_config: FedowConfig = None,
         'Authorization': f'Api-Key {apikey}',
         "Content-type": "application/json",
     }
+    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
+        headers['Host'] = fedow_config.fedow_domain()
 
     # Si un user est donné, on indique son wallet dans le header et on le signe avec now
     if user:
@@ -74,7 +89,7 @@ def _post(fedow_config: FedowConfig = None,
     # / Mandatory timeout: without it, if Fedow does not answer, the server
     # thread hangs forever (2026-06-11 incident: runserver frozen, all 504).
     request_fedow = session.post(
-        f"https://{fedow_domain}/{path}/",
+        f"{fedow_base_url}/{path}/",
         headers=headers,
         data=json.dumps(data),
         verify=bool(not settings.DEBUG),
@@ -91,7 +106,7 @@ def _get(fedow_config: FedowConfig = None,
          user: TibilletUser = None,
          path: str = None,
          apikey: str = None):
-    fedow_domain = fedow_config.fedow_domain()
+    fedow_base_url = _fedow_base_url(fedow_config)
     now = f"{datetime.now().isoformat()}"
 
     if apikey is None:
@@ -102,6 +117,8 @@ def _get(fedow_config: FedowConfig = None,
         "Date": f"{now}",
         'Authorization': f'Api-Key {apikey}',
     }
+    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
+        headers['Host'] = fedow_config.fedow_domain()
 
     # Si un user est donné, on indique son wallet dans le header et on le signe avec now
     if user:
@@ -127,7 +144,7 @@ def _get(fedow_config: FedowConfig = None,
     # timeout obligatoire : meme raison que _post (incident 2026-06-11).
     # / Mandatory timeout: same reason as _post (2026-06-11 incident).
     request_fedow = session.get(
-        f"https://{fedow_domain}/{path}/",
+        f"{fedow_base_url}/{path}/",
         headers=headers,
         verify=bool(not settings.DEBUG),
         timeout=30,

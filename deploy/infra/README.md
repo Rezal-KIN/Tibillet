@@ -50,6 +50,9 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
   idempotente `configure_gala_apex`, exécutée après `install` dans chaque déploiement,
   corrige le mapping initial de l'installateur TiBillet ; le healthcheck refuse le site
   générique `public` même s'il répond HTTP 200.
+  Lespass contacte Fedow sur le réseau Docker local, en conservant l'en-tête
+  `Host` public et les signatures d'API ; cela permet de tester Smoke sans
+  déplacer l'IP fixe ni accepter le certificat temporaire auto-signé.
 - **Smoke** : les mêmes noms publics que Production. Un seul environnement
   reçoit l'IP fixe à la fois ; la pipeline manuelle Gala actif fait la bascule.
   Les images Fedow, Laboutik et Traefik de Smoke sont épinglées dans

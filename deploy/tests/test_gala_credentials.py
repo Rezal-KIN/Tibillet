@@ -84,6 +84,7 @@ class GeneratedGalaSecretTests(unittest.TestCase):
         self.assertIn("EMAIL_BACKEND='django.core.mail.backends.dummy.EmailBackend'", files["lespass.env"])
         self.assertIn("SUB='festival'", files["lespass.env"])
         self.assertIn("GALA_APEX_TENANT='1'", files["lespass.env"])
+        self.assertIn("GALA_LOCAL_FEDOW='1'", files["lespass.env"])
         self.assertIn(f"ACTIVE_GALA_API_TOKEN='{generated['active_gala_api_token']}'", files["fedow.env"])
         self.assertIn(f"ACTIVE_GALA_API_TOKEN='{generated['active_gala_api_token']}'", files["lespass.env"])
         with tempfile.TemporaryDirectory() as directory:

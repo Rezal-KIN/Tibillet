@@ -175,6 +175,7 @@ def assemble(
         "PUBLIC": text_field(site, "public_name"),
         "SUB": text_field(site, "tenant_subdomain"),
         "GALA_APEX_TENANT": "1",
+        "GALA_LOCAL_FEDOW": "1",
         "META": text_field(site, "meta_subdomain"),
         "FEDOW_DOMAIN": fedow_domain,
         "ACTIVE_GALA_API_TOKEN": text_field(generated, "active_gala_api_token"),
