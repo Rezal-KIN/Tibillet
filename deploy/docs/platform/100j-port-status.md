@@ -37,6 +37,12 @@ cashless ? » avec trois étapes et un bouton d'adhésion ouvrant le panneau de 
 La formulation « Aucun compte requis » de l'ancien panneau a été précisée : un email est
 requis pour le rechargement en ligne via QR, mais le rechargement en caisse reste distinct.
 
+La vérification Smoke a révélé que l'installateur TiBillet associait initialement l'apex
+au tenant générique `public` : le healthcheck HTTP 200 passait alors que l'accueil du gala
+restait sous `festival.`. Le contrat de déploiement réconcilie désormais ce mapping après
+`install`, et le healthcheck vérifie le propriétaire du domaine. La correction est
+versionnée dans la pipeline, pas appliquée manuellement à l'EC2.
+
 ## Validation avant activation publique
 
 1. Faire passer les tests de `tests/pytest/test_qr_card_onboarding.py` dans l'image applicative.
