@@ -21,6 +21,42 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_first_run_retirement_requires_exact_instance_and_volume(self) -> None:
+        slug = module.FIRST_RUN_SLUG
+        address = f'module.gala["{slug}"].aws_instance.retirable[0]'
+        before = {
+            "id": module.FIRST_RUN_INSTANCE_ID,
+            "primary_network_interface_id": "eni-0123456789abcdef0",
+            "disable_api_termination": True,
+            "tags": {"Project": "tibillet-gala-paris", "Gala": slug, "ManagedBy": "terraform"},
+            "root_block_device": [{"volume_id": module.FIRST_RUN_VOLUME_ID,
+                                   "volume_size": 40, "delete_on_termination": False}],
+        }
+        after = copy.deepcopy(before)
+        after["disable_api_termination"] = False
+        after["root_block_device"][0]["delete_on_termination"] = True
+        prepare = {"address": address,
+                   "previous_address": f'module.gala["{slug}"].aws_instance.runtime[0]',
+                   "change": {"actions": ["update"], "before": before, "after": after,
+                              "after_unknown": {}}}
+        self.assertEqual(len(module.verify_verification_retirement_plan(
+            {"resource_changes": [prepare]}, "prepare", slug=slug)), 1)
+        wrong = copy.deepcopy(prepare)
+        wrong["change"]["before"]["root_block_device"][0]["volume_id"] = "vol-00000000000000000"
+        with self.assertRaises(ValueError):
+            module.verify_verification_retirement_plan(
+                {"resource_changes": [wrong]}, "prepare", slug=slug)
+        retire = {"address": address, "change": {"actions": ["delete"],
+                  "before": after, "after": None, "after_unknown": {}}}
+        pipeline = {"address": f'aws_codepipeline.production["{slug}"]',
+                    "change": {"actions": ["delete"], "before": {"id": "same"}, "after": None}}
+        self.assertEqual(len(module.verify_verification_retirement_plan(
+            {"resource_changes": [retire, pipeline]}, "retire", slug=slug)), 2)
+        with self.assertRaises(ValueError):
+            module.verify_verification_retirement_plan({"resource_changes": [
+                retire, change('module.gala["gala-am-aix"].aws_instance.runtime[0]', ["delete"]),
+            ]}, "retire", slug=slug)
+
     def test_temporary_gala_retirement_targets_only_verified_ec2_and_pipeline(self) -> None:
         address = 'module.gala["gala-verification"].aws_instance.retirable[0]'
         before = {

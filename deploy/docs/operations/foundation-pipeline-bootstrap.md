@@ -93,3 +93,24 @@ joignable sans imposer un contrôle de services applicatifs pour cette opératio
 de maintenance. Attendre la réussite de toute la pipeline, puis vérifier que
 Test conserve son document SSM et que les pipelines Foundation, Test, Active
 Gala et Production Aix sont présentes.
+
+## Fin du test de première exécution automatique
+
+Le gala jetable `gala-first-run-20260926` a été créé pour vérifier l'exécution
+Production déclenchée par `CreatePipeline`. Après validation de sa première
+release, de sa sauvegarde et d'une restauration isolée, retirer son EC2 et sa
+pipeline par deux exécutions Foundation distinctes :
+
+1. `GalaName=Prepare Gala First Run Retirement` : le plan ne doit modifier que
+   l'EC2 `i-0f32df17b219428dd`, en désactivant sa protection de terminaison et
+   en activant la suppression de son volume racine `vol-06682cc1dace8854f`.
+2. Après `Succeeded` et contrôle des deux attributs AWS,
+   `GalaName=Retire Gala First Run` : le plan ne peut supprimer que cette EC2,
+   sa pipeline Production, ses projets CodeBuild, ses politiques de livraison
+   et son document SSM. Les sauvegardes, journaux, secret généré, Aix, Smoke et
+   l'IP publique sont conservés.
+
+Attendre le statut final `Succeeded` des deux exécutions, puis confirmer la
+terminaison de l'EC2, la disparition du volume et de la pipeline, ainsi que la
+santé publique d'Aix. Ne pas utiliser `terraform destroy` ni modifier l'EC2
+manuellement pour contourner un échec de Foundation.

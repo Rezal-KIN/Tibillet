@@ -25,6 +25,13 @@ VERIFICATION_RETIREMENT = {
 }
 VERIFICATION_INSTANCE_ID = "i-0f8d460abd9ba41d9"
 VERIFICATION_VOLUME_ID = "vol-0643159830aff7cd1"
+FIRST_RUN_RETIREMENT = {
+    "Prepare Gala First Run Retirement": "prepare",
+    "Retire Gala First Run": "retire",
+}
+FIRST_RUN_SLUG = "gala-first-run-20260926"
+FIRST_RUN_INSTANCE_ID = "i-0f32df17b219428dd"
+FIRST_RUN_VOLUME_ID = "vol-06682cc1dace8854f"
 
 
 def verify_validation_retirement(
@@ -55,8 +62,12 @@ def verify_validation_retirement(
         volume_id = blocks[0].get("volume_id")
         if not isinstance(volume_id, str) or not re.fullmatch(r"vol-[0-9a-f]{8,17}", volume_id):
             raise RuntimeError(f"invalid root volume in plan for {slug}")
-        if slug == "gala-verification" and (instance_id != VERIFICATION_INSTANCE_ID or volume_id != VERIFICATION_VOLUME_ID):
-            raise RuntimeError("temporary Gala verification EC2 or root volume identity changed")
+        exact_temporary = {
+            "gala-verification": (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
+            FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
+        }.get(slug)
+        if exact_temporary and (instance_id, volume_id) != exact_temporary:
+            raise RuntimeError("temporary Gala EC2 or root volume identity changed")
         if phase == "prepare":
             found = aws("ec2", "describe-instances", "--instance-ids", instance_id)
             instances = [item for group in found.get("Reservations", []) for item in group.get("Instances", [])]
@@ -212,6 +223,7 @@ def main() -> None:
         raise ValueError("wrong AWS account")
     retirement_phase = VALIDATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     verification_phase = VERIFICATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    first_run_phase = FIRST_RUN_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     if retirement_phase:
         if args.slug != "gala-validation" or not args.foundation_plan:
             raise ValueError("validation retirement requires the exact plan and slug")
@@ -226,6 +238,14 @@ def main() -> None:
         verify_validation_retirement(
             json.loads(args.foundation_plan.read_text(encoding="utf-8")),
             verification_phase, args.project_name, targets=("gala-verification",),
+        )
+        return
+    if first_run_phase:
+        if args.slug != FIRST_RUN_SLUG or not args.foundation_plan:
+            raise ValueError("first-run retirement requires the exact plan and slug")
+        verify_validation_retirement(
+            json.loads(args.foundation_plan.read_text(encoding="utf-8")),
+            first_run_phase, args.project_name, targets=(FIRST_RUN_SLUG,),
         )
         return
     instance_id = selected_instance(args.project_name, args.slug)

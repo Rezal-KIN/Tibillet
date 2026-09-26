@@ -28,6 +28,9 @@ VALIDATION_SLUGS = ("gala-validation", "gala-validation-2")
 VERIFICATION_SLUG = "gala-verification"
 PREPARE_VERIFICATION_RETIREMENT_REQUEST = "Prepare Gala Verification Retirement"
 RETIRE_VERIFICATION_REQUEST = "Retire Gala Verification"
+FIRST_RUN_SLUG = "gala-first-run-20260926"
+PREPARE_FIRST_RUN_RETIREMENT_REQUEST = "Prepare Gala First Run Retirement"
+RETIRE_FIRST_RUN_REQUEST = "Retire Gala First Run"
 
 
 def validation_retirement_phase(name: str) -> str | None:
@@ -42,6 +45,14 @@ def verification_retirement_phase(name: str) -> str | None:
     if name == PREPARE_VERIFICATION_RETIREMENT_REQUEST:
         return "prepare"
     if name == RETIRE_VERIFICATION_REQUEST:
+        return "retire"
+    return None
+
+
+def first_run_retirement_phase(name: str) -> str | None:
+    if name == PREPARE_FIRST_RUN_RETIREMENT_REQUEST:
+        return "prepare"
+    if name == RETIRE_FIRST_RUN_REQUEST:
         return "retire"
     return None
 
@@ -65,6 +76,8 @@ def gala_slug(name: str) -> str:
         return "gala-validation"
     if verification_retirement_phase(name):
         return VERIFICATION_SLUG
+    if first_run_retirement_phase(name):
+        return FIRST_RUN_SLUG
     normalized = unicodedata.normalize("NFKD", name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
@@ -100,6 +113,7 @@ def main() -> None:
     retire_smoke_pipeline = gala_name == RETIRE_SMOKE_PIPELINE_REQUEST
     validation_retirement = validation_retirement_phase(gala_name)
     verification_retirement = verification_retirement_phase(gala_name)
+    first_run_retirement = first_run_retirement_phase(gala_name)
     domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
         fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
@@ -163,6 +177,10 @@ def main() -> None:
         temporary = galas.get(VERIFICATION_SLUG)
         if isinstance(temporary, dict) and temporary.get("create_instance") is True:
             fail("finish Gala Verification Retirement before other Foundation operations")
+    if not first_run_retirement:
+        temporary = galas.get(FIRST_RUN_SLUG)
+        if isinstance(temporary, dict) and temporary.get("create_instance") is True:
+            fail("finish Gala First Run Retirement before other Foundation operations")
 
     new_gala = {
         "platform": "v1",
@@ -200,6 +218,18 @@ def main() -> None:
         else:
             if existing.get("protect_from_destruction") is not False:
                 fail("prepare Gala Verification Retirement before terminating its EC2")
+            existing["create_instance"] = False
+    elif first_run_retirement:
+        existing = galas.get(FIRST_RUN_SLUG)
+        if not isinstance(existing, dict) or existing.get("create_instance") is not True:
+            fail("temporary Gala first run EC2 is absent from the active catalog")
+        if first_run_retirement == "prepare":
+            if existing.get("protect_from_destruction") is not True:
+                fail("temporary Gala first run is already prepared or has unexpected protection")
+            existing["protect_from_destruction"] = False
+        else:
+            if existing.get("protect_from_destruction") is not False:
+                fail("prepare Gala First Run Retirement before terminating its EC2")
             existing["create_instance"] = False
     elif retire_smoke_pipeline:
         if slug not in galas or galas[slug].get("create_instance") is not True:
