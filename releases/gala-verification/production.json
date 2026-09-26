@@ -1,13 +1,13 @@
 {
   "application_repository": "Rezal-KIN/Tibillet",
   "fedow_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
-  "fork_commit": "8e59429d1f09005dea019531a744ab84e80f1f10",
+  "fork_commit": "226e3fd3ebd3c83e03beae898c7e934cd4c390e3",
   "gala_slug": "gala-verification",
   "laboutik_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
-  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:5af7f8fc2be499473bc376808f68e25283beddcd78ec53b4278646925858570d",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:98b3fe393b3874af2588eadf40e13eb2ad41b46db36b1c1a9e3b78d015259d4c",
   "platform": "v1",
-  "release_id": "verification-8e59429d",
+  "release_id": "verification-226e3fd3",
   "schema_generation": "v1",
-  "tibillet_upstream_commit": "8e59429d1f09005dea019531a744ab84e80f1f10",
+  "tibillet_upstream_commit": "226e3fd3ebd3c83e03beae898c7e934cd4c390e3",
   "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
 }
