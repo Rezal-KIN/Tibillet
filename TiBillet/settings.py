@@ -411,8 +411,10 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', False)
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
+# Environment values are strings: bool('0') is True and makes Django reject
+# the SMTP backend when STARTTLS=1 and SSL=0 are supplied by the Gala runtime.
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', '0') == '1'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', '0' if EMAIL_USE_TLS else '1') == '1'
 
 # Celery Configuration Options
 CELERY_TIMEZONE = os.environ.get('TIME_ZONE', 'UTC')
@@ -571,4 +573,3 @@ if DEBUG:
         #
     ]
     os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"  # only use in development
-

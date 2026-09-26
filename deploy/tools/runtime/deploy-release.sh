@@ -113,14 +113,14 @@ timeout 120s docker exec lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py configure_gala_apex'
 
 healthy=false
-for attempt in {1..30}; do
+for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then
     healthy=true
     break
   fi
-  if (( attempt < 30 )); then sleep 5; fi
+  if (( attempt < 60 )); then sleep 5; fi
 done
-[[ "$healthy" == true ]] || fail "local healthcheck did not pass after 30 attempts"
+[[ "$healthy" == true ]] || fail "local healthcheck did not pass after 60 attempts"
 # A fresh Gala must have a recoverable database snapshot before its first
 # release is marked deployed. Existing Galas are already covered by preflight.
 if [[ ! -s "$(runtime_dir)/last-successful-backup" ]]; then
