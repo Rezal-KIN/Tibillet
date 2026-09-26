@@ -73,6 +73,34 @@ class FoundationPlanTests(unittest.TestCase):
                     **update["change"], "after": invalid_after, "after_unknown": unknown,
                 }}]}, "gala-am-aix")
 
+    def test_accepts_only_foundation_finalize_buildspec_refresh(self) -> None:
+        address = 'aws_codebuild_project.foundation_finalize[0]'
+        before = {"name": "foundation-finalize", "service_role": "same-role",
+                  "source": [{"type": "CODEPIPELINE", "buildspec": "old"}]}
+        after = {**before, "source": [{"type": "CODEPIPELINE", "buildspec": "new"}]}
+        update = {"address": address, "change": {
+            "actions": ["update"], "before": before, "after": after, "after_unknown": {},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [update]}, "gala-validation"),
+                         [f"update-foundation-finalize-buildspec {address}"])
+        with self.assertRaises(ValueError):
+            module.verify({"resource_changes": [{**update, "change": {
+                **update["change"], "after": {**after, "service_role": "other-role"},
+            }}]}, "gala-validation")
+
+    def test_accepts_only_foundation_pipeline_policy_refresh(self) -> None:
+        address = 'aws_iam_role_policy.foundation_pipeline[0]'
+        update = {"address": address, "change": {
+            "actions": ["update"], "before": {"id": "same", "policy": "old"},
+            "after": {"id": "same"}, "after_unknown": {"policy": True},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [update]}, "gala-validation"),
+                         [f"refresh-policy {address}"])
+        with self.assertRaises(ValueError):
+            module.verify({"resource_changes": [{**update, "change": {
+                **update["change"], "after": {"id": "different"},
+            }}]}, "gala-validation")
+
     def test_accepts_only_requested_gala_and_switch_policy_update(self) -> None:
         plan = {"resource_changes": [
             {"mode": "data", **change('data.aws_iam_policy_document.active_switch_build["apply"]', ["read"])},
