@@ -134,6 +134,14 @@ def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> 
             "aws_codebuild_project.production_validate",
         )
     }
+    # Terraform defers these unchanged policy documents while their referenced
+    # production resources are being removed. The only acceptable change is a
+    # provider-computed policy value; all identity and other fields must match.
+    allowed_policy_refreshes = {
+        'aws_iam_role_policy.production_build["gala-am-aix"]',
+        'aws_iam_role_policy.production_pipeline["gala-am-aix"]',
+        'aws_iam_role_policy.test_deploy[0]',
+    }
     core: list[dict[str, object]] = []
     accepted: list[str] = []
     for item in changes:
@@ -148,6 +156,9 @@ def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> 
             continue
         if address in {instance_address, switch_policy}:
             core.append(item)
+        elif (phase == "retire" and address in allowed_policy_refreshes
+              and actions == ["update"] and safe_computed_policy_refresh(change)):
+            accepted.append(f"refresh-unrelated-delivery-policy {address}")
         elif (phase == "retire" and address in allowed_delivery_deletions
               and actions == ["delete"] and change.get("after") is None
               and isinstance(change.get("before"), dict)):
@@ -158,6 +169,19 @@ def verify_verification_retirement_plan(plan: dict[str, object], phase: str) -> 
         {"resource_changes": core}, phase, targets=(VERIFICATION_SLUG,),
     ))
     return accepted
+
+
+def safe_computed_policy_refresh(change: dict[str, object]) -> bool:
+    before = change.get("before")
+    after = change.get("after")
+    return (
+        isinstance(before, dict) and isinstance(after, dict)
+        and isinstance(before.get("policy"), str)
+        and after.get("policy") is None
+        and change.get("after_unknown") == {"policy": True}
+        and {key: value for key, value in before.items() if key != "policy"}
+        == {key: value for key, value in after.items() if key != "policy"}
+    )
 
 
 def safe_validation_policy_removal(change: dict[str, object], removed_resources: set[str]) -> bool:
