@@ -4,9 +4,15 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from django.test import RequestFactory
 
 from BaseBillet.views_qr_card import qr_card_landing, qr_card_link
+
+
+@pytest.fixture(autouse=True)
+def _allow_mock_host(settings):
+    settings.ALLOWED_HOSTS = [*settings.ALLOWED_HOSTS, 'gala.example']
 
 
 def _request(method, path, data=None, authenticated=False):
