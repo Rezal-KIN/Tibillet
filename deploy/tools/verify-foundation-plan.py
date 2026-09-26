@@ -69,7 +69,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         ):
             changed.append(f"create {address}")
             continue
-        if actions == ["update"] and allowed_updates.fullmatch(address):
+        if actions == ["update"] and (
+            allowed_updates.fullmatch(address) or address == 'aws_iam_role_policy.foundation_pipeline[0]'
+        ):
             change = item["change"]
             before = change.get("before")
             after = change.get("after")
@@ -85,7 +87,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
             if address == 'aws_iam_role_policy.active_switch_build["apply"]' and safe_group_permission_addition(change):
                 changed.append(f"add-managed-gala-group-permission {address}")
                 continue
-        if actions == ["update"] and production_project.fullmatch(address):
+        if actions == ["update"] and (
+            production_project.fullmatch(address) or address == 'aws_codebuild_project.foundation_finalize[0]'
+        ):
             change = item["change"]
             before = change.get("before")
             after = change.get("after")
@@ -103,7 +107,12 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                     and {k: v for k, v in old_source[0].items() if k != "buildspec"}
                     == {k: v for k, v in new_source[0].items() if k != "buildspec"}
                 ):
-                    changed.append(f"update-production-buildspec {address}")
+                    kind = (
+                        "update-foundation-finalize-buildspec"
+                        if address == 'aws_codebuild_project.foundation_finalize[0]'
+                        else "update-production-buildspec"
+                    )
+                    changed.append(f"{kind} {address}")
                     continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
