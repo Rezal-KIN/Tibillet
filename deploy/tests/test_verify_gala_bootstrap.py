@@ -16,6 +16,49 @@ SPEC.loader.exec_module(module)
 
 
 class BootstrapGateTests(unittest.TestCase):
+    def test_validation_retirement_checks_both_instances_and_volumes(self) -> None:
+        slugs = ("gala-validation", "gala-validation-2")
+        plan = {"resource_changes": [
+            {"address": f'module.gala["{slug}"].aws_instance.retirable[0]',
+             "change": {"before": {"id": f"i-{index:017x}",
+                                   "root_block_device": [{"volume_id": f"vol-{index:017x}"}]}}}
+            for index, slug in enumerate(slugs, start=1)
+        ]}
+
+        def prepared(*args: str) -> dict[str, object]:
+            if args[:2] == ("ssm", "get-parameter"):
+                return {"Parameter": {"Value": "gala-am-aix"}}
+            if args[:2] == ("ec2", "describe-instances"):
+                slug = slugs[int(args[3][-1], 16) - 1]
+                return {"Reservations": [{"Instances": [{
+                    "State": {"Name": "running"},
+                    "Tags": [{"Key": "Project", "Value": "tibillet-gala-paris"},
+                             {"Key": "Gala", "Value": slug},
+                             {"Key": "ManagedBy", "Value": "terraform"}],
+                    "BlockDeviceMappings": [{"Ebs": {
+                        "VolumeId": f"vol-{slugs.index(slug) + 1:017x}",
+                        "DeleteOnTermination": True,
+                    }}],
+                }]}]}
+            if args[:2] == ("ec2", "describe-instance-attribute"):
+                return {"DisableApiTermination": {"Value": False}}
+            raise AssertionError(args)
+
+        with patch.object(module, "aws", side_effect=prepared):
+            module.verify_validation_retirement(plan, "prepare", "tibillet-gala-paris")
+
+        def retired(*args: str) -> dict[str, object]:
+            if args[:2] == ("ssm", "get-parameter"):
+                return {"Parameter": {"Value": "gala-am-aix"}}
+            if args[:2] == ("ec2", "describe-instances"):
+                return {"Reservations": [{"Instances": [{"State": {"Name": "terminated"}}]}]}
+            if args[:2] == ("ec2", "describe-volumes"):
+                return {"Volumes": []}
+            raise AssertionError(args)
+
+        with patch.object(module, "aws", side_effect=retired):
+            module.verify_validation_retirement(plan, "retire", "tibillet-gala-paris")
+
     def test_only_historical_validation_maintenance_skips_runtime_gate(self) -> None:
         unchanged = {"resource_changes": [
             {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',

@@ -86,3 +86,26 @@ La création d'un nouveau gala est automatique **dans Foundation** après
 contrôle du plan. Le bootstrap initial ou une migration d'infrastructure
 existante suit un plan séparé et revu. Une release Production garde son
 approbation humaine après la validation des images testées.
+
+### Retrait des deux EC2 de validation historiques
+
+Cette opération exceptionnelle passe elle aussi par Foundation, jamais par une
+correction manuelle sur les hôtes. Les entrées `gala-validation` et
+`gala-validation-2` restent dans le catalogue afin de préserver leurs secrets,
+sauvegardes et journaux, mais leurs EC2 et volumes racine de 40 Gio sont retirés.
+Vérifier d'abord que le gala actif n'est aucun des deux et que l'IP partagée
+reste associée à Aix. Puis lancer deux exécutions Foundation successives, avec
+la variable `GalaName` exacte :
+
+1. `Prepare Validation Retirement` : déplace uniquement ces deux ressources
+   Terraform vers leur variante retirable, désactive leur protection de
+   terminaison et active la suppression de leur volume racine à la terminaison.
+   Attendre `Succeeded` pour **toute** la pipeline et vérifier les deux EC2.
+2. `Retire Validation Instances` : le contrôle du plan n'autorise que la
+   suppression de ces deux EC2 et le retrait de leurs autorisations réseau
+   devenues inutiles. La finalisation attend leur terminaison et la disparition
+   des deux volumes avant d'enregistrer le catalogue. Attendre à nouveau
+   `Succeeded` pour toute la pipeline et revérifier l'IP publique active.
+
+Si l'une des étapes échoue, corriger le code de Foundation et relancer ; ne pas
+terminer manuellement les EC2 ni modifier isolément leur état Terraform.

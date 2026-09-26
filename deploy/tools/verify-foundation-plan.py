@@ -1,11 +1,143 @@
 #!/usr/bin/env python3
-"""Fail closed on any Terraform Foundation plan outside one Gala creation."""
+"""Fail closed on Terraform Foundation plans outside approved operations."""
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
+
+
+VALIDATION_SLUGS = ("gala-validation", "gala-validation-2")
+RETIREMENT_OPERATIONS = {
+    "Prepare Validation Retirement": "prepare",
+    "Retire Validation Instances": "retire",
+}
+
+
+def verify_validation_retirement_plan(plan: dict[str, object], phase: str) -> list[str]:
+    """Permit only the two exact validation hosts through the two-step retirement."""
+    if phase not in {"prepare", "retire"}:
+        raise ValueError("invalid validation retirement phase")
+    changes = plan.get("resource_changes")
+    if not isinstance(changes, list):
+        raise ValueError("Terraform plan has no resource_changes array")
+    accepted: list[str] = []
+    seen: set[str] = set()
+    policy_change: dict[str, object] | None = None
+    removed_resources: set[str] = set()
+    for item in changes:
+        if not isinstance(item, dict) or not isinstance(item.get("address"), str):
+            raise ValueError("malformed Terraform resource change")
+        address = item["address"]
+        change = item.get("change")
+        if not isinstance(change, dict):
+            raise ValueError(f"malformed Terraform change on {address}")
+        actions = change.get("actions")
+        if actions == ["no-op"] or (item.get("mode") == "data" and actions == ["read"]):
+            continue
+        if phase == "retire" and address == 'aws_iam_role_policy.active_switch_build["apply"]' and actions == ["update"]:
+            if policy_change is not None:
+                raise ValueError("duplicate active switch policy update")
+            policy_change = change
+            continue
+        slug = next((value for value in VALIDATION_SLUGS
+                     if address == f'module.gala["{value}"].aws_instance.retirable[0]'), None)
+        if slug is None or slug in seen:
+            raise ValueError(f"validation retirement refuses {actions} on {address}")
+        seen.add(slug)
+        before = change.get("before")
+        after = change.get("after")
+        if not isinstance(before, dict):
+            raise ValueError(f"missing existing EC2 state on {address}")
+        tags = before.get("tags")
+        blocks = before.get("root_block_device")
+        if (not isinstance(tags, dict) or tags.get("Project") != "tibillet-gala-paris"
+                or tags.get("Gala") != slug or tags.get("ManagedBy") != "terraform"
+                or not isinstance(blocks, list) or len(blocks) != 1
+                or not isinstance(blocks[0], dict) or blocks[0].get("volume_size") != 40):
+            raise ValueError(f"unexpected validation EC2 identity on {address}")
+        if phase == "prepare":
+            if actions != ["update"] or not isinstance(after, dict) or change.get("after_unknown", {}) != {}:
+                raise ValueError(f"unsafe validation preparation on {address}")
+            old_address = f'module.gala["{slug}"].aws_instance.runtime[0]'
+            if item.get("previous_address") not in (None, old_address):
+                raise ValueError(f"unexpected moved source on {address}")
+            new_blocks = after.get("root_block_device")
+            if (before.get("disable_api_termination") is not True
+                    or after.get("disable_api_termination") is not False
+                    or blocks[0].get("delete_on_termination") is not False
+                    or not isinstance(new_blocks, list) or len(new_blocks) != 1
+                    or not isinstance(new_blocks[0], dict)
+                    or new_blocks[0].get("delete_on_termination") is not True
+                    or {key: value for key, value in before.items() if key not in {"disable_api_termination", "root_block_device"}}
+                    != {key: value for key, value in after.items() if key not in {"disable_api_termination", "root_block_device"}}
+                    or {key: value for key, value in blocks[0].items() if key != "delete_on_termination"}
+                    != {key: value for key, value in new_blocks[0].items() if key != "delete_on_termination"}):
+                raise ValueError(f"unsafe validation preparation on {address}")
+            accepted.append(f"prepare-validation-instance {address}")
+        elif (actions == ["delete"] and after is None
+              and item.get("previous_address") is None
+              and before.get("disable_api_termination") is False
+              and blocks[0].get("delete_on_termination") is True):
+            instance_id = before.get("id")
+            eni_id = before.get("primary_network_interface_id")
+            if not (isinstance(instance_id, str) and re.fullmatch(r"i-[0-9a-f]{8,17}", instance_id)
+                    and isinstance(eni_id, str) and re.fullmatch(r"eni-[0-9a-f]{8,17}", eni_id)):
+                raise ValueError(f"invalid retiring EC2 identifiers on {address}")
+            removed_resources.add(f"arn:aws:ec2:eu-west-3:318629836660:instance/{instance_id}")
+            removed_resources.add(f"arn:aws:ec2:eu-west-3:318629836660:network-interface/{eni_id}")
+            accepted.append(f"retire-validation-instance {address}")
+        else:
+            raise ValueError(f"unsafe validation deletion on {address}")
+    if policy_change is not None:
+        if not safe_validation_policy_removal(policy_change, removed_resources):
+            raise ValueError("unsafe active switch policy update during validation retirement")
+        accepted.append('remove-retired-host-permissions aws_iam_role_policy.active_switch_build["apply"]')
+    return accepted
+
+
+def safe_validation_policy_removal(change: dict[str, object], removed_resources: set[str]) -> bool:
+    before = change.get("before")
+    after = change.get("after")
+    if not isinstance(before, dict) or not isinstance(after, dict) or has_unknown(change.get("after_unknown", {})):
+        return False
+    if {k: v for k, v in before.items() if k != "policy"} != {k: v for k, v in after.items() if k != "policy"}:
+        return False
+    try:
+        old = json.loads(before["policy"])
+        new = json.loads(after["policy"])
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return False
+    if {k: v for k, v in old.items() if k != "Statement"} != {k: v for k, v in new.items() if k != "Statement"}:
+        return False
+    old_statements = old.get("Statement")
+    new_statements = new.get("Statement")
+    if not isinstance(old_statements, list) or not isinstance(new_statements, list) or len(old_statements) != len(new_statements):
+        return False
+    changed_sids: set[str] = set()
+    for prior, later in zip(old_statements, new_statements):
+        if prior == later:
+            continue
+        if not isinstance(prior, dict) or not isinstance(later, dict):
+            return False
+        sid = prior.get("Sid")
+        if sid not in {"MoveOnlyTheSharedGalaEip", "ChangeOnlyKnownGalaNetworkInterfaces", "RunReadOnlyTargetHealthcheck"}:
+            return False
+        if {k: v for k, v in prior.items() if k != "Resource"} != {k: v for k, v in later.items() if k != "Resource"}:
+            return False
+        old_resources = prior.get("Resource")
+        new_resources = later.get("Resource")
+        if not isinstance(old_resources, list) or not isinstance(new_resources, list):
+            return False
+        removed = set(old_resources) - set(new_resources)
+        if (len(old_resources) != len(set(old_resources)) or len(new_resources) != len(set(new_resources))
+                or not removed or not removed <= removed_resources
+                or [resource for resource in old_resources if resource not in removed] != new_resources):
+            return False
+        changed_sids.add(sid)
+    return changed_sids == {"MoveOnlyTheSharedGalaEip", "ChangeOnlyKnownGalaNetworkInterfaces", "RunReadOnlyTargetHealthcheck"}
 
 
 def verify(plan: dict[str, object], slug: str) -> list[str]:
@@ -176,7 +308,14 @@ def main() -> None:
     parser.add_argument("plan_json", type=Path)
     parser.add_argument("--slug", required=True)
     args = parser.parse_args()
-    changed = verify(json.loads(args.plan_json.read_text(encoding="utf-8")), args.slug)
+    plan = json.loads(args.plan_json.read_text(encoding="utf-8"))
+    phase = RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    if phase:
+        if args.slug != "gala-validation":
+            raise ValueError("validation retirement requires the exact validation slug")
+        changed = verify_validation_retirement_plan(plan, phase)
+    else:
+        changed = verify(plan, args.slug)
     print(f"Foundation plan accepted: {len(changed)} resource changes")
     for change in changed:
         print(change)

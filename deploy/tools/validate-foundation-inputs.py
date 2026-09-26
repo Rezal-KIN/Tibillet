@@ -22,6 +22,17 @@ AMI = re.compile(r"^ami-[0-9a-f]{8,17}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 CONNECTION = re.compile(r"^arn:aws:codeconnections:eu-west-3:318629836660:connection/[0-9a-f-]{36}$")
 RETIRE_SMOKE_PIPELINE_REQUEST = "Retire Smoke Production Pipeline"
+PREPARE_VALIDATION_RETIREMENT_REQUEST = "Prepare Validation Retirement"
+RETIRE_VALIDATION_INSTANCES_REQUEST = "Retire Validation Instances"
+VALIDATION_SLUGS = ("gala-validation", "gala-validation-2")
+
+
+def validation_retirement_phase(name: str) -> str | None:
+    if name == PREPARE_VALIDATION_RETIREMENT_REQUEST:
+        return "prepare"
+    if name == RETIRE_VALIDATION_INSTANCES_REQUEST:
+        return "retire"
+    return None
 
 
 def fail(message: str) -> None:
@@ -39,6 +50,8 @@ def value(name: str) -> str:
 def gala_slug(name: str) -> str:
     if name == RETIRE_SMOKE_PIPELINE_REQUEST:
         return "gala-smoke"
+    if validation_retirement_phase(name):
+        return "gala-validation"
     normalized = unicodedata.normalize("NFKD", name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
@@ -72,6 +85,7 @@ def main() -> None:
     gala_name = value("GALA_NAME")
     slug = gala_slug(gala_name)
     retire_smoke_pipeline = gala_name == RETIRE_SMOKE_PIPELINE_REQUEST
+    validation_retirement = validation_retirement_phase(gala_name)
     domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
         fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
@@ -123,6 +137,15 @@ def main() -> None:
             # hostnames. No existing EC2 is replaced: user_data is ignored.
             existing["domain"] = SHARED_DOMAIN
 
+    # The two exact moved blocks require their old protected count to be zero.
+    # Until Prepare has committed the catalogue, refuse every other operation
+    # before planning; this prevents an accidental replacement during retry.
+    if not validation_retirement:
+        for validation_slug in VALIDATION_SLUGS:
+            existing = galas.get(validation_slug)
+            if existing and existing.get("create_instance") is True and existing.get("protect_from_destruction") is not False:
+                fail("run Prepare Validation Retirement before other Foundation operations")
+
     new_gala = {
         "platform": "v1",
         "domain": domain,
@@ -135,7 +158,20 @@ def main() -> None:
         "create_instance": True,
         "protect_from_destruction": True,
     }
-    if retire_smoke_pipeline:
+    if validation_retirement:
+        for validation_slug in VALIDATION_SLUGS:
+            existing = galas.get(validation_slug)
+            if not isinstance(existing, dict):
+                fail(f"missing historical validation Gala {validation_slug}")
+            if validation_retirement == "prepare":
+                if existing.get("create_instance") is not True:
+                    fail(f"{validation_slug} has no EC2 to prepare for retirement")
+                existing["protect_from_destruction"] = False
+            else:
+                if existing.get("protect_from_destruction") is not False:
+                    fail(f"prepare {validation_slug} before terminating its EC2")
+                existing["create_instance"] = False
+    elif retire_smoke_pipeline:
         if slug not in galas or galas[slug].get("create_instance") is not True:
             fail("Smoke pipeline retirement requires an existing Terraform-managed Smoke EC2")
     elif slug in galas:

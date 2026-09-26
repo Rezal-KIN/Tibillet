@@ -4,7 +4,8 @@ locals {
   delivery_resources_enabled   = local.gala_resources_enabled && var.enable_delivery_platform
   production_resources_enabled = local.delivery_resources_enabled && var.enable_production_pipeline
   # Smoke uses the Test pipeline; the two trial hosts no longer need their
-  # failed Production pipelines. Keep all EC2s, IAM roles and audit logs.
+  # failed Production pipelines. Historical IAM roles and audit logs survive
+  # the separately gated retirement of the two validation EC2s.
   retired_production_pipeline_slugs = toset(["gala-smoke", "gala-validation", "gala-validation-2"])
   production_target_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
@@ -18,7 +19,7 @@ locals {
   } : {}
   production_log_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
-    if gala.create_instance
+    if gala.create_instance || contains(["gala-validation", "gala-validation-2"], slug)
   } : {}
   # Keep the historical validation IAM roles without permissions until a
   # separately reviewed IAM-deletion migration is available in Foundation.
