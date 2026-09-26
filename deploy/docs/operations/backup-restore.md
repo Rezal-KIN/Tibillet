@@ -63,10 +63,20 @@ sudo /usr/local/lib/tibillet-gala/restore-postgres.sh \
 
 ## Vérification périodique (Phase 0, bloquante avant toute migration)
 
-Restaurer régulièrement le dernier backup de chaque gala actif sur une preview isolée et
-consigner : checksum vérifié, taille du dump, date, résultat applicatif (l'app démarre-t-elle
-et les données sont-elles cohérentes). Un backup qui n'a jamais été restauré avec succès
-n'est pas un backup vérifié.
+`verify-backup-restore.sh` télécharge un backup, vérifie ses métadonnées et ses checksums,
+puis restaure chaque dump dans un conteneur PostgreSQL jetable du même type que la source.
+Ce conteneur n'a ni réseau, ni port publié, ni volume hôte ; sa mémoire est limitée à
+512 Mio et ses données temporaires disparaissent après le contrôle. Il ne touche jamais
+aux bases live. Utiliser la portée SSM approuvée pour le gala ciblé :
+
+```bash
+sudo /usr/local/lib/tibillet-gala/verify-backup-restore.sh \
+  /etc/tibillet-gala/gala-am-aix.conf 20260926T121509Z
+```
+
+Consigner l'ID du backup, la validation des checksums et les trois résultats de restauration.
+Un backup qui n'a jamais été restauré avec succès n'est pas un backup vérifié. Ce drill
+SQL ne remplace pas un essai applicatif complet sur une preview isolée avant une migration.
 
 ## Ce que ce runbook ne couvre pas
 
