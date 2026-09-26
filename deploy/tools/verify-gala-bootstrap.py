@@ -19,17 +19,26 @@ VALIDATION_RETIREMENT = {
     "Prepare Validation Retirement": "prepare",
     "Retire Validation Instances": "retire",
 }
+VERIFICATION_RETIREMENT = {
+    "Prepare Gala Verification Retirement": "prepare",
+    "Retire Gala Verification": "retire",
+}
+VERIFICATION_INSTANCE_ID = "i-0f8d460abd9ba41d9"
+VERIFICATION_VOLUME_ID = "vol-0643159830aff7cd1"
 
 
-def verify_validation_retirement(plan: dict[str, object], phase: str, project: str) -> None:
-    """Check both exact hosts and their root volumes before committing catalog state."""
+def verify_validation_retirement(
+    plan: dict[str, object], phase: str, project: str,
+    targets: tuple[str, ...] = ("gala-validation", "gala-validation-2"),
+) -> None:
+    """Check exact hosts and root volumes before committing catalog state."""
     active = aws("ssm", "get-parameter", "--name", f"/{project}/active-gala")
-    if active.get("Parameter", {}).get("Value") in {"gala-validation", "gala-validation-2"}:
+    if active.get("Parameter", {}).get("Value") in targets:
         raise RuntimeError("a validation Gala is currently active")
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("missing retirement plan changes")
-    for slug in ("gala-validation", "gala-validation-2"):
+    for slug in targets:
         address = f'module.gala["{slug}"].aws_instance.retirable[0]'
         matches = [item for item in changes if isinstance(item, dict) and item.get("address") == address]
         if len(matches) != 1:
@@ -46,6 +55,8 @@ def verify_validation_retirement(plan: dict[str, object], phase: str, project: s
         volume_id = blocks[0].get("volume_id")
         if not isinstance(volume_id, str) or not re.fullmatch(r"vol-[0-9a-f]{8,17}", volume_id):
             raise RuntimeError(f"invalid root volume in plan for {slug}")
+        if slug == "gala-verification" and (instance_id != VERIFICATION_INSTANCE_ID or volume_id != VERIFICATION_VOLUME_ID):
+            raise RuntimeError("temporary Gala verification EC2 or root volume identity changed")
         if phase == "prepare":
             found = aws("ec2", "describe-instances", "--instance-ids", instance_id)
             instances = [item for group in found.get("Reservations", []) for item in group.get("Instances", [])]
@@ -200,12 +211,21 @@ def main() -> None:
     if aws("sts", "get-caller-identity").get("Account") != ACCOUNT:
         raise ValueError("wrong AWS account")
     retirement_phase = VALIDATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    verification_phase = VERIFICATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     if retirement_phase:
         if args.slug != "gala-validation" or not args.foundation_plan:
             raise ValueError("validation retirement requires the exact plan and slug")
         verify_validation_retirement(
             json.loads(args.foundation_plan.read_text(encoding="utf-8")),
             retirement_phase, args.project_name,
+        )
+        return
+    if verification_phase:
+        if args.slug != "gala-verification" or not args.foundation_plan:
+            raise ValueError("temporary Gala retirement requires the exact plan and slug")
+        verify_validation_retirement(
+            json.loads(args.foundation_plan.read_text(encoding="utf-8")),
+            verification_phase, args.project_name, targets=("gala-verification",),
         )
         return
     instance_id = selected_instance(args.project_name, args.slug)

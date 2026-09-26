@@ -45,3 +45,10 @@ moved {
   from = module.gala["gala-validation-2"].aws_instance.runtime[0]
   to   = module.gala["gala-validation-2"].aws_instance.retirable[0]
 }
+
+# The temporary Gala was created by Foundation solely to verify a fresh
+# production chain. Its retirement is separately gated; Aix and Smoke stay put.
+moved {
+  from = module.gala["gala-verification"].aws_instance.runtime[0]
+  to   = module.gala["gala-verification"].aws_instance.retirable[0]
+}

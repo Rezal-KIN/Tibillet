@@ -3,9 +3,9 @@ locals {
   gala_resources_enabled       = var.enable_additive_resources && var.enable_backup_storage
   delivery_resources_enabled   = local.gala_resources_enabled && var.enable_delivery_platform
   production_resources_enabled = local.delivery_resources_enabled && var.enable_production_pipeline
-  # Smoke uses the Test pipeline; the two trial hosts no longer need their
-  # failed Production pipelines. Historical IAM roles and audit logs survive
-  # the separately gated retirement of the two validation EC2s.
+  # Smoke uses the Test pipeline; the two historical trials no longer need
+  # their failed Production pipelines. Retired Gala roles and audit logs stay
+  # available after their separately gated EC2 retirement.
   retired_production_pipeline_slugs = toset(["gala-smoke", "gala-validation", "gala-validation-2"])
   production_target_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
@@ -19,10 +19,10 @@ locals {
   } : {}
   production_log_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
-    if gala.create_instance || contains(["gala-validation", "gala-validation-2"], slug)
+    if gala.create_instance || contains(["gala-validation", "gala-validation-2", "gala-verification"], slug)
   } : {}
-  # Keep the historical validation IAM roles without permissions until a
-  # separately reviewed IAM-deletion migration is available in Foundation.
+  # Keep retired validation IAM roles without permissions until a separately
+  # reviewed IAM-deletion migration is available in Foundation.
   production_iam_role_prefix = {
     for slug, gala in local.production_log_galas :
     slug => length("${local.name_prefix}-production-${slug}-pipeline") <= 64 ?

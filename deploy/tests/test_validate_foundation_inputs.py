@@ -60,6 +60,31 @@ def run(catalog: dict[str, object], **overrides: str) -> tuple[subprocess.Comple
 
 
 class FoundationInputTests(unittest.TestCase):
+    def test_temporary_gala_retirement_is_two_phase_and_preserves_aix(self) -> None:
+        base = {
+            "platform": "v1", "domain": "galas-am-aix.rezal.fr",
+            "instance_type": "t3.medium", "root_volume_size_gib": 40,
+            "ssh_emergency_cidrs": [], "associate_public_ip_address": True,
+            "create_instance": True, "protect_from_destruction": True,
+        }
+        catalog = {"version": 1, "galas": {
+            "gala-verification": dict(base), "gala-am-aix": dict(base),
+        }}
+        premature, _, _ = run(catalog, GALA_NAME="Retire Gala Verification")
+        self.assertNotEqual(premature.returncode, 0)
+        prepared, output, proposal = run(catalog, GALA_NAME="Prepare Gala Verification Retirement")
+        self.assertEqual(prepared.returncode, 0, prepared.stderr)
+        self.assertTrue(output["galas"]["gala-verification"]["create_instance"])
+        self.assertFalse(output["galas"]["gala-verification"]["protect_from_destruction"])
+        self.assertEqual(proposal["galas"]["gala-am-aix"], base)
+        blocked, _, _ = run(proposal)
+        self.assertNotEqual(blocked.returncode, 0)
+        self.assertIn("finish Gala Verification Retirement", blocked.stderr)
+        retired, output, proposal = run(proposal, GALA_NAME="Retire Gala Verification")
+        self.assertEqual(retired.returncode, 0, retired.stderr)
+        self.assertFalse(output["galas"]["gala-verification"]["create_instance"])
+        self.assertEqual(proposal["galas"]["gala-am-aix"], base)
+
     def test_validation_retirement_requires_prepare_then_retires_only_instances(self) -> None:
         base = {
             "platform": "v1", "domain": "galas-am-aix.rezal.fr",
