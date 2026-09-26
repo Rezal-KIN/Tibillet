@@ -44,6 +44,7 @@ services:
       - ./backup:/Backup
       - ./ssh:/home/tibillet/.ssh # if you want to use borgbackup with ssh
       - ./settings.py:/DjangoFiles/Cashless/settings.py
+      - ./install.py:/DjangoFiles/administration/management/commands/install.py:ro
       - ./views.py:/DjangoFiles/webview/views.py
       - ./fedow_api.py:/DjangoFiles/fedow_connect/fedow_api.py
       - ./validators.py:/DjangoFiles/webview/validators.py
