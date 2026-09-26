@@ -60,6 +60,22 @@ def run(catalog: dict[str, object], **overrides: str) -> tuple[subprocess.Comple
 
 
 class FoundationInputTests(unittest.TestCase):
+    def test_smoke_pipeline_retirement_preserves_catalog(self) -> None:
+        smoke = {
+            "platform": "v1", "domain": "galas-am-aix.rezal.fr",
+            "instance_type": "t3.medium", "root_volume_size_gib": 40,
+            "ssh_emergency_cidrs": [], "associate_public_ip_address": True,
+            "create_instance": True, "protect_from_destruction": True,
+        }
+        catalog = {"version": 1, "galas": {"gala-smoke": smoke}}
+        result, output, proposal = run(catalog, GALA_NAME="Retire Smoke Production Pipeline")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["galas"], catalog["galas"])
+        self.assertEqual(proposal["galas"], catalog["galas"])
+        result, _, _ = run({"version": 1, "galas": {}}, GALA_NAME="Retire Smoke Production Pipeline")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("existing Terraform-managed Smoke EC2", result.stderr)
+
     def test_adds_a_new_gala_to_an_empty_catalog(self) -> None:
         result, output, proposal = run({"version": 1, "galas": {}})
 

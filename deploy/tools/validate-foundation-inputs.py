@@ -21,6 +21,7 @@ SUBNET = re.compile(r"^subnet-[0-9a-f]{8,17}$")
 AMI = re.compile(r"^ami-[0-9a-f]{8,17}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 CONNECTION = re.compile(r"^arn:aws:codeconnections:eu-west-3:318629836660:connection/[0-9a-f-]{36}$")
+RETIRE_SMOKE_PIPELINE_REQUEST = "Retire Smoke Production Pipeline"
 
 
 def fail(message: str) -> None:
@@ -36,6 +37,8 @@ def value(name: str) -> str:
 
 
 def gala_slug(name: str) -> str:
+    if name == RETIRE_SMOKE_PIPELINE_REQUEST:
+        return "gala-smoke"
     normalized = unicodedata.normalize("NFKD", name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
@@ -66,7 +69,9 @@ def main() -> None:
     if value("AWS_DEFAULT_REGION") != REGION:
         fail(f"AWS_DEFAULT_REGION must be {REGION}")
 
-    slug = gala_slug(value("GALA_NAME"))
+    gala_name = value("GALA_NAME")
+    slug = gala_slug(gala_name)
+    retire_smoke_pipeline = gala_name == RETIRE_SMOKE_PIPELINE_REQUEST
     domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
         fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
@@ -130,7 +135,10 @@ def main() -> None:
         "create_instance": True,
         "protect_from_destruction": True,
     }
-    if slug in galas:
+    if retire_smoke_pipeline:
+        if slug not in galas or galas[slug].get("create_instance") is not True:
+            fail("Smoke pipeline retirement requires an existing Terraform-managed Smoke EC2")
+    elif slug in galas:
         if galas[slug] != new_gala:
             fail(f"existing Gala {slug} differs from the permanent configuration; use a reviewed migration")
     else:

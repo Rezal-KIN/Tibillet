@@ -1,6 +1,6 @@
 # Test is a single shared host. Its build role may deploy only to gala-smoke.
 locals {
-  test_deploy_enabled = local.production_resources_enabled && contains(keys(local.production_target_galas), "gala-smoke")
+  test_deploy_enabled = local.production_resources_enabled && contains(keys(local.production_deploy_document_galas), "gala-smoke")
 }
 
 resource "aws_cloudwatch_log_group" "test_deploy" {

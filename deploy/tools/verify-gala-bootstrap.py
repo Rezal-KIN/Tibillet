@@ -14,12 +14,12 @@ from pathlib import Path
 REGION = "eu-west-3"
 ACCOUNT = "318629836660"
 SLUG = re.compile(r"[a-z0-9][a-z0-9-]{1,62}\Z")
-RETIRED_VALIDATION_SLUGS = {"gala-validation", "gala-validation-2"}
+RETIRED_DELIVERY_SLUGS = {"gala-smoke", "gala-validation", "gala-validation-2"}
 
 
-def is_validation_retirement(plan: dict[str, object], slug: str) -> bool:
+def is_delivery_retirement(plan: dict[str, object], slug: str) -> bool:
     """A historical pipeline cleanup must not depend on application health."""
-    if slug not in RETIRED_VALIDATION_SLUGS:
+    if slug not in RETIRED_DELIVERY_SLUGS:
         return False
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
@@ -138,7 +138,7 @@ def main() -> None:
         raise ValueError("wrong AWS account")
     instance_id = selected_instance(args.project_name, args.slug)
     wait_online(instance_id)
-    if args.foundation_plan and is_validation_retirement(
+    if args.foundation_plan and is_delivery_retirement(
         json.loads(args.foundation_plan.read_text(encoding="utf-8")), args.slug
     ):
         print(f"Historical pipeline retirement: EC2 {instance_id} remains online; bootstrap check not applicable", flush=True)

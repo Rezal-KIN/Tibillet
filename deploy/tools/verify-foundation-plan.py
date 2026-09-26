@@ -40,10 +40,19 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         "aws_iam_role_policy.production_validate",
         "aws_codebuild_project.production_validate",
     }
-    allowed_retire = {
-        f'{kind}["{retired_slug}"]'
-        for kind in retired_types for retired_slug in retired_slugs
-    } if slug in retired_slugs else set()
+    if slug in retired_slugs:
+        allowed_retire = {
+            f'{kind}["{retired_slug}"]'
+            for kind in retired_types for retired_slug in retired_slugs
+        }
+    elif slug == "gala-smoke":
+        # The Test pipeline still uses Smoke's SSM deploy document.
+        allowed_retire = {
+            f'{kind}["gala-smoke"]'
+            for kind in retired_types - {"aws_ssm_document.production_deploy"}
+        }
+    else:
+        allowed_retire = set()
     allowed_updates = re.compile(
         r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
     )
@@ -62,7 +71,7 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if actions == ["no-op"]:
             continue
         if actions == ["delete"] and address in allowed_retire:
-            changed.append(f"retire-validation-pipeline {address}")
+            changed.append(f"retire-production-pipeline {address}")
             continue
         if actions == ["create"] and (
             address.startswith(f'module.gala["{slug}"].') or address in allowed_new
