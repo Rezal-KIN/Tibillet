@@ -7,12 +7,16 @@ entre galas — `BACKUP_BUCKET` et le préfixe viennent de la config privée de 
 
 ## Backup automatique
 
-`systemd/tibillet-gala-backup.timer` déclenche `tibillet-gala-backup@<slug>.service` toutes
-les 6 heures (00h/06h/12h/18h15 UTC, `Persistent=true` — rattrape un backup manqué au
-prochain boot si l'instance était arrêtée à l'heure prévue).
+Le premier déploiement sain crée immédiatement un backup des trois bases,
+vérifie l'upload, puis démarre `systemd/tibillet-gala-backup.timer`. Celui-ci
+déclenche `tibillet-gala-backup@<slug>.service` toutes les 6 heures
+(00h/06h/12h/18h15 UTC, `Persistent=true` — rattrape un backup manqué au
+prochain boot si l'instance était arrêtée à l'heure prévue). Aucun déploiement
+suivant ne peut utiliser `ALLOW_INITIAL_DEPLOY` pour contourner un backup
+absent ou périmé.
 
 ```bash
-sudo systemctl enable --now tibillet-gala-backup.timer@gala-am-aix-2027
+sudo systemctl enable --now tibillet-gala-backup@gala-am-aix.timer
 sudo systemctl list-timers 'tibillet-gala-backup*'
 ```
 
@@ -21,7 +25,8 @@ sudo systemctl list-timers 'tibillet-gala-backup*'
    `POSTGRES_CONTAINERS`, compressé (`gzip -9`).
 2. Écrit `metadata.txt` (gala, backup_id, platform, date) et `SHA256SUMS` couvrant les
    dumps et les métadonnées.
-3. `aws s3 cp --recursive` vers le préfixe du backup. Le SQL, les identifiants et le
+3. `aws s3 cp --recursive` vers le préfixe du backup, avec des chemins relatifs
+   dans `SHA256SUMS` pour permettre la vérification après téléchargement. Le SQL, les identifiants et le
    contenu des secrets ne passent jamais dans les logs.
 4. Écrit `$(runtime_dir)/last-successful-backup` — c'est ce fichier que
    `tools/runtime/preflight.sh` vérifie avant tout déploiement (refuse si absent, invalide,

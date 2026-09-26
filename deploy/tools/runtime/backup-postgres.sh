@@ -28,7 +28,6 @@ IFS=',' read -r -a containers <<< "$POSTGRES_CONTAINERS"
 (( ${#containers[@]} > 0 )) || fail "POSTGRES_CONTAINERS must list at least one container"
 
 metadata="$work_dir/metadata.txt"
-checksums="$work_dir/SHA256SUMS"
 printf 'gala=%s\nbackup_id=%s\nplatform=%s\ncreated_at=%s\n' \
   "$GALA_SLUG" "$backup_id" "${PLATFORM:-unknown}" "$(date -u --iso-8601=seconds)" > "$metadata"
 
@@ -42,9 +41,9 @@ for container in "${containers[@]}"; do
   docker exec "$container" sh -ec 'exec pg_dump --format=plain --no-owner --no-privileges -U "$POSTGRES_USER" "$POSTGRES_DB"' \
     | gzip -9 > "$dump_file"
   test -s "$dump_file" || fail "empty dump from $container"
-  sha256sum "$dump_file" >> "$checksums"
+  (cd "$work_dir" && sha256sum "${container}.sql.gz" >> SHA256SUMS)
 done
-sha256sum "$metadata" >> "$checksums"
+(cd "$work_dir" && sha256sum metadata.txt >> SHA256SUMS)
 
 aws s3 cp --only-show-errors --recursive "$work_dir/" "$remote_prefix/"
 printf '%s\n' "$backup_id" > "$(runtime_dir)/last-successful-backup"

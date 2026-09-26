@@ -19,6 +19,12 @@ require_var COMPOSE_FILES
 
 "$SCRIPT_DIR/reclaim-deployment-space.sh" "$CONFIG_PATH"
 
+# Hosts deployed before the first-backup gate may have a release marker but no
+# backup. Take that backup before preflight; never waive the gate on a retry.
+if [[ -f "$(deployed_manifest_path)" && ! -s "$(runtime_dir)/last-successful-backup" ]]; then
+  "$SCRIPT_DIR/backup-postgres.sh" "$CONFIG_PATH"
+fi
+
 # Materialize the three app-specific secrets before Compose reads their env_file
 # paths. This is also required for the first release, before systemd has ever
 # started the stacks.
@@ -113,6 +119,14 @@ for attempt in {1..30}; do
   if (( attempt < 30 )); then sleep 5; fi
 done
 [[ "$healthy" == true ]] || fail "local healthcheck did not pass after 30 attempts"
+# A fresh Gala must have a recoverable database snapshot before its first
+# release is marked deployed. Existing Galas are already covered by preflight.
+if [[ ! -s "$(runtime_dir)/last-successful-backup" ]]; then
+  "$SCRIPT_DIR/backup-postgres.sh" "$CONFIG_PATH"
+fi
+# Enable the periodic timer only after databases exist and one upload worked.
+# install-runtime-contract intentionally does not start it during bootstrap.
+systemctl enable --now "tibillet-gala-backup@${GALA_SLUG}.timer"
 install -d -m 0750 "$(release_dir)"
 manifest_copy="$(mktemp "$(release_dir)/deployed-manifest.json.XXXXXX")"
 cleanup() { rm -f "$manifest_copy"; }
