@@ -105,8 +105,12 @@ done
 # The install command exits harmlessly when domains already exist. During this
 # one-time local Fedow handshake only, DEBUG disables verification of Traefik's
 # temporary self-signed certificate; the web process remains DEBUG=0.
-timeout 600s docker exec lespass_django bash -lc \
-  'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py migrate_schemas --executor=multiprocessing'
+# The multiprocessing executor can leave its workers waiting on the parent
+# pipe after every schema reports "No migrations to apply". Use django-tenants'
+# standard sequential executor so completion is deterministic on repeated
+# releases as well as first boot.
+timeout 900s docker exec lespass_django bash -lc \
+  'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py migrate_schemas'
 timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
 timeout 120s docker exec lespass_django bash -lc \
