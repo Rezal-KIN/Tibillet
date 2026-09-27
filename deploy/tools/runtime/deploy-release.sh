@@ -120,6 +120,13 @@ timeout 120s docker exec lespass_django bash -lc \
 timeout 600s docker exec -e DEBUG=1 laboutik_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
 
+# Secrets Manager populates Fedow's env_file, but live webhook signature
+# verification reads an encrypted Configuration row. Reconcile on every
+# release (first boot and rotation) before reporting a healthy deployment.
+timeout 120s docker exec -i fedow_django sh -lc \
+  'cd /home/fedow/Fedow && poetry run python manage.py shell' \
+  < "$SCRIPT_DIR/reconcile-fedow-webhook.py"
+
 healthy=false
 for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then

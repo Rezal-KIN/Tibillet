@@ -83,3 +83,20 @@ au gala sont des données de configuration, pas du code de template déjà port�
 4. **Fait :** promouvoir le manifeste immuable par la pipeline Production et
    son approbation manuelle. La validation publique ne prouve pas encore un
    paiement live ni la délivrabilité d'un email Brevo.
+
+## Vérification complémentaire du 27 septembre
+
+Sur Smoke, une carte Fedow existante est retrouvée par Lespass et sa page QR
+affiche le formulaire d'inscription (`200`) ; les quatre tests de logique QR
+passent. Après le handshake de Laboutik, Fedow exige sa signature RSA pour
+créer une nouvelle carte : l'ancien test qui appelait `create_cards()` depuis
+Lespass reçoit `403`. Le lanceur versionné `run-qr-smoke-e2e.sh` crée désormais
+la carte par l'API signée de Laboutik avant de tester l'inscription et le
+Checkout Stripe test, sans paiement ni courriel sortant.
+
+Le webhook Stripe live est déclaré côté Stripe pour Fedow, mais la
+`Configuration` Fedow d'Aix ne contient pas encore son secret chiffré. Le
+déploiement doit donc synchroniser ce secret depuis l'environnement issu de
+Secrets Manager avant son healthcheck. Le bouton « Recharger » reste désactivé
+sur Aix tant qu'un paiement réel contrôlé, le webhook et le crédit cashless
+ne sont pas validés. Aucun réglage manuel sur l'EC2 ne constitue une solution.
