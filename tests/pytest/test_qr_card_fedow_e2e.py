@@ -5,10 +5,9 @@ SMTP message or live Stripe mode even if invoked from another environment.
 """
 
 import os
-import secrets
 from unittest.mock import patch
 from urllib.parse import urlparse
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from django.conf import settings
@@ -41,21 +40,18 @@ def test_new_qr_card_links_and_opens_refill_landing():
 
     domain = os.environ['DOMAIN']
     tenant = Client.objects.get(schema_name=os.environ['SUB'])
-    card_id = uuid4()
-    card_number = secrets.token_hex(4).upper()
+    # Prepared through Laboutik, which alone can sign card creation after its
+    # RSA key has been paired with Fedow. See run-qr-smoke-e2e.sh.
+    if not os.environ.get('QR_SMOKE_CARD_UUID') or not os.environ.get('QR_SMOKE_CARD_NUMBER'):
+        pytest.skip('run via versioned run-qr-smoke-e2e.sh')
+    card_id = UUID(os.environ['QR_SMOKE_CARD_UUID'])
+    card_number = os.environ['QR_SMOKE_CARD_NUMBER']
     email = f'qr-smoke-{uuid4().hex[:12]}@example.org'
     user = None
 
     with tenant_context(tenant):
         api = FedowAPI()
-        assert api.NFCcard.create_cards([{
-            'first_tag_id': secrets.token_hex(4).upper(),
-            'complete_tag_id_uuid': str(uuid4()),
-            'qrcode_uuid': str(card_id),
-            'number_printed': card_number,
-            'generation': 1,
-            'is_primary': False,
-        }])
+        assert api.NFCcard.qr_retrieve(card_id)['is_wallet_ephemere'] is True
 
     try:
         browser = DjangoClient(HTTP_HOST=domain)
