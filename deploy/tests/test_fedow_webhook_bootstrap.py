@@ -76,6 +76,11 @@ class FedowWebhookBootstrapTests(unittest.TestCase):
         self.assertLess(release.index("reconcile-fedow-webhook.py"), release.index("healthy=false"))
         self.assertIn("reconcile-fedow-webhook.py", install)
 
+    def test_release_migrates_without_forked_executor(self):
+        release = (RUNTIME / "deploy-release.sh").read_text(encoding="utf-8")
+        command = next(line for line in release.splitlines() if "poetry run python manage.py migrate_schemas'" in line)
+        self.assertNotIn("--executor", command)
+
 
 if __name__ == "__main__":
     unittest.main()
