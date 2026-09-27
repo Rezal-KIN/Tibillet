@@ -40,6 +40,10 @@ timeout 30s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_apex --check \
   >/dev/null || fail "Lespass apex is not mapped to the Gala tenant"
 
+timeout 30s docker exec -w /DjangoFiles lespass_django \
+  /home/tibillet/.local/bin/poetry run python manage.py configure_gala_refill --check \
+  >/dev/null || fail "Gala QR-card refill action is not visible"
+
 # A healthy HTTP response is insufficient when email login cannot send its
 # activation link. Django expects real booleans, not truthy strings like "0".
 timeout 15s docker exec -w /DjangoFiles lespass_django \
