@@ -131,6 +131,12 @@ timeout 120s docker exec -i fedow_django sh -lc \
   'cd /home/fedow/Fedow && poetry run python manage.py shell' \
   < "$SCRIPT_DIR/reconcile-fedow-webhook.py"
 
+# Fedow's cashless checkout is separate from Lespass ticket payouts. Without
+# this explicit, idempotent setting, a Gala without Stripe Connect has a
+# working QR flow but hides its "Recharge" action from card holders.
+timeout 120s docker exec -w /DjangoFiles lespass_django \
+  /home/tibillet/.local/bin/poetry run python manage.py configure_gala_refill
+
 healthy=false
 for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then

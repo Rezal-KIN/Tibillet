@@ -5,7 +5,6 @@ SMTP message or live Stripe mode even if invoked from another environment.
 """
 
 import os
-from unittest.mock import patch
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
@@ -76,11 +75,10 @@ def test_new_qr_card_links_and_opens_refill_landing():
             assert user.email_valid is False
             assert FedowAPI().NFCcard.qr_retrieve(card_id)['is_wallet_ephemere'] is False
 
-        # The freshly installed Smoke tenant may have its refill button
-        # disabled until cashless configuration is reconciled. Exercise the
-        # QR landing UI with the feature enabled without changing EC2 data.
-        with patch.object(Configuration, 'show_refill_button', return_value=True):
-            landing = browser.get(f'/qr/{card_id}/')
+        # The deployment must enable the real setting; do not mock the CTA.
+        with tenant_context(tenant):
+            assert Configuration.get_solo().show_refill_button() is True
+        landing = browser.get(f'/qr/{card_id}/')
         assert landing.status_code == 200
         assert b'/my_account/refill_wallet/' in landing.content
 
