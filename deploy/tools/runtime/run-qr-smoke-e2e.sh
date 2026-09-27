@@ -19,14 +19,14 @@ read -r qr_uuid card_number tag_id tag_uuid < <(python3 -c \
 
 # Only this test process accepts Smoke's temporary self-signed Fedow cert.
 # The running Laboutik web service keeps DEBUG=0.
-docker exec -i \
+timeout 120s docker exec -i \
   -e DEBUG=1 \
   -e QR_SMOKE_CARD_UUID="$qr_uuid" -e QR_SMOKE_CARD_NUMBER="$card_number" \
   -e QR_SMOKE_TAG_ID="$tag_id" -e QR_SMOKE_TAG_UUID="$tag_uuid" \
   laboutik_django sh -lc 'cd /DjangoFiles && poetry run python manage.py shell' \
   < "$SCRIPT_DIR/create-qr-smoke-card.py"
 
-docker exec -e API_KEY=qr-smoke-placeholder -e RUN_QR_CARD_E2E=1 \
+timeout 600s docker exec -e API_KEY=qr-smoke-placeholder -e RUN_QR_CARD_E2E=1 \
   -e QR_SMOKE_CARD_UUID="$qr_uuid" -e QR_SMOKE_CARD_NUMBER="$card_number" \
   lespass_django sh -lc \
   'cd /DjangoFiles && poetry run pytest -q tests/pytest/test_qr_card_fedow_e2e.py'
