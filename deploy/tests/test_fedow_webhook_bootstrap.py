@@ -16,9 +16,12 @@ SCRIPT = RUNTIME / "reconcile-fedow-webhook.py"
 class FakeConfiguration:
     def __init__(self, initial="", test_mode=False):
         self.stripe_endpoint_secret_enc = initial or None
+        self.stripe_api_key = None
         self.secret = initial
+        self.api_key = ""
         self.test_mode = test_mode
         self.writes = 0
+        self.api_writes = 0
 
     def get_stripe_endpoint_secret(self):
         if self.test_mode:
@@ -29,6 +32,16 @@ class FakeConfiguration:
         self.secret = secret
         self.stripe_endpoint_secret_enc = "encrypted"
         self.writes += 1
+
+    def get_stripe_api(self):
+        if self.test_mode:
+            return os.environ.get("STRIPE_KEY_TEST")
+        return self.api_key
+
+    def set_stripe_api(self, key):
+        self.api_key = key
+        self.stripe_api_key = "encrypted"
+        self.api_writes += 1
 
 
 class FakeConnection:
@@ -91,16 +104,19 @@ class FedowWebhookBootstrapTests(unittest.TestCase):
     def test_first_live_deployment_and_rotation_are_idempotent(self):
         config = FakeConfiguration()
         reconcile = reconcile_function(config)
-        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_first"}):
+        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_first", "STRIPE_KEY": "sk_live_first"}):
             reconcile()
             reconcile()
         self.assertEqual(config.writes, 1)
+        self.assertEqual(config.api_writes, 1)
         self.assertEqual(set(reconcile.storage.alterations), {"stripe_endpoint_secret_enc", "stripe_api_key"})
         self.assertEqual(len(reconcile.storage.alterations), 2)
-        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_rotated"}):
+        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_rotated", "STRIPE_KEY": "sk_live_rotated"}):
             reconcile()
         self.assertEqual(config.writes, 2)
+        self.assertEqual(config.api_writes, 2)
         self.assertEqual(config.secret, "whsec_rotated")
+        self.assertEqual(config.api_key, "sk_live_rotated")
 
     def test_missing_live_secret_fails_closed(self):
         reconcile = reconcile_function(FakeConfiguration())
@@ -108,18 +124,25 @@ class FedowWebhookBootstrapTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "missing or invalid"):
                 reconcile()
 
+    def test_missing_live_api_key_fails_closed(self):
+        reconcile = reconcile_function(FakeConfiguration())
+        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_first", "STRIPE_KEY": ""}):
+            with self.assertRaisesRegex(RuntimeError, "STRIPE_KEY is missing or invalid"):
+                reconcile()
+
     def test_smoke_uses_environment_without_database_write(self):
         config = FakeConfiguration(test_mode=True)
         reconcile = reconcile_function(config, test_mode=True)
-        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET_TEST": "whsec_smoke"}):
+        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET_TEST": "whsec_smoke", "STRIPE_KEY_TEST": "sk_test_smoke"}):
             reconcile()
         self.assertEqual(config.writes, 0)
+        self.assertEqual(config.api_writes, 0)
         self.assertEqual(len(reconcile.storage.alterations), 2)
 
     def test_missing_storage_column_fails_closed(self):
         storage = FakeConnection({"stripe_endpoint_secret_enc": "character varying"})
         reconcile = reconcile_function(FakeConfiguration(test_mode=True), test_mode=True, storage=storage)
-        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET_TEST": "whsec_smoke"}):
+        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET_TEST": "whsec_smoke", "STRIPE_KEY_TEST": "sk_test_smoke"}):
             with self.assertRaisesRegex(RuntimeError, "columns are missing"):
                 reconcile()
 
