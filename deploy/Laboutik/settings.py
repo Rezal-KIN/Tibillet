@@ -173,7 +173,7 @@ SOLO_CACHE_TIMEOUT = 120
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'source_templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'source_templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

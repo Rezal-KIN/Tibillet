@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import tarfile
 import tempfile
@@ -29,6 +31,21 @@ def upstream_archive(files):
 
 
 class SourceOfferTests(unittest.TestCase):
+    def test_template_directories_support_each_upstream_base_dir_type(self):
+        # Evaluate the actual settings declarations without starting Django or
+        # importing production integrations. Laboutik's BASE_DIR is a string,
+        # whereas Fedow's is a pathlib.Path.
+        for component in ("Fedow", "Laboutik"):
+            settings_path = ROOT / component / "settings.py"
+            tree = ast.parse(settings_path.read_text())
+            declarations = [node for node in tree.body if isinstance(node, ast.Assign)
+                            and any(isinstance(target, ast.Name) and target.id in {"BASE_DIR", "TEMPLATES"}
+                                    for target in node.targets)]
+            namespace = {"__file__": str(settings_path), "os": os, "Path": Path}
+            exec(compile(ast.Module(body=declarations, type_ignores=[]), str(settings_path), "exec"), namespace)
+            dirs = namespace["TEMPLATES"][0]["DIRS"]
+            self.assertEqual([Path(value) for value in dirs], [Path(namespace["BASE_DIR"]) / "source_templates"])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
