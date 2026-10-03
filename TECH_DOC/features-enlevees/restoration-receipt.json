@@ -1,0 +1,64 @@
+{
+  "scope": "Only the listed units; shared files retain other customizations.",
+  "reference_repository": "TiBillet/LaBoutik",
+  "reference_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+  "reference_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+  "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+  "units": [
+    {
+      "feature": "C",
+      "upstream_path": "webview/validators.py",
+      "local_path": "deploy/Laboutik/validators.py",
+      "class_name": "DataAchatDepuisClientValidator",
+      "function_name": "validate_articles",
+      "byte_length": 1557,
+      "upstream_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+      "restored_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "index",
+      "byte_length": 5397,
+      "upstream_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+      "restored_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "preparation",
+      "byte_length": 6713,
+      "upstream_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+      "restored_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "paiement",
+      "byte_length": 1114,
+      "upstream_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+      "restored_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+      "exact_text_match": true
+    },
+    {
+      "feature": "F",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": "FedowAPI",
+      "function_name": "send_assets_from_cashless",
+      "byte_length": 1718,
+      "upstream_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+      "restored_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+      "exact_text_match": true
+    }
+  ]
+}

@@ -1,5 +1,11 @@
 # Choix utilisateur et propositions après l'audit des volumes
 
+**Document historique de proposition.** La décision ultérieure privilégie le
+retour au code TiBillet vanilla : D et F sont retirés, B est conservé comme guide
+de connexion rapide. La proposition de réimplémenter D est abandonnée. Les choix
+à jour, les retraits C/D/F et leur vérification textuelle sont dans
+[features-enlevees](../features-enlevees/README.md).
+
 État local du 3 octobre 2026. Le snapshot initial dans `2026-10-03-fork/`
 reste intact. Ce document conserve les décisions et les propositions à examiner
 avant d'intégrer D, E et H.
