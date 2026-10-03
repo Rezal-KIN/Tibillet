@@ -1,6 +1,8 @@
 # Offre d'accès aux sources des instances Gala
 
-Offre déployée et contrôlée sur Aix le 3 octobre 2026, release `gala-am-aix-v1.0.8`.
+Offre initialement déployée et contrôlée sur Aix le 3 octobre 2026, release
+`gala-am-aix-v1.0.8`. À partir de `gala-am-aix-v1.0.10`, les téléchargements
+de production sont hébergés dans les Releases GitHub, indépendamment de la VM.
 Cette documentation décrit le mécanisme technique et les vérifications réalisées.
 Le dépôt public est <https://github.com/Rezal-KIN/Tibillet>, sous GNU AGPLv3.
 Les auteurs et dates de modification sont indiqués dans [NOTICE.md](../../../NOTICE.md).
