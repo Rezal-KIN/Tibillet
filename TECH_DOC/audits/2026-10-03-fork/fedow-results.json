@@ -1,0 +1,173 @@
+{
+  "django": "4.2.30",
+  "postgres": 150018,
+  "scope": "real source serializers and models, migrated isolated PostgreSQL; deterministic injected failures and synchronized two-worker race; no load test or external payment",
+  "results": [
+    {
+      "variant": "upstream",
+      "case": "local_success",
+      "accepted": true,
+      "errors": "{}",
+      "client_balance": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "failed_local_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 0,
+      "issuer_balance_after_failure": 0,
+      "client_balance_after_failure": 0,
+      "retry_accepted": true,
+      "retry_error": "{}",
+      "issuer_balance_after_retry": 0,
+      "client_balance_after_retry": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "failed_stripe_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 0,
+      "issuer_balance_after_failure": 0,
+      "client_balance_after_failure": 0,
+      "retry_accepted": true,
+      "retry_error": "{}",
+      "issuer_balance_after_retry": 0,
+      "client_balance_after_retry": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "concurrent_same_stripe_checkout",
+      "outcomes": [
+        {
+          "exception": "IntegrityError",
+          "error": "duplicate key value violates unique constraint \"une_seule_creation_et_un_seul_refill_par_checkout\"\nDETAIL:  Key (checkout_stripe_id, action)=(c54223e2-7366-456e-abcd-f3c1b2adecfa, CRE) already exists."
+        },
+        {
+          "accepted": true,
+          "errors": "{}"
+        }
+      ],
+      "creation_rows": 1,
+      "refill_rows": 1,
+      "issuer_balance": 0,
+      "client_balance": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "model_interleaving",
+      "balances": [
+        0,
+        1000,
+        2000
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "archived_fusion_asset_validation",
+      "accepted": true
+    },
+    {
+      "variant": "upstream",
+      "case": "void_multi_place",
+      "accepted": true,
+      "remaining_places": [
+        "OtherPlace"
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "local_refill_with_malformed_null_checkout_mint",
+      "accepted": true,
+      "errors": "{}"
+    },
+    {
+      "variant": "upstream",
+      "case": "two_invoices_with_empty_session_id",
+      "checkout_rows": 2,
+      "errors": []
+    },
+    {
+      "variant": "overlay",
+      "case": "local_success",
+      "accepted": true,
+      "errors": "{}",
+      "client_balance": 1000
+    },
+    {
+      "variant": "overlay",
+      "case": "failed_local_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 1,
+      "issuer_balance_after_failure": 1000,
+      "client_balance_after_failure": 0,
+      "retry_accepted": true,
+      "retry_error": "{}",
+      "issuer_balance_after_retry": 1000,
+      "client_balance_after_retry": 1000
+    },
+    {
+      "variant": "overlay",
+      "case": "failed_stripe_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 1,
+      "issuer_balance_after_failure": 1000,
+      "client_balance_after_failure": 0,
+      "retry_accepted": false,
+      "retry_error": "{'non_field_errors': [ErrorDetail(string='Stripe token creation with this paiement already made', code='invalid')]}",
+      "issuer_balance_after_retry": 1000,
+      "client_balance_after_retry": 0
+    },
+    {
+      "variant": "overlay",
+      "case": "concurrent_same_stripe_checkout",
+      "outcomes": [
+        {
+          "exception": "IntegrityError",
+          "error": "duplicate key value violates unique constraint \"une_seule_creation_et_un_seul_refill_par_checkout\"\nDETAIL:  Key (checkout_stripe_id, action)=(497245c4-42bd-4e89-aea5-614fff7e9bc2, CRE) already exists."
+        },
+        {
+          "accepted": true,
+          "errors": "{}"
+        }
+      ],
+      "creation_rows": 1,
+      "refill_rows": 1,
+      "issuer_balance": 1000,
+      "client_balance": 1000
+    },
+    {
+      "variant": "overlay",
+      "case": "model_interleaving",
+      "balances": [
+        0,
+        1000,
+        2000
+      ]
+    },
+    {
+      "variant": "overlay",
+      "case": "archived_fusion_asset_validation",
+      "accepted": false
+    },
+    {
+      "variant": "overlay",
+      "case": "void_multi_place",
+      "accepted": true,
+      "remaining_places": []
+    },
+    {
+      "variant": "overlay",
+      "case": "local_refill_with_malformed_null_checkout_mint",
+      "accepted": false,
+      "errors": "{'non_field_errors': [ErrorDetail(string='Stripe token creation with this paiement already made', code='invalid')]}"
+    },
+    {
+      "variant": "overlay",
+      "case": "two_invoices_with_empty_session_id",
+      "checkout_rows": 1,
+      "errors": [
+        "IntegrityError"
+      ]
+    }
+  ]
+}

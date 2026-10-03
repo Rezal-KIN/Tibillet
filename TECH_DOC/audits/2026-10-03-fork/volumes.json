@@ -1,0 +1,478 @@
+{
+  "scope": "tracked active stack definitions; no new live Docker inspection",
+  "head": "a6a7d447a33929568dc1ba5d44e52e2f86b79cbf",
+  "rows": [
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_postgres",
+      "source": "./database",
+      "target": "/var/lib/postgresql/data",
+      "mode": "rw",
+      "category": "base persistante",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./www",
+      "target": "/home/fedow/Fedow/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./logs",
+      "target": "/home/fedow/Fedow/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./settings.py",
+      "target": "/home/fedow/Fedow/fedowallet_django/settings.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_core/serializers.py",
+      "target": "/home/fedow/Fedow/fedow_core/serializers.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/urls.py",
+      "target": "/home/fedow/Fedow/fedow_dashboard/urls.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/views.py",
+      "target": "/home/fedow/Fedow/fedow_dashboard/views.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/index.html",
+      "target": "/home/fedow/Fedow/fedow_dashboard/templates/index/index.html",
+      "mode": "rw",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/suivi.html",
+      "target": "/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html",
+      "mode": "rw",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/base.html",
+      "target": "/home/fedow/Fedow/fedow_dashboard/templates/base.html",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "./custom_patches/fedow_dashboard/public_index.html",
+      "target": "/home/fedow/Fedow/fedow_dashboard/templates/index.html",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_django",
+      "source": "../source/admin-templates",
+      "target": "/home/fedow/Fedow/source_templates",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_nginx",
+      "source": "./www",
+      "target": "/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_nginx",
+      "source": "./logs",
+      "target": "/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_nginx",
+      "source": "./nginx",
+      "target": "/etc/nginx/conf.d",
+      "mode": "rw",
+      "category": "configuration Nginx",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Fedow/docker-compose.yml",
+      "service": "fedow_nginx",
+      "source": "../source/public",
+      "target": "/source",
+      "mode": "ro",
+      "category": "offre sources AGPL",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_postgres",
+      "source": "./database/data",
+      "target": "/var/lib/postgresql/data",
+      "mode": "rw",
+      "category": "base persistante",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./www",
+      "target": "/DjangoFiles/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./logs",
+      "target": "/DjangoFiles/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./backup",
+      "target": "/Backup",
+      "mode": "rw",
+      "category": "sauvegardes",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./ssh",
+      "target": "/home/tibillet/.ssh",
+      "mode": "rw",
+      "category": "configuration SSH",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./settings.py",
+      "target": "/DjangoFiles/Cashless/settings.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./install.py",
+      "target": "/DjangoFiles/administration/management/commands/install.py",
+      "mode": "ro",
+      "category": "code/configuration Python remplace",
+      "declarations": 1,
+      "introduction_first_parent": "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./source_templates/login.html",
+      "target": "/DjangoFiles/webview/templates/login.html",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./source_templates/kiosk_base.html",
+      "target": "/DjangoFiles/htmxview/templates/kiosk/base.html",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./source_templates/infos.html",
+      "target": "/DjangoFiles/htmxview/templates/appsettings/infos.html",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "../source/admin-templates",
+      "target": "/DjangoFiles/source_templates",
+      "mode": "ro",
+      "category": "template remplace",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./views.py",
+      "target": "/DjangoFiles/webview/views.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 2,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./fedow_api.py",
+      "target": "/DjangoFiles/fedow_connect/fedow_api.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 2,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_django",
+      "source": "./validators.py",
+      "target": "/DjangoFiles/webview/validators.py",
+      "mode": "rw",
+      "category": "code/configuration Python remplace",
+      "declarations": 2,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_nginx",
+      "source": "./www",
+      "target": "/DjangoFiles/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_nginx",
+      "source": "./logs",
+      "target": "/DjangoFiles/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_nginx",
+      "source": "./nginx",
+      "target": "/etc/nginx/conf.d",
+      "mode": "rw",
+      "category": "configuration Nginx",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Laboutik/docker-compose.yml",
+      "service": "laboutik_nginx",
+      "source": "../source/public",
+      "target": "/source",
+      "mode": "ro",
+      "category": "offre sources AGPL",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_postgres",
+      "source": "./database",
+      "target": "/var/lib/postgresql/data",
+      "mode": "rw",
+      "category": "base persistante",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_django",
+      "source": "./www",
+      "target": "/DjangoFiles/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_django",
+      "source": "./logs",
+      "target": "/DjangoFiles/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_django",
+      "source": "./backup",
+      "target": "/Backup",
+      "mode": "rw",
+      "category": "sauvegardes",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_django",
+      "source": "./ssh",
+      "target": "/home/tibillet/.ssh",
+      "mode": "rw",
+      "category": "configuration SSH",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_celery",
+      "source": "./www",
+      "target": "/DjangoFiles/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_celery",
+      "source": "./logs",
+      "target": "/DjangoFiles/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_nginx",
+      "source": "../source/public",
+      "target": "/source",
+      "mode": "ro",
+      "category": "offre sources AGPL",
+      "declarations": 1,
+      "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_nginx",
+      "source": "./www",
+      "target": "/www",
+      "mode": "rw",
+      "category": "fichiers www (medias/static/prix)",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_nginx",
+      "source": "./logs",
+      "target": "/logs",
+      "mode": "rw",
+      "category": "journaux",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/Lespass/docker-compose.yml",
+      "service": "lespass_nginx",
+      "source": "./nginx",
+      "target": "/etc/nginx/conf.d",
+      "mode": "rw",
+      "category": "configuration Nginx",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/traefik/docker-compose.yml",
+      "service": "traefik",
+      "source": "/var/run/docker.sock",
+      "target": "/var/run/docker.sock",
+      "mode": "ro",
+      "category": "socket Docker",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    },
+    {
+      "compose": "deploy/traefik/docker-compose.yml",
+      "service": "traefik",
+      "source": "./acme.json",
+      "target": "/acme.json",
+      "mode": "rw",
+      "category": "certificats TLS",
+      "declarations": 1,
+      "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+    }
+  ],
+  "unique_mounts_per_service_total": 47,
+  "raw_declarations_total": 50
+}

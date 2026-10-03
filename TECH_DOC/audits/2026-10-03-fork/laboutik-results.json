@@ -1,0 +1,101 @@
+{
+  "scope": "executed source functions with mock HTTP/ORM collaborators; decorators omitted; not full LaBoutik integration",
+  "results": [
+    {
+      "variant": "upstream",
+      "case": "_get_timeout",
+      "timeout": [
+        3,
+        5
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "_post_timeout",
+      "timeout": [
+        3,
+        5
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "_put_timeout",
+      "timeout": null
+    },
+    {
+      "variant": "upstream",
+      "case": "billet_handler",
+      "has_methode_BI": true,
+      "bare_dispatch_observation": "HandlerReached: billet handler reached",
+      "note": "actual dispatcher; dummy handler marks reachability only, no real ticket created"
+    },
+    {
+      "variant": "upstream",
+      "case": "card_lookup_network_failure",
+      "create_attempts": 0,
+      "local_get_or_create_attempts": 0,
+      "error": "ConnectionError"
+    },
+    {
+      "variant": "upstream",
+      "case": "subscription_error_contract",
+      "exception": "Rejected",
+      "message": "Carte primaire non valide"
+    },
+    {
+      "variant": "upstream",
+      "case": "check_carte_membership_lookup",
+      "calls_fetch_adhesions": true
+    },
+    {
+      "variant": "upstream",
+      "case": "methode_VT_membership_lookup",
+      "calls_fetch_adhesions": true
+    },
+    {
+      "variant": "overlay",
+      "case": "_get_timeout",
+      "timeout": null
+    },
+    {
+      "variant": "overlay",
+      "case": "_post_timeout",
+      "timeout": null
+    },
+    {
+      "variant": "overlay",
+      "case": "_put_timeout",
+      "timeout": null
+    },
+    {
+      "variant": "overlay",
+      "case": "billet_handler",
+      "has_methode_BI": false,
+      "bare_dispatch_observation": "AttributeError: 'types.SimpleNamespace' object has no attribute 'methode_BI'",
+      "note": "actual dispatcher; dummy handler marks reachability only, no real ticket created"
+    },
+    {
+      "variant": "overlay",
+      "case": "card_lookup_network_failure",
+      "create_attempts": 1,
+      "local_get_or_create_attempts": 1,
+      "error": "ConnectionError"
+    },
+    {
+      "variant": "overlay",
+      "case": "subscription_error_contract",
+      "returned_type": "int",
+      "returned": 400
+    },
+    {
+      "variant": "overlay",
+      "case": "check_carte_membership_lookup",
+      "calls_fetch_adhesions": false
+    },
+    {
+      "variant": "overlay",
+      "case": "methode_VT_membership_lookup",
+      "calls_fetch_adhesions": false
+    }
+  ]
+}

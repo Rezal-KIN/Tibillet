@@ -1,0 +1,414 @@
+--- TiBillet/Fedow/fedow_core/serializers.py
++++ deploy/Fedow/custom_patches/fedow_core/serializers.py
+@@ -1,8 +1,9 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ import logging
+ from collections import OrderedDict
+-from contextlib import nullcontext
+ from random import choices
+-from time import monotonic, sleep
++from time import sleep
+ from uuid import UUID
+ 
+ from django.db import transaction
+@@ -11,35 +12,17 @@
+ from cryptography.hazmat.primitives.asymmetric import rsa
+ from django.conf import settings
+ from django.core.cache import cache
+-from django.db.models import F, Sum
++from django.db.models import Sum
+ from django.db.transaction import atomic
+-from django.db.utils import OperationalError
+ from django.utils import timezone
+ from rest_framework import serializers
+ from rest_framework.generics import get_object_or_404
+ 
+ from fedow_core.models import Place, FedowUser, Card, Wallet, Transaction, OrganizationAPIKey, Asset, Token, \
+-    get_or_create_user, Origin, asset_creator, Configuration, Federation, CheckoutStripe
++    get_or_create_user, Origin, asset_creator, Configuration, Federation, CheckoutStripe, wallet_creator
+ from fedow_core.utils import get_request_ip, get_public_key, dict_to_b64, verify_signature, data_to_b64
+ 
+ logger = logging.getLogger(__name__)
+-
+-# SQLite n'accepte qu'un seul writer a la fois : sous forte affluence, une ecriture
+-# peut trouver le verrou occupe au-dela du busy_timeout (5 s). Trois tentatives
+-# espacees de 100 ms puis 200 ms suffisent largement au regard du trafic mesure
+-# (pic reel a 1,5 transaction/seconde sur le festival 2026).
+-# / SQLite allows a single writer; three short attempts cover measured peak traffic.
+-NOMBRE_DE_TENTATIVES_SI_BASE_VERROUILLEE = 3
+-DELAI_ENTRE_TENTATIVES_EN_SECONDES = 0.1
+-# Budget total, borne DURE. La caisse LaBoutik coupe a 5 s (timeout=(3, 5) dans
+-# son fedow_api). Une tentative qui aboutirait APRES ce delai serait pire que
+-# l'echec : le benevole a deja vu l'erreur et refait l'operation, et ni la vente
+-# ni la recharge locale n'ont de cle d'idempotence => doublon. Chaque tentative
+-# pouvant elle-meme attendre jusqu'au busy_timeout (5 s), on verifie le temps
+-# ecoule avant d'en relancer une.
+-# / Hard budget: LaBoutik gives up at 5 s, and a late success would cause a
+-# duplicate since local sales and refills have no idempotency key.
+-BUDGET_MAXIMAL_DU_RETRY_EN_SECONDES = 4.0
+ 
+ 
+ class HandshakeValidator(serializers.Serializer):
+@@ -260,16 +243,7 @@
+         if attrs.get('action') == Transaction.VOID:
+             logger.info('action VOID !')
+             self.user_card.user = None
+-            # On retire le lien primaire du SEUL lieu qui signe la requete.
+-            # Card.primary_places est un ManyToMany : la meme carte physique peut
+-            # ouvrir la caisse de plusieurs lieux de la federation. Un .clear()
+-            # ici couperait aussi les autres lieux, qui n'ont rien demande : leur
+-            # LaBoutik garderait sa CarteMaitresse en base locale et toutes leurs
+-            # transactions seraient ensuite refusees par « Carte primaire non valide ».
+-            # / Remove the primary link of the ONLY place signing the request. A
+-            #   .clear() would also cut the other places of the federation, which
+-            #   asked for nothing.
+-            self.user_card.primary_places.remove(self.place)
++            self.user_card.primary_places.clear()
+             self.user_card.wallet_ephemere = None
+             self.user_card.save()
+ 
+@@ -609,6 +583,14 @@
+         # S'il existe, on check la clé envoyée
+         if FedowUser.objects.filter(email=email).exists():
+             self.user = FedowUser.objects.get(email=email)
++            if not self.user.wallet:
++                self.user.wallet = wallet_creator(
++                    ip=get_request_ip(request),
++                    public_pem=attrs.get('public_pem'),
++                )
++                self.user.save(update_fields=['wallet'])
++                self.created = True
++
+             # Check si pub == user pub
+ 
+             # if not self.user.wallet.public_pem:
+@@ -957,12 +939,8 @@
+                     raise serializers.ValidationError("invoice_stripe_id Already reported")
+ 
+             self.checkout_stripe = CheckoutStripe.objects.create(
+-                # `or None` : normalise toute chaine vide en NULL. La contrainte unique
+-                # sur checkout_session_id_stripe autorise plusieurs NULL mais un seul ''.
+-                # / `or None`: normalize any empty string to NULL. The unique constraint
+-                # allows many NULLs but only one '' — never store '' here.
+-                checkout_session_id_stripe=checkout_session_id_stripe or None,
+-                invoice_stripe_id=invoice_stripe_id or None,
++                checkout_session_id_stripe=checkout_session_id_stripe,
++                invoice_stripe_id=invoice_stripe_id,
+                 metadata=metadata,
+                 status=CheckoutStripe.FROM_LESPASS,
+                 asset=self.asset,
+@@ -1010,14 +988,7 @@
+             "card": None,
+             "subscription_start_datetime": None
+         }
+-        transaction = Transaction(**transaction_dict)
+-        # Meme raison qu'en TransactionW2W : on adosse explicitement le refill a sa
+-        # creation monetaire. Ici checkout_stripe peut valoir None (reward Lespass
+-        # sur ticket scanne), donc l'appariement par checkout ne suffirait pas.
+-        # / Same as in TransactionW2W: hand the model the exact mint. Here
+-        # checkout_stripe may be None (Lespass reward), so checkout matching is moot.
+-        transaction.creation_associee = crea_transaction
+-        transaction.save(force_insert=True)
++        transaction = Transaction.objects.create(**transaction_dict)
+ 
+         if not transaction.verify_hash():
+             logger.error(
+@@ -1177,81 +1148,33 @@
+         queryset=Card.objects.all(),
+         required=False, slug_field='first_tag_id')
+ 
+-    def __init__(self, *args, **kwargs):
+-        super().__init__(*args, **kwargs)
+-        # Cas de la fusion d'un wallet éphémère de carte vers le wallet d'un
+-        # utilisateur (liaison de carte). On autorise alors les assets archivés :
+-        # l'utilisateur doit pouvoir récupérer le solde de sa carte même si la
+-        # monnaie a été archivée entre-temps (monnaie temps/cadeau d'un évènement
+-        # passé, ancienne monnaie locale remplacée…). Sans ça, un seul token sur
+-        # un asset archivé bloque toute la liaison (erreur 400 sur 'asset').
+-        # / Ephemeral card wallet fusion into a user wallet (card linking). We then
+-        #   allow archived assets so the user can still recover the card balance
+-        #   even if the currency was archived in the meantime. Otherwise a single
+-        #   token on an archived asset blocks the whole linking (400 on 'asset').
+-        initial_data = getattr(self, 'initial_data', None)
+-        if isinstance(initial_data, dict) and initial_data.get('action') == Transaction.FUSION:
+-            self.fields['asset'].queryset = Asset.objects.all()
+-
+     def validate_amount(self, value):
+         # Positive amount only
+         if value < 0:
+             raise serializers.ValidationError("Amount cannot be negative")
+         return value
+ 
+-    def _verifie_carte_primaire_du_lieu(self, carte: Card, nom_du_champ: str) -> Card:
+-        """
+-        Verifie que la carte est declaree primaire pour le lieu qui signe la requete.
+-        / Checks the card is registered as primary for the place signing the request.
+-
+-        LOCALISATION : fedow_core/serializers.py
+-
+-        Une carte primaire est celle qui ouvre la caisse d'un lieu. Le lien vit
+-        dans le ManyToMany Card.primary_places : une meme carte physique peut etre
+-        primaire sur plusieurs lieux de la federation a la fois.
+-
+-        Le message renvoye au client reste volontairement vague. Le log serveur,
+-        lui, doit tout donner : le tag reel, le lieu demandeur et les lieux
+-        reellement enregistres. Sans ces trois informations, l'erreur est
+-        indiagnosticable a distance — LaBoutik valide sa carte primaire sur sa
+-        propre table CarteMaitresse, jamais aupres de Fedow, donc une carte peut
+-        passer d'un cote et etre refusee de l'autre.
+-
+-        :param carte: la carte primaire envoyee par le serveur LaBoutik
+-        :param nom_du_champ: nom du champ valide, pour retrouver la ligne dans les logs
+-        :return: la carte, si elle est bien primaire pour ce lieu
+-        """
+-        request = self.context.get('request')
+-        self.place: Place = getattr(request, 'place', None)
+-
+-        # Sans lieu signataire, on ne peut rien verifier du tout.
+-        # / Without a signing place, nothing can be checked at all.
+-        if not self.place:
+-            logger.error(
+-                f"{nom_du_champ} : aucun lieu sur la requete "
+-                f"(carte {getattr(carte, 'first_tag_id', 'inconnue')})"
+-            )
++    def validate_primary_card(self, value):
++        try:
++            request = self.context.get('request')
++            self.place: Place = getattr(request, 'place', None)
++            if self.place not in value.primary_places.all():
++                raise serializers.ValidationError("Carte primaire non valide")
++            return value
++        except Exception as e:
++            logger.error(f"TransactionW2W validate_primary_card {e}")
+             raise serializers.ValidationError("Carte primaire non valide")
+ 
+-        lieux_primaires = list(carte.primary_places.all())
+-        if self.place not in lieux_primaires:
+-            noms_des_lieux_primaires = [lieu.name for lieu in lieux_primaires]
+-            logger.error(
+-                f"{nom_du_champ} : carte {carte.first_tag_id} "
+-                f"(n° {carte.number_printed}, origine {carte.origin.place.name}) "
+-                f"non primaire pour le lieu demandeur « {self.place.name} ». "
+-                f"Lieux primaires enregistres : "
+-                f"{noms_des_lieux_primaires if noms_des_lieux_primaires else 'AUCUN'}"
+-            )
++    def validate_primary_card_fisrtTagId(self, value: Card):
++        try:
++            request = self.context.get('request')
++            self.place: Place = getattr(request, 'place', None)
++            if self.place not in value.primary_places.all():
++                raise serializers.ValidationError("Carte primaire non valide")
++            return value
++        except Exception as e:
++            logger.error(f"TransactionW2W validate_primary_card_fisrtTagId {e}")
+             raise serializers.ValidationError("Carte primaire non valide")
+-
+-        return carte
+-
+-    def validate_primary_card(self, value: Card):
+-        return self._verifie_carte_primaire_du_lieu(value, 'validate_primary_card')
+-
+-    def validate_primary_card_fisrtTagId(self, value: Card):
+-        return self._verifie_carte_primaire_du_lieu(value, 'validate_primary_card_fisrtTagId')
+ 
+     def get_action(self, attrs):
+         # Quel type de transaction ?
+@@ -1385,15 +1308,8 @@
+                 f"{timezone.localtime()} INFO NewTransactionWallet2WalletValidator : receiver token does not exist -> create")
+             self.token_receiver = Token.objects.create(wallet=self.receiver, asset=self.asset, value=0)
+ 
+-        # Anti-rejeu Stripe : ne vérifier QUE s'il y a un checkout a dédupliquer.
+-        # Sans checkout (vente, adhésion, recharge locale), self.checkout_stripe=None :
+-        # rien à rejouer, et un filtre checkout_stripe=None serait empoisonné par toute
+-        # CREATION FED sans checkout persistée ailleurs (invariant fragile). La garde
+-        # `self.checkout_stripe and` supprime ce risque sans changer le comportement Stripe.
+-        # / Stripe anti-replay: only check when there IS a checkout to dedupe. Without one,
+-        # there is nothing to replay; a checkout_stripe=None filter would otherwise be
+-        # poisoned by any stray FED CREATION with a null checkout.
+-        if self.checkout_stripe and Transaction.objects.filter(
++        # On vérifie qu'une transaction CREATION pour refill avec le même checkout id stripe n'existe déja ?
++        if Transaction.objects.filter(
+                 action=Transaction.CREATION,
+                 checkout_stripe=self.checkout_stripe,
+                 asset__category=Asset.STRIPE_FED_FIAT,
+@@ -1402,130 +1318,69 @@
+ 
+         ### ALL CHECK OK ###
+ 
+-        # Retry sur "database is locked". SQLite n'a qu'UN writer : sous forte
+-        # affluence, une ecriture peut trouver le verrou occupe au-dela du
+-        # busy_timeout (5 s). Rejouer est sans danger, et c'est precisement ce que
+-        # nous offre l'atomicite : le rollback est complet, donc au moment ou l'on
+-        # retente il n'existe ni doublon ni CREATION orpheline.
+-        # Sans ce retry, la caisse LaBoutik renvoie l'erreur au benevole, qui doit
+-        # refaire l'operation devant le client : refill_wallet leve NotAcceptable
+-        # et ne retente jamais d'elle-meme. Le webhook Stripe, lui, se rattrape par
+-        # ses propres relances ; la caisse est donc le seul canal sans filet.
+-        # / Retry on "database is locked": the rollback is complete, so replaying is
+-        # safe. LaBoutik never retries by itself, unlike the Stripe webhook.
+-        # ON NE REJOUE QUE CE QU'ON SAIT ANNULER. Seul le REFILL est atomique.
+-        # Partout ailleurs (SALE, SUBSCRIBE, QRCODE_SALE...), Transaction.save()
+-        # committe les soldes en autocommit AVANT d'inserer la transaction
+-        # (models.py : deux UPDATE de Token, puis super().save()). Un "locked" sur
+-        # l'INSERT laisse donc le debit du client deja passe : rejouer le
+-        # debiterait une SECONDE fois, en silence. Ces actions remontent l'erreur
+-        # telles quelles, comme avant.
+-        # / Only the refill path is atomic and therefore replayable. Elsewhere the
+-        # balances are already committed when the insert fails: replaying would
+-        # silently double-charge the customer.
+-        peut_etre_rejoue = action == Transaction.REFILL
+-        debut_des_tentatives = monotonic()
+-
+-        for tentative in range(1, NOMBRE_DE_TENTATIVES_SI_BASE_VERROUILLEE + 1):
+-            try:
+-                transaction = self._ecrire_la_paire(request, action)
+-                break
+-            except OperationalError as erreur:
+-                derniere_tentative = tentative == NOMBRE_DE_TENTATIVES_SI_BASE_VERROUILLEE
+-                budget_epuise = (monotonic() - debut_des_tentatives
+-                                 > BUDGET_MAXIMAL_DU_RETRY_EN_SECONDES)
+-                if (not peut_etre_rejoue
+-                        or "locked" not in str(erreur).lower()
+-                        or derniere_tentative
+-                        or budget_epuise):
+-                    raise
++        # Si c'est un refill, on génère la monnaie avant :
++        if action == Transaction.REFILL:
++            if not Transaction.objects.filter(asset=self.asset).exists():
+                 logger.warning(
+-                    f"{timezone.localtime()} base verrouillee, tentative "
+-                    f"{tentative}/{NOMBRE_DE_TENTATIVES_SI_BASE_VERROUILLEE} : {erreur}")
+-                sleep(DELAI_ENTRE_TENTATIVES_EN_SECONDES * tentative)
+-
+-        self.transaction = transaction
+-        return attrs
+-
+-    def _ecrire_la_paire(self, request, action):
+-        """
+-        Ecrit la CREATION puis le REFILL, en tout-ou-rien.
+-        / Writes the mint then the refill, all-or-nothing.
+-
+-        C'est l'absence d'atomicite ici qui a laisse 24 CREATION orphelines les
+-        28-29/08/2026 (monnaie creee, jamais transferee - cf TECH_DEV/DRIFT).
+-        On n'englobe QUE cette paire : un SUBSCRIBE passe par le meme validate()
+-        et son signal post_save appelle Lespass en synchrone (jusqu'a 3 s) ; hors
+-        de question de tenir le verrou d'ecriture SQLite pendant ce temps.
+-        Rejouable tel quel : appele en boucle par validate() si la base est verrouillee.
+-        / Only the mint+refill pair is wrapped, and the method is replayable as is.
+-        """
+-        contexte_atomique = atomic() if action == Transaction.REFILL else nullcontext()
+-        with contexte_atomique:
+-            crea_transaction = None
+-
+-            if action == Transaction.REFILL:
+-                # Django 4.2 ouvre la transaction en BEGIN DEFERRED : le verrou d'ecriture
+-                # n'est pris qu'a la premiere ecriture. Si un autre worker committe entre
+-                # nos premieres lectures et notre premiere ecriture, SQLite renvoie
+-                # SQLITE_BUSY_SNAPSHOT IMMEDIATEMENT, sans respecter le busy_timeout.
+-                # On prend donc le verrou des l'entree du bloc par une ecriture neutre :
+-                # les workers concurrents attendent au lieu d'echouer aussitot.
+-                # (transaction_mode="IMMEDIATE" n'existe qu'a partir de Django 5.1)
+-                # / Grab the write lock upfront: BEGIN DEFERRED + SQLITE_BUSY_SNAPSHOT
+-                # would otherwise bypass busy_timeout entirely.
+-                Token.objects.filter(wallet=self.sender, asset=self.asset).update(value=F("value"))
+-
+-                # Si c'est un refill, on génère la monnaie avant :
+-                crea_transac_dict = {
+-                    "ip": get_request_ip(request),
+-                    "sender": self.sender,
+-                    "receiver": self.sender,
+-                    "asset": self.asset,
+-                    "comment": self.comment,
+-                    "metadata": self.metadata,
+-                    "checkout_stripe": self.checkout_stripe,
+-                    "amount": self.amount,
+-                    "action": Transaction.CREATION,
+-                    "primary_card": self.primary_card,
+-                    "card": self.user_card,
+-                }
+-                crea_transaction = Transaction.objects.create(**crea_transac_dict)
+-
+-                if not crea_transaction.verify_hash():
+-                    logger.error(
+-                        f"{timezone.localtime()} ERROR NewTransactionWallet2WalletValidator : transaction hash is not valid on CREATION")
+-                    raise serializers.ValidationError("Transaction hash is not valid")
+-
+-            transaction_dict = {
++                    f"{timezone.localtime()} WARNING NewTransactionWallet2WalletValidator : "
++                    f"missing FIRST block for asset {self.asset.uuid} -> auto create"
++                )
++                Transaction.objects.create(
++                    ip="0.0.0.0",
++                    sender=self.asset.wallet_origin,
++                    receiver=self.asset.wallet_origin,
++                    asset=self.asset,
++                    amount=0,
++                    datetime=self.asset.created_at if self.asset.created_at else timezone.localtime(),
++                    action=Transaction.FIRST,
++                    checkout_stripe=None,
++                    primary_card=None,
++                    card=None,
++                )
++
++            crea_transac_dict = {
+                 "ip": get_request_ip(request),
+                 "sender": self.sender,
+-                "receiver": self.receiver,
++                "receiver": self.sender,
+                 "asset": self.asset,
+                 "comment": self.comment,
+                 "metadata": self.metadata,
+                 "checkout_stripe": self.checkout_stripe,
+                 "amount": self.amount,
+-                "action": action,
++                "action": Transaction.CREATION,
+                 "primary_card": self.primary_card,
+                 "card": self.user_card,
+-                "subscription_start_datetime": self.subscription_start_datetime
+             }
+-            transaction = Transaction(**transaction_dict)
+-            if crea_transaction is not None:
+-                # On passe explicitement la creation monetaire qui adosse cette
+-                # recharge : le modele ne peut plus la deviner en lisant la derniere
+-                # transaction de l'asset, qui n'est pas la bonne sous concurrence.
+-                # / Hand the model the exact mint backing this refill.
+-                transaction.creation_associee = crea_transaction
+-            transaction.save(force_insert=True)
+-
+-            if not transaction.verify_hash():
++            crea_transaction = Transaction.objects.create(**crea_transac_dict)
++
++            if not crea_transaction.verify_hash():
+                 logger.error(
+-                    f"{timezone.localtime()} ERROR NewTransactionWallet2WalletValidator : transaction hash is not valid")
++                    f"{timezone.localtime()} ERROR NewTransactionWallet2WalletValidator : transaction hash is not valid on CREATION")
+                 raise serializers.ValidationError("Transaction hash is not valid")
+ 
+-        return transaction
++        transaction_dict = {
++            "ip": get_request_ip(request),
++            "sender": self.sender,
++            "receiver": self.receiver,
++            "asset": self.asset,
++            "comment": self.comment,
++            "metadata": self.metadata,
++            "checkout_stripe": self.checkout_stripe,
++            "amount": self.amount,
++            "action": action,
++            "primary_card": self.primary_card,
++            "card": self.user_card,
++            "subscription_start_datetime": self.subscription_start_datetime
++        }
++        transaction = Transaction.objects.create(**transaction_dict)
++
++        if not transaction.verify_hash():
++            logger.error(
++                f"{timezone.localtime()} ERROR NewTransactionWallet2WalletValidator : transaction hash is not valid")
++            raise serializers.ValidationError("Transaction hash is not valid")
++
++        self.transaction = transaction
++        return attrs
+ 
+ 
+ class CachedTransactionSerializer(serializers.ModelSerializer):

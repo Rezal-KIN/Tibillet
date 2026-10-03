@@ -1,0 +1,35 @@
+--- TiBillet/LaBoutik/Cashless/settings.py
++++ deploy/Laboutik/settings.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ """
+ Django settings for Cashless project.
+ 
+@@ -171,7 +173,7 @@
+ TEMPLATES = [
+     {
+         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+-        'DIRS': [],
++        'DIRS': [os.path.join(BASE_DIR, 'source_templates')],
+         'APP_DIRS': True,
+         'OPTIONS': {
+             'context_processors': [
+@@ -279,14 +281,15 @@
+ LOGIN_REDIRECT_URL = '/'
+ LOGOUT_REDIRECT_URL = '/'
+ 
++EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+ EMAIL_HOST = os.environ.get('EMAIL_HOST')
+ EMAIL_PORT = os.environ.get('EMAIL_PORT')
+ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+ 
+-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', False)
+-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
++EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS') == '1'
++EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL') == '1'
+ 
+ if DEBUG:
+     SHELL_PLUS = "ipython"
