@@ -99,8 +99,6 @@ class ArticlePricesTests(unittest.TestCase):
         terminal_manager = Mock()
         terminal_manager.filter.return_value.exists.return_value = False
         scope = {
-            "_enforce_active_terminal_user": Mock(return_value=None),
-            "_limit_cash_register_connections": Mock(),
             "settings": types.SimpleNamespace(DEMO=False),
             "Configuration": types.SimpleNamespace(get_solo=lambda: config, objects=conf_manager),
             "logger": Mock(), "FedowAPI": lambda: types.SimpleNamespace(NFCcard=nfc),

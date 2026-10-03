@@ -6,10 +6,9 @@ import json
 from typing import List
 from decimal import Decimal
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.core import signing
 from django.db import transaction
 from django.http import JsonResponse, HttpResponseNotFound, HttpResponseNotAllowed
@@ -38,139 +37,6 @@ from webview.validators import DataAchatDepuisClientValidator, PreparationValida
     NewPeriphPinValidator
 
 logger = logging.getLogger(__name__)
-
-CASH_REGISTER_POS_NAME = "caisse"
-MAX_CASH_REGISTER_TERMINALS = 2
-CASH_REGISTER_QUEUE_CACHE_KEY = "wv:cash_register_active_terminals"
-
-
-def _is_admin_bypass_terminal(user: TibiUser = None, appareil: Appareil = None, username: str = None) -> bool:
-    """
-    Admin bypass terminals:
-    device name starting with "admin" ignores Caisse max-2 restriction.
-    Security choice: bypass is bound to the physical terminal identity only.
-    """
-    device_name = getattr(appareil, 'name', None)
-    if isinstance(device_name, str) and device_name.strip().lower().startswith("admin"):
-        return True
-    return False
-
-
-def _enforce_active_terminal_user(request):
-    """
-    If a terminal user has been evicted/disabled server-side, force re-login.
-    """
-    user: TibiUser = request.user
-    appareil: Appareil = getattr(user, 'appareil', None)
-    if not appareil:
-        return None
-
-    if user.is_active and appareil.actif:
-        return None
-
-    # UX demandée: si le terminal a été évincé (actif=False),
-    # repasser une carte primaire doit suffire à se reconnecter.
-    if (
-        request.method == 'POST'
-        and user.is_active
-        and not appareil.actif
-        and request.POST.get('type-action') == 'valider_carte_maitresse'
-    ):
-        appareil.actif = True
-        appareil.save(update_fields=['actif'])
-        logger.info(f"Terminal reactivated by primary card for user={user.username}")
-        return None
-
-    logger.warning(f"Terminal user {user.username} inactive -> force logout")
-    logout(request)
-    if request.method == 'GET':
-        return redirect('/wv/login_hardware')
-    return JsonResponse(
-        {"msg": _("Terminal déconnecté. Reconnectez-vous.")},
-        status=status.HTTP_401_UNAUTHORIZED
-    )
-
-
-def _limit_cash_register_connections(request, point_de_vente: PointDeVente):
-    """
-    Enforce max 2 concurrent terminals on POS "Caisse" only.
-    When a third connects, evict the oldest connected terminal (FIFO).
-    """
-    if not point_de_vente or point_de_vente.name.lower() != CASH_REGISTER_POS_NAME:
-        return
-
-    user: TibiUser = request.user
-    appareil: Appareil = getattr(user, 'appareil', None)
-    if not appareil:
-        return
-
-    # Admin terminals bypass this restriction entirely.
-    if _is_admin_bypass_terminal(user=user, appareil=appareil):
-        return
-
-    queue = cache.get(CASH_REGISTER_QUEUE_CACHE_KEY) or []
-    now_ts = timezone.now().timestamp()
-
-    # Keep only known, active terminals; deduplicate by appareil_id.
-    appareil_ids = [entry.get('appareil_id') for entry in queue if entry.get('appareil_id')]
-    appareils = {
-        app.id: app for app in Appareil.objects.select_related('user').filter(id__in=appareil_ids)
-    }
-
-    cleaned = []
-    seen = set()
-    for entry in sorted(queue, key=lambda e: e.get('connected_at', now_ts)):
-        app_id = entry.get('appareil_id')
-        if not app_id or app_id in seen:
-            continue
-        app = appareils.get(app_id)
-        if not app or not app.user_id:
-            continue
-        if not app.actif or not app.user.is_active:
-            continue
-        if _is_admin_bypass_terminal(user=app.user, appareil=app, username=entry.get('username')):
-            continue
-        cleaned.append(entry)
-        seen.add(app_id)
-
-    queue = cleaned
-
-    # Register current terminal if not already present.
-    if appareil.id not in seen:
-        queue.append({
-            'appareil_id': appareil.id,
-            'user_id': user.id,
-            'username': user.username,
-            'connected_at': now_ts,
-        })
-
-    queue.sort(key=lambda e: e.get('connected_at', now_ts))
-
-    # FIFO eviction when limit is exceeded.
-    evicted = []
-    while len(queue) > MAX_CASH_REGISTER_TERMINALS:
-        evicted.append(queue.pop(0))
-
-    for entry in evicted:
-        evicted_appareil = appareils.get(entry.get('appareil_id'))
-        if not evicted_appareil:
-            evicted_appareil = Appareil.objects.select_related('user').filter(
-                id=entry.get('appareil_id')
-            ).first()
-        if not evicted_appareil:
-            continue
-
-        if evicted_appareil.actif:
-            evicted_appareil.actif = False
-            evicted_appareil.save(update_fields=['actif'])
-
-        logger.warning(
-            f"Caisse max terminals reached: evicted oldest terminal user={entry.get('username')}"
-        )
-
-    cache.set(CASH_REGISTER_QUEUE_CACHE_KEY, queue, timeout=60 * 60 * 24)
-
-
 
 def login_admin(request):
     user: TibiUser = request.user
@@ -355,10 +221,6 @@ class NfcReader(APIView):
 @login_required(login_url='/wv/login_hardware')
 @api_view(['POST', 'GET'])
 def index(request):
-    terminal_guard = _enforce_active_terminal_user(request)
-    if terminal_guard:
-        return terminal_guard
-
     # Si l'user n'est pas un appareil et que le mode démo n'est pas activé
     mode_demo: bool = settings.DEMO
     if not getattr(request.user, 'appareil', None) and not mode_demo:
@@ -372,23 +234,6 @@ def index(request):
         # print("----------------------------------------------")
         # print(f"->data ={request.POST}")
         # print("----------------------------------------------")
-        logger.info(
-            f"/wv POST type-action={request.POST.get('type-action')} "
-            f"pk_pdv={request.POST.get('pk_pdv')} "
-            f"user={getattr(request.user, 'username', None)}"
-        )
-
-        # Réservation d'un point de vente par le terminal courant.
-        if request.POST.get('type-action') == 'register_pos_connection':
-            try:
-                pdv_uuid = request.POST.get('pk_pdv')
-                point_de_vente = PointDeVente.objects.get(pk=pdv_uuid)
-            except Exception:
-                return JsonResponse({"msg": _("Point de vente introuvable.")},
-                                    status=status.HTTP_404_NOT_FOUND)
-
-            _limit_cash_register_connections(request, point_de_vente)
-            return JsonResponse({"msg": "ok"}, status=status.HTTP_200_OK)
 
         # valider la carte primaire
         if request.POST.get('type-action') == 'valider_carte_maitresse':
@@ -399,13 +244,29 @@ def index(request):
                 fedowApi = FedowAPI()
                 cm = fedowApi.NFCcard.retrieve(tag_id_cm) # tester la carte primaire coté fedow
                 if not cm.get('is_primary'):
-                    # En cas de carte perdu : vérification que la carte ne soit pas toujours primary dans LaBoutik
+                    # Fedow fait autorite sur le droit d'ouvrir la caisse. S'il ne
+                    # reconnait plus la carte comme primaire (carte declaree perdue,
+                    # remplacee, retiree par un VOID), LaBoutik ne doit pas continuer
+                    # a accorder le droit : on supprime la CarteMaitresse locale.
+                    # / Fedow is authoritative. If the card is no longer primary there,
+                    #   drop the local CarteMaitresse instead of keeping the right.
                     if CarteMaitresse.objects.filter(carte__tag_id=tag_id_cm).exists():
+                        logger.warning(
+                            f"Carte {tag_id_cm} non primaire chez Fedow : "
+                            f"suppression de la CarteMaitresse locale."
+                        )
                         CarteMaitresse.objects.get(carte__tag_id=tag_id_cm).delete()
                     return JsonResponse({"erreur": 1, "msg": "Carte perdue ? On passe en non primaire"})
 
                 carte_m = CarteMaitresse.objects.get(carte__tag_id=tag_id_cm)
             except Exception as e:
+                # Le message reste volontairement generique pour le gerant, mais la
+                # cause reelle doit etre tracee : Fedow injoignable, cle d'API
+                # refusee, carte absente de Fedow et CarteMaitresse introuvable
+                # aboutissent toutes ici, et sans ce log on ne peut pas les demeler.
+                # / Keep the message generic for the manager, but log the real cause:
+                #   Fedow down, API key refused and unknown card all land here.
+                logger.error(f"valider_carte_maitresse {tag_id_cm} : {type(e).__name__} - {e}")
                 return JsonResponse({"erreur": 1, "msg": "Carte non primaire"})
 
             else:
@@ -413,12 +274,6 @@ def index(request):
                 # import ipdb; ipdb.set_trace()
 
                 if responsable:
-                    # Enforce Caisse connection limit server-side at terminal entry time.
-                    # This avoids relying on client-side JS freshness/cache.
-                    caisse_pdv = carte_m.points_de_vente.filter(name__iexact='caisse').first()
-                    if caisse_pdv:
-                        _limit_cash_register_connections(request, caisse_pdv)
-
                     monnaie_principale_name = Configuration.objects.get().monnaie_principale.name
                     article_paiement_fractionne = Articles.objects.get(methode_choices=Articles.FRACTIONNE)
                     # noinspection PyDictCreation
@@ -582,10 +437,6 @@ def allOrders(request, *args, **kwargs):
 @login_required
 @api_view(['POST', 'GET'])
 def preparation(request, *args, **kwargs):
-    terminal_guard = _enforce_active_terminal_user(request)
-    if terminal_guard:
-        return terminal_guard
-
     if request.method == 'GET':
         table = kwargs.get('table')
         commandes_classee_par_groupe = GroupCategorieSerializer(GroupementCategorie.objects.all(), many=True,
@@ -706,10 +557,6 @@ def preparation(request, *args, **kwargs):
 @login_required
 @api_view(['POST'])
 def check_carte(request):
-    terminal_guard = _enforce_active_terminal_user(request)
-    if terminal_guard:
-        return terminal_guard
-
     if request.method == 'POST':
         tag_id_request = request.data.get('tag_id_client').upper()
 
@@ -1728,18 +1575,11 @@ def paiement(request):
     :return: Commande
     """
     if request.method == 'POST':
-        terminal_guard = _enforce_active_terminal_user(request)
-        if terminal_guard:
-            return terminal_guard
-
         validator = DataAchatDepuisClientValidator(data=request.data)
         if validator.is_valid():
             # logger.info(f"/wv/paiement - validator.is_valid()")
             data = validator.validated_data
             logger.debug(f"\n\n/wv/paiement : initial data : {data}\n\n")
-
-            _limit_cash_register_connections(request, data.get('pk_pdv'))
-
             ip_user = get_ip_user(request)
             if ip_user:
                 data['ip_user'] = ip_user
@@ -1749,8 +1589,6 @@ def paiement(request):
 
             return Response(reponse, status=status.HTTP_200_OK)
 
-        logger.error(
-            f"/wv/paiement validator.errors : {validator.errors}")
         # errors = [validator.errors[error][0] for error in validator.errors]
         # import ipdb; ipdb.set_trace()
         return Response(validator.errors, status=status.HTTP_406_NOT_ACCEPTABLE)
