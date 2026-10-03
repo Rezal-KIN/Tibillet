@@ -257,3 +257,10 @@ L'index de la nouvelle release doit être activé seulement après le healthchec
 Détails : `deploy/docs/operations/agpl-source-offer.md`. Ces changements sont
 préparés en branche ; ils ne sont pas encore déployés et ne règlent pas le statut
 juridique d'éventuels manquements passés.
+
+Test Smoke AGPL : le premier déploiement du commit `01ca8349` a détecté
+un `TypeError` avant l'initialisation Laboutik : son `BASE_DIR` est une chaîne
+(`os.path.dirname`) et non un Path. Utiliser `os.path.join` pour ses DIRS
+de templates. Un test évalue les déclarations réelles de settings des deux
+applications sans secrets ni imports d'intégrations. Aix n'a pas été promu
+sur cette candidate échouée.
