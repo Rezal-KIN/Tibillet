@@ -2,17 +2,13 @@
 # Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 import logging
 import os
-import json
 from decimal import Decimal
 from typing import List
-from datetime import time
 
 from cryptography.exceptions import InvalidSignature
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.core.cache import cache
 from django.db import IntegrityError
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import empty
@@ -21,7 +17,6 @@ from APIcashless.models import Articles, Membre, PointDeVente, Configuration, Ca
     CommandeSauvegarde, CarteMaitresse, Assets, Appareil
 from fedow_connect.utils import get_public_key, verify_signature
 from tibiauth.models import TibiUser
-import pytz
 
 logger = logging.getLogger(__name__)
 from sentry_sdk import capture_message
@@ -32,67 +27,6 @@ from fedow_connect.fedow_api import FedowAPI
 def dround(value):
     return Decimal(value).quantize(Decimal('1.00'))
 
-
-HAPPY_HOUR_START = os.environ.get("HAPPY_HOUR_START", "22:00")
-HAPPY_HOUR_END = os.environ.get("HAPPY_HOUR_END", "23:30")
-HAPPY_HOUR_PRICE_FILE = os.environ.get("HAPPY_HOUR_PRICE_FILE", "/DjangoFiles/www/happy_hour_prices.json")
-HAPPY_HOUR_CACHE_KEY = "wv:happy_hour_prices_cache"
-
-
-def _normalize_txt(value: str) -> str:
-    return (value or "").strip().lower()
-
-
-def _parse_hhmm(value: str, default_h: int, default_m: int) -> time:
-    try:
-        hh, mm = value.split(":", 1)
-        return time(hour=int(hh), minute=int(mm))
-    except Exception:
-        return time(hour=default_h, minute=default_m)
-
-
-def _is_happy_hour_active(config: Configuration) -> bool:
-    start = _parse_hhmm(HAPPY_HOUR_START, 22, 0)
-    end = _parse_hhmm(HAPPY_HOUR_END, 23, 30)
-    tz_name = config.fuseau_horaire or os.environ.get("TIME_ZONE", "Europe/Paris")
-    now_local = timezone.localtime(timezone.now(), timezone=pytz.timezone(tz_name)).time()
-    current = now_local.replace(second=0, microsecond=0)
-    if start <= end:
-        return start <= current <= end
-    return current >= start or current <= end
-
-
-def _load_hh_price_map():
-    data = cache.get(HAPPY_HOUR_CACHE_KEY)
-    if data is not None:
-        return data
-
-    parsed = {"bars": {}}
-    try:
-        if os.path.exists(HAPPY_HOUR_PRICE_FILE):
-            with open(HAPPY_HOUR_PRICE_FILE, "r", encoding="utf-8") as f:
-                parsed = json.load(f) or {"bars": {}}
-    except Exception as e:
-        logger.error(f"Unable to read happy hour prices file: {e}")
-        parsed = {"bars": {}}
-
-    cache.set(HAPPY_HOUR_CACHE_KEY, parsed, timeout=60)
-    return parsed
-
-
-def _get_hh_price_for_article(pos_name: str, article: Articles):
-    if not pos_name:
-        return None
-    data = _load_hh_price_map()
-    bars = data.get("bars", {})
-    by_bar = bars.get(_normalize_txt(pos_name), {})
-    raw = by_bar.get(str(article.id)) or by_bar.get(_normalize_txt(article.name))
-    if raw is None:
-        return None
-    try:
-        return Decimal(str(raw)).quantize(Decimal("1.00"))
-    except Exception:
-        return None
 
 class NewPeriphPinValidator(serializers.Serializer):
     username = serializers.CharField(max_length=512)
@@ -215,28 +149,8 @@ class DataAchatDepuisClientValidator(serializers.Serializer):
             self.initial_data['total'] = total_sended
 
         total_temp = Decimal(0)
-
-        pos_name = None
-        try:
-            pdv_raw = self.initial_data.get('pk_pdv')
-            if pdv_raw:
-                pdv = PointDeVente.objects.filter(pk=pdv_raw).first()
-                pos_name = pdv.name if pdv else None
-        except Exception:
-            pos_name = None
-
-        hh_active = _is_happy_hour_active(self.config)
         for art in value:
-            article = art.get('pk')
-            qty = art.get('qty')
-            unit_price = article.prix
-            if hh_active:
-                hh_price = _get_hh_price_for_article(pos_name, article)
-                if hh_price is not None:
-                    unit_price = hh_price
-                    # In-memory override only for this request pipeline.
-                    article.prix = hh_price
-            total_temp += dround(unit_price * qty)
+            total_temp += dround(art.get('pk').prix * art.get('qty'))
 
         # On vérifie que les virgules du total soit max 0.00
         if total_sended:

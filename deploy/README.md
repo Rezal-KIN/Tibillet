@@ -51,15 +51,8 @@ Caisse cashless pour les points de vente. Plusieurs instances peuvent tourner en
 
 ## Fonctionnalités additionnelles
 
-### Happy Hour automatique (Laboutik)
-Bascule automatiquement sur une grille de prix réduits sur une plage horaire configurable. Les prix sont chargés depuis un fichier JSON monté dans le container.
-
-Variables `.env` concernées : `HAPPY_HOUR_START`, `HAPPY_HOUR_END`, `HAPPY_HOUR_PRICE_FILE`
-
-Fichier de prix à créer sur le serveur : `Laboutik/www/happy_hour_prices.json`
-```json
-{"biere": 2.50, "soft": 1.50}
-```
+### Prix des articles (Laboutik)
+Les prix affichés et contrôlés sont ceux des articles enregistrés en base. La personnalisation happy hour a été retirée ; son ancien fichier de prix et ses variables d’environnement ne sont plus utilisés.
 
 ### Dashboard de suivi de gala (Fedow)
 Interface temps réel pour suivre les consommations par bar/caisse pendant un événement : totaux par actif monétaire, filtrage par lieu, suivi de session.

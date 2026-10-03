@@ -4,7 +4,6 @@ import threading
 import os
 import json
 from typing import List
-from datetime import time
 from decimal import Decimal
 
 from django.contrib.auth import authenticate, login, logout
@@ -37,101 +36,12 @@ from webview.serializers import CarteCashlessSerializer, PointDeVenteSerializer,
     debut_fin_journee
 from webview.validators import DataAchatDepuisClientValidator, PreparationValidator, LoginHardwareValidator, \
     NewPeriphPinValidator
-import pytz
 
 logger = logging.getLogger(__name__)
 
 CASH_REGISTER_POS_NAME = "caisse"
 MAX_CASH_REGISTER_TERMINALS = 2
 CASH_REGISTER_QUEUE_CACHE_KEY = "wv:cash_register_active_terminals"
-HAPPY_HOUR_START = os.environ.get("HAPPY_HOUR_START", "22:00")
-HAPPY_HOUR_END = os.environ.get("HAPPY_HOUR_END", "23:30")
-HAPPY_HOUR_CACHE_KEY = "wv:happy_hour_prices_cache"
-HAPPY_HOUR_PRICE_FILE = os.environ.get("HAPPY_HOUR_PRICE_FILE", "/DjangoFiles/www/happy_hour_prices.json")
-
-
-def _normalize_txt(value: str) -> str:
-    return (value or "").strip().lower()
-
-
-def _parse_hhmm(value: str, default_h: int, default_m: int) -> time:
-    try:
-        hh, mm = value.split(":", 1)
-        return time(hour=int(hh), minute=int(mm))
-    except Exception:
-        return time(hour=default_h, minute=default_m)
-
-
-def _is_happy_hour_active() -> bool:
-    start = _parse_hhmm(HAPPY_HOUR_START, 22, 0)
-    end = _parse_hhmm(HAPPY_HOUR_END, 23, 30)
-
-    conf = Configuration.get_solo()
-    tz_name = conf.fuseau_horaire or os.environ.get("TIME_ZONE", "Europe/Paris")
-    now_local = timezone.localtime(timezone.now(), timezone=pytz.timezone(tz_name)).time()
-    current = now_local.replace(second=0, microsecond=0)
-
-    # Handle regular windows and windows crossing midnight.
-    if start <= end:
-        return start <= current <= end
-    return current >= start or current <= end
-
-
-def _load_happy_hour_prices():
-    cached = cache.get(HAPPY_HOUR_CACHE_KEY)
-    if cached is not None:
-        return cached
-
-    parsed = {"bars": {}}
-    try:
-        if os.path.exists(HAPPY_HOUR_PRICE_FILE):
-            with open(HAPPY_HOUR_PRICE_FILE, "r", encoding="utf-8") as f:
-                parsed = json.load(f) or {"bars": {}}
-    except Exception as e:
-        logger.error(f"happy hour price file read error: {e}")
-        parsed = {"bars": {}}
-
-    cache.set(HAPPY_HOUR_CACHE_KEY, parsed, timeout=60)
-    return parsed
-
-
-def _get_hh_price(pos_name: str, article_id: str, article_name: str):
-    """
-    Expected file format (/DjangoFiles/www/happy_hour_prices.json):
-    {
-      "bars": {
-        "bar name": {
-          "<article_uuid>": "5.00",
-          "article name": "5.00"
-        }
-      }
-    }
-    """
-    data = _load_happy_hour_prices()
-    bars = data.get("bars", {})
-    by_bar = bars.get(_normalize_txt(pos_name), {})
-    raw = by_bar.get(str(article_id)) or by_bar.get(_normalize_txt(article_name))
-    if raw is None:
-        return None
-    try:
-        return Decimal(str(raw)).quantize(Decimal("1.00"))
-    except Exception:
-        return None
-
-
-def _apply_happy_hour_prices_to_pdv_payload(payload):
-    if not _is_happy_hour_active():
-        return
-
-    for pdv in payload:
-        pos_name = pdv.get("name")
-        for article in pdv.get("articles", []):
-            hh_price = _get_hh_price(pos_name, article.get("id"), article.get("name"))
-            if hh_price is None:
-                continue
-            article["prix_normal"] = article.get("prix")
-            article["prix"] = f"{hh_price:.2f}"
-            article["happy_hour"] = True
 
 
 def _is_admin_bypass_terminal(user: TibiUser = None, appareil: Appareil = None, username: str = None) -> bool:
@@ -518,7 +428,6 @@ def index(request):
                             'responsable': {},
                             'article_paiement_fractionne': f"{article_paiement_fractionne.pk}",
                             }
-                    _apply_happy_hour_prices_to_pdv_payload(data['data'])
 
                     data['responsable']['nom'] = responsable.name,
                     data['responsable']['uuid'] = responsable.id
