@@ -66,3 +66,7 @@ _(pour chaque objectif ci-dessus : comment vérifier automatiquement qu'il est a
 
 - Nom d’attribution des personnalisations : **AM-Rezal**. Les références
   techniques au dépôt GitHub `Rezal-KIN/Tibillet` conservent leur identifiant réel.
+- Sources de production hébergées dans les Releases GitHub : publication des
+  huit assets avant promotion, puis vérification de leur correspondance par le
+  déploiement. Le lien « Code source » renvoie vers les téléchargements GitHub,
+  accessibles même lorsque l’instance AWS est arrêtée.

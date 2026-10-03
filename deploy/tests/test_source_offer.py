@@ -10,6 +10,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -65,6 +66,7 @@ class SourceOfferTests(unittest.TestCase):
             "deploy/Fedow/docker-compose.yml": "services:\n  app:\n    volumes:\n      - ./patch.py:/home/fedow/Fedow/core.py:ro\n      - ../source/admin-templates:/home/fedow/Fedow/source_templates:ro\n",
             "deploy/Laboutik/docker-compose.yml": "services: {}\n",
             "deploy/source/admin-templates/admin/base_site.html": "source offer\n",
+            "deploy/source/BUILD.md": "Build instructions from the pinned public commit\n",
             ".env": "private-production-value\n",
             ".context/mail.pdf": "private correspondence\n",
             "logs/client.log": "private runtime log\n",
@@ -161,6 +163,37 @@ class SourceOfferTests(unittest.TestCase):
         (self.repo / "deploy/Fedow/patch.py").write_text("uncommitted effective code")
         with self.assertRaisesRegex(ValueError, "differs from its Git revision"):
             offer.verify_working_tree(self.repo, self.commit)
+
+    def test_github_page_links_to_all_assets_off_the_instance(self):
+        info = self.build()
+        release_name = Path(info["deployment_archive"]["archive"]).parent.name
+        page = offer.render_page(info, release_name, github_release=True)
+        base = f"https://github.com/Rezal-KIN/Tibillet/releases/download/sources-{release_name}/"
+        for name in ("lespass.tar.gz", "fedow.tar.gz", "laboutik.tar.gz", "deployment.tar.gz",
+                     "BUILD.md", "LICENSE.txt", "SHA256SUMS", "source-manifest.json"):
+            self.assertIn(f'href="{base}{name}"', page)
+        self.assertIn("restent accessibles lorsque cette instance est arrêtée", page)
+
+    def test_github_gate_rejects_missing_or_mismatched_public_assets(self):
+        info = self.build()
+        release_name = Path(info["deployment_archive"]["archive"]).parent.name
+        root = self.output / "releases" / release_name
+        tag = offer.github_release_tag(release_name)
+        release = {"tag_name": tag, "draft": False, "assets": [
+            {"name": path.name, "digest": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+             "browser_download_url": f"https://github.com/Rezal-KIN/Tibillet/releases/download/{tag}/{path.name}"}
+            for path in root.iterdir()
+        ]}
+        def check():
+            with patch.object(offer.urllib.request, "urlopen", return_value=io.BytesIO(json.dumps(release).encode())):
+                offer.verify_github_release(root, release_name)
+        check()
+        asset = release["assets"].pop()
+        with self.assertRaisesRegex(ValueError, "missing"):
+            check()
+        release["assets"].append({**asset, "digest": "sha256:" + "0" * 64})
+        with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+            check()
 
 
 if __name__ == "__main__":

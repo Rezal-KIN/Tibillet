@@ -34,11 +34,17 @@ fi
 # preflight runs in a separate process. Load the same validated manifest again
 # here so the images exported to Compose are exactly the release it checked.
 load_release_images "$MANIFEST_PATH"
+source_hosting=()
+# Smoke can validate a candidate before its public Release is prepared. Every
+# production release requires its exact source assets on GitHub first.
+if [[ "$GALA_SLUG" != "gala-smoke" ]]; then
+  source_hosting+=(--github-release)
+fi
 python3 "$REPO_ROOT/deploy/tools/build-source-offer.py" \
   --repository "$REPO_ROOT" --manifest "$MANIFEST_PATH" \
   --catalog "$REPO_ROOT/deploy/source/image-sources.json" \
   --output "$REPO_ROOT/deploy/source/public" --cache "$REPO_ROOT/deploy/source/cache" \
-  --index-output "$REPO_ROOT/deploy/source/next-index.html" --verify-working-tree
+  --index-output "$REPO_ROOT/deploy/source/next-index.html" --verify-working-tree "${source_hosting[@]}"
 write_compose_environment
 
 lespass_registry="${LESPASS_IMAGE%%/*}"
