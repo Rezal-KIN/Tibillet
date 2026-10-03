@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django.contrib import messages
 from django.db import models
@@ -28,10 +29,10 @@ def sanitize_textfields(instance: models.Model) -> None:
 
 class StaffAdminSite(UnfoldAdminSite):
     def login(self, request, extra_context=None):
-        """
-        Open the tenant's email-login panel instead of showing an admin
-        password form that cannot authenticate TiBillet users.
-        """
+        # Gala administrators can use Django's password login as well as the
+        # existing email flow. Other TiBillet installations keep email login.
+        if os.environ.get('GALA_APEX_TENANT') == '1':
+            return super().login(request, extra_context=extra_context)
         messages.add_message(request, messages.WARNING, _("Please login to access this page."))
         return HttpResponseRedirect('/?login=1')
 
