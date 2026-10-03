@@ -237,3 +237,23 @@ Format suggéré par entrée :
   `Lespass-v2/app` et `origin/V2`.
 - **Ce stack est une PREVIEW jetable** : DB de test sans rapport avec les vraies données
   d'association. Le stack de prod (`Lespass/`, pin `main`, 22 tenants) n'est touché à aucun moment.
+
+
+## Offre de sources AGPL - préparation du 3 octobre 2026
+
+Audit SSM en lecture seule : Aix exécute `gala-am-aix-v1.0.7`, avec le checkout
+`ff59f523e9ef9589938ef00951848da15bb45224`. Les images originales contiennent
+les commits Fedow `1668d94fb2391cd1b9fef28abf857c356e13207c` et Laboutik
+`3fdba313c2dea172bfaa6a06ebab05e1caf62490`. Le script Docker de Laboutik indique
+1.7 dans l'image contre 1.4 dans Git ; cette différence est dans le catalogue.
+
+Le mécanisme préparé génère une offre `/source/` à partir de snapshots Git et
+d'archives vérifiées, inclut les bind mounts et conserve les notices originales.
+Fedow lit `database/courbe_survie.json` : c'est une ressource source à conserver,
+pas un dump à exclure. Les répertoires publics doivent être 0755 et leurs fichiers
+0644 pour Nginx, même si les scripts runtime héritent d'un umask 077.
+
+L'index de la nouvelle release doit être activé seulement après le healthcheck.
+Détails : `deploy/docs/operations/agpl-source-offer.md`. Ces changements sont
+préparés en branche ; ils ne sont pas encore déployés et ne règlent pas le statut
+juridique d'éventuels manquements passés.

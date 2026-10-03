@@ -48,3 +48,16 @@ Objectifs vérifiables du projet, pensés pour permettre un fonctionnement en `/
 ## Critères d'acceptation
 
 _(pour chaque objectif ci-dessus : comment vérifier automatiquement qu'il est atteint — tests, commande à exécuter, comportement observable)_
+
+
+## Offre de sources AGPL - préparation du 3 octobre 2026
+
+- Audit de la release Aix en service effectué en lecture seule ; sources originales
+  et patches identifiés. Offre de téléchargement, notices et liens préparés.
+- Vérifications locales : tests de déploiement, rendu des templates, configurations
+  Compose/Nginx et téléchargements des quatre archives avec contrôle SHA-256.
+- Reste après revue : construire une candidate de cette branche, vérifier les
+  liens sur Smoke, puis promouvoir via la pipeline approuvée. Critère live :
+  `/source/` retourne 200 sans authentification sur les trois services et les
+  archives correspondent à la release effectivement exécutée.
+- Chronologie et brouillon de réponse conservés dans `.context/`, sans envoi.

@@ -45,6 +45,10 @@ services:
       - ./ssh:/home/tibillet/.ssh # if you want to use borgbackup with ssh
       - ./settings.py:/DjangoFiles/Cashless/settings.py
       - ./install.py:/DjangoFiles/administration/management/commands/install.py:ro
+      - ./source_templates/login.html:/DjangoFiles/webview/templates/login.html:ro
+      - ./source_templates/kiosk_base.html:/DjangoFiles/htmxview/templates/kiosk/base.html:ro
+      - ./source_templates/infos.html:/DjangoFiles/htmxview/templates/appsettings/infos.html:ro
+      - ../source/admin-templates:/DjangoFiles/source_templates:ro
       - ./views.py:/DjangoFiles/webview/views.py
       - ./fedow_api.py:/DjangoFiles/fedow_connect/fedow_api.py
       - ./validators.py:/DjangoFiles/webview/validators.py
@@ -81,6 +85,7 @@ services:
       - ./www:/DjangoFiles/www
       - ./logs:/DjangoFiles/logs
       - ./nginx:/etc/nginx/conf.d
+      - ../source/public:/source:ro
     labels:
       - traefik.enable=true
       - traefik.docker.network=frontend

@@ -1,3 +1,5 @@
+# Rezal-KIN modified version, imported 2026-09-21; source notices updated 2026-10-03.
+# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 """
 Django settings for fedowallet_django project.
 
@@ -104,7 +106,7 @@ ROOT_URLCONF = 'fedowallet_django.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'source_templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

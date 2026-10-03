@@ -34,6 +34,11 @@ fi
 # preflight runs in a separate process. Load the same validated manifest again
 # here so the images exported to Compose are exactly the release it checked.
 load_release_images "$MANIFEST_PATH"
+python3 "$REPO_ROOT/deploy/tools/build-source-offer.py" \
+  --repository "$REPO_ROOT" --manifest "$MANIFEST_PATH" \
+  --catalog "$REPO_ROOT/deploy/source/image-sources.json" \
+  --output "$REPO_ROOT/deploy/source/public" --cache "$REPO_ROOT/deploy/source/cache" \
+  --index-output "$REPO_ROOT/deploy/source/next-index.html" --verify-working-tree
 write_compose_environment
 
 lespass_registry="${LESPASS_IMAGE%%/*}"
@@ -146,6 +151,17 @@ for attempt in {1..60}; do
   if (( attempt < 60 )); then sleep 5; fi
 done
 [[ "$healthy" == true ]] || fail "local healthcheck did not pass after 60 attempts"
+# Only advertise the new sources after the running apps pass their healthcheck.
+# Previous source archives remain at their immutable URLs.
+source_index="$(mktemp "$REPO_ROOT/deploy/source/public/.index.XXXXXX")"
+install -m 0644 "$REPO_ROOT/deploy/source/next-index.html" "$source_index"
+mv -f "$source_index" "$REPO_ROOT/deploy/source/public/index.html"
+for domain in "$LESPASS_PUBLIC_DOMAIN" "$FEDOW_PUBLIC_DOMAIN" "$LABOUTIK_PUBLIC_DOMAIN"; do
+  source_status="$(curl --fail --silent --show-error --insecure --noproxy '*' \
+    --resolve "$domain:443:127.0.0.1" --max-time 20 \
+    --output /dev/null --write-out '%{http_code}' "https://$domain/source/")"
+  [[ "$source_status" == 200 ]] || fail "source offer is unavailable or redirects on $domain"
+done
 # A fresh Gala must have a recoverable database snapshot before its first
 # release is marked deployed. Existing Galas are already covered by preflight.
 if [[ ! -s "$(runtime_dir)/last-successful-backup" ]]; then

@@ -1,3 +1,5 @@
+# Rezal-KIN modified version, imported 2026-09-21; source notices updated 2026-10-03.
+# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 from django.urls import path
 import fedow_dashboard.views as dashboard_views
 from rest_framework import routers
