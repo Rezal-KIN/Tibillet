@@ -4,6 +4,9 @@ Offre déployée et contrôlée sur Aix le 3 octobre 2026, release `gala-am-aix-
 Cette documentation décrit le mécanisme technique et les vérifications réalisées.
 Le dépôt public est <https://github.com/Rezal-KIN/Tibillet>, sous GNU AGPLv3.
 Les auteurs et dates de modification sont indiqués dans [NOTICE.md](../../../NOTICE.md).
+Le nom d’attribution du fork est **AM-Rezal** (pages, crédits et notices corrigés
+dans la release `gala-am-aix-v1.0.9`). `Rezal-KIN/Tibillet` reste l’identifiant
+technique du dépôt GitHub.
 
 ## Audit de la release Aix en service
 
