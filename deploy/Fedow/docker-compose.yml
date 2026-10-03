@@ -35,6 +35,9 @@ services:
       - ./custom_patches/fedow_dashboard/views.py:/home/fedow/Fedow/fedow_dashboard/views.py
       - ./custom_patches/fedow_dashboard/index.html:/home/fedow/Fedow/fedow_dashboard/templates/index/index.html
       - ./custom_patches/fedow_dashboard/suivi.html:/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html
+      - ./custom_patches/fedow_dashboard/base.html:/home/fedow/Fedow/fedow_dashboard/templates/base.html:ro
+      - ./custom_patches/fedow_dashboard/public_index.html:/home/fedow/Fedow/fedow_dashboard/templates/index.html:ro
+      - ../source/admin-templates:/home/fedow/Fedow/source_templates:ro
     networks:
       - fedow_backend
     extra_hosts:
@@ -50,6 +53,7 @@ services:
       - ./www:/www
       - ./logs:/logs
       - ./nginx:/etc/nginx/conf.d
+      - ../source/public:/source:ro
     depends_on:
       - fedow_django
     links:

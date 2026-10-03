@@ -70,6 +70,12 @@ def get_sidebar_navigation(request):
                     "link": reverse_lazy("staff_admin:AuthBillet_humanuser_changelist"),
                     "permission": admin_permission,
                 },
+                # Rezal-KIN source offer, 2026-10-03 (GNU AGPLv3).
+                {
+                    "title": _("Code source de cette instance — AGPLv3"),
+                    "icon": "code",
+                    "link": "/source/",
+                },
                 # This menu option is here only for debug purpose
                 # {
                 #     "title": _("Produit"),

@@ -21,6 +21,11 @@ certs/
 # even if removed from HEAD since. A public image carrying it publishes them all.
 .git
 .github
+.context/
+.venv/
+deploy/source/public/
+deploy/source/cache/
+deploy/source/next-index.html
 
 # --- Sorties d'execution : regenerees au demarrage, ou propres a une machine ---
 

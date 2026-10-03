@@ -1,3 +1,5 @@
+# Rezal-KIN modified version, imported 2026-09-21; source notices updated 2026-10-03.
+# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 """
 Django settings for Cashless project.
 
@@ -171,7 +173,7 @@ SOLO_CACHE_TIMEOUT = 120
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'source_templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
