@@ -49,7 +49,10 @@ if service == 'lespass':
 with context, transaction.atomic():
     email = os.environ.get('ADMIN_EMAIL', admin_email)
     user = U.objects.select_for_update().filter(username=username).first()
-    bootstrap = U.objects.select_for_update().filter(email=email, is_staff=True).first() if email else None
+    candidates = U.objects.select_for_update().filter(email=email)
+    if service != 'fedow':
+        candidates = candidates.filter(is_staff=True)
+    bootstrap = candidates.first() if email else None
     if user and (not user.is_staff or (bootstrap and bootstrap.pk != user.pk)):
         raise RuntimeError('Requested username belongs to a different account')
     user = user or bootstrap
