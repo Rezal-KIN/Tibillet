@@ -63,3 +63,6 @@ _(pour chaque objectif ci-dessus : comment vérifier automatiquement qu'il est a
 - Limites distinctes : reconstruction indépendante complète des trois apps,
   inventaire exhaustif des licences tierces et statut des manquements historiques.
 - Chronologie et brouillon de réponse conservés dans `.context/`, sans envoi.
+
+- Nom d’attribution des personnalisations : **AM-Rezal**. Les références
+  techniques au dépôt GitHub `Rezal-KIN/Tibillet` conservent leur identifiant réel.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build an AGPL source offer from fixed Git revisions, never a live directory.
 
-Rezal-KIN modifications, 2026-10-03. Licensed under AGPL-3.0; see LICENSE.
+AM-Rezal modifications, 2026-10-03. Licensed under AGPL-3.0; see LICENSE.
 Only public Git content is read. Containers, dotenvs and databases are not read.
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ PRIVATE_DIRS = {".git", ".context", ".venv", "node_modules", "__pycache__",
                 "database", "logs", "backup", "Backup", "certs", "ssh"}
 NOTICE = """TiBillet was created by its upstream authors, including Cooperative Code Commun.
 Original copyright, license and attribution notices are retained in these sources.
-Rezal-KIN maintains a modified Gala deployment. Modifications imported into the
+AM-Rezal maintains a modified Gala deployment. Modifications imported into the
 public fork on 2026-09-21; source-offer changes prepared on 2026-10-03.
 The modified applications are distributed under GNU AGPL version 3 (see LICENSE).
 Third-party components retain their respective licenses and notices.
@@ -286,7 +286,7 @@ def render_page(info: dict, release_name: str) -> str:
 <p>Vous pouvez télécharger gratuitement les sources de cette version modifiée de TiBillet,
 les étudier, les modifier et les redistribuer selon la licence GNU AGPLv3.</p>
 <p>TiBillet est développé par ses auteurs, dont la coopérative Code Commun.
-Cette instance utilise des personnalisations maintenues par Rezal-KIN.</p>
+Cette instance utilise des personnalisations maintenues par AM-Rezal.</p>
 <h2>Sources de la version utilisée</h2><p>Release : <code>{html.escape(info['release_id'])}</code></p>
 <ul>{''.join(links)}
 <li><a href="{info['deployment_archive']['archive']}">Télécharger les scripts et fichiers de déploiement</a></li></ul>
@@ -294,7 +294,7 @@ Cette instance utilise des personnalisations maintenues par Rezal-KIN.</p>
 <a href="{base}/SHA256SUMS">Empreintes SHA-256 des archives</a> ·
 <a href="{base}/source-manifest.json">Références exactes des sources</a></p>
 <h2>Licence et auteurs</h2><p><a href="{base}/LICENSE.txt">Texte intégral de la licence AGPLv3</a> ·
-<a href="https://github.com/Rezal-KIN/Tibillet">Dépôt du fork Rezal-KIN</a> ·
+<a href="https://github.com/Rezal-KIN/Tibillet">Dépôt du fork AM-Rezal</a> ·
 <a href="https://github.com/TiBillet/">Projets originaux TiBillet</a></p>
 <p>Les mentions des auteurs et les licences des composants tiers sont conservées dans les archives.
 Le logiciel est fourni sans garantie, dans les limites autorisées par la loi.</p>

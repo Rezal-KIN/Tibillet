@@ -3,14 +3,14 @@
 TiBillet est le travail de ses auteurs originaux, dont la coopérative Code Commun.
 Les crédits détaillés sont conservés dans [AUTHORS.md](AUTHORS.md).
 
-Le fork **Rezal-KIN/Tibillet** comporte des modifications et une configuration de
-déploiement pour les galas Arts et Métiers. Les personnalisations historiques ont
+Le fork **AM-Rezal** ([dépôt GitHub](https://github.com/Rezal-KIN/Tibillet))
+comporte des modifications et une configuration de déploiement pour les galas Arts et Métiers. Les personnalisations historiques ont
 été importées sous `deploy/` le **21 septembre 2026** (commit `0b7078ea`) ; cette
 date est celle de l'import Git, et non une date attribuée à leur écriture initiale.
 Les portages QR et les évolutions de déploiement sont datés dans l'historique Git.
 L'offre d'accès aux sources et les liens d'interface ont été préparés le
 **3 octobre 2026**. Ces modifications sont maintenues par les contributeurs du fork
-Rezal-KIN ; cette mention ne transfère pas les droits des auteurs originaux.
+AM-Rezal ; cette mention ne transfère pas les droits des auteurs originaux.
 
 Les applications modifiées restent sous **GNU AGPLv3**, dont le texte intégral est
 dans [LICENSE](LICENSE). Elles sont fournies sans garantie, dans les limites

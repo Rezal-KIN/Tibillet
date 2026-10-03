@@ -85,8 +85,9 @@ https://jb.gg/OpenSourceSupport
     - celery
     - redis
     - tenant-schemas-celery
-# Rezal-KIN fork
+# AM-Rezal fork
 
 Gala customizations and source-offer integration are maintained by contributors
-to Rezal-KIN/Tibillet. See NOTICE.md for modification dates and scope. Original
-authors and third-party credits above are retained.
+to the AM-Rezal fork (https://github.com/Rezal-KIN/Tibillet). See NOTICE.md for
+modification dates and scope. Original authors and third-party credits above
+are retained.

@@ -1,4 +1,4 @@
-# Rezal-KIN modified version, imported 2026-09-21; source notices updated 2026-10-03.
+# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
 # Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 import logging
 import json
