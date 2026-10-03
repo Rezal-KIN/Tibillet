@@ -1,7 +1,7 @@
 # Offre d'accès aux sources des instances Gala
 
-État de préparation au 3 octobre 2026. Cette documentation décrit le mécanisme
-technique ; la présence des fichiers dans Git ne prouve pas leur déploiement.
+Offre déployée et contrôlée sur Aix le 3 octobre 2026, release `gala-am-aix-v1.0.8`.
+Cette documentation décrit le mécanisme technique et les vérifications réalisées.
 Le dépôt public est <https://github.com/Rezal-KIN/Tibillet>, sous GNU AGPLv3.
 Les auteurs et dates de modification sont indiqués dans [NOTICE.md](../../../NOTICE.md).
 
@@ -29,9 +29,45 @@ déclarées et notices principales, pas les octets de tous les assets binaires.
 Les différences dans les environnements, logs et répertoires de données sont
 exclues. Aucune base, clé ou configuration secrète n'est exportée par l'outil.
 
-L'accueil public de Lespass possède actuellement un lien vers le GitHub officiel,
-sans accès au fork modifié. L'offre visible n'est corrigée qu'après promotion de
-la release contenant les changements de cette PR.
+Lors de l'audit initial de v1.0.7, l'accueil public de Lespass proposait uniquement
+le GitHub officiel, sans accès au fork modifié. La release v1.0.8 ajoute l'offre
+visible vers les sources correspondantes.
+
+## Validation et mise en ligne
+
+Candidate applicative et checkout des patches :
+`91941740979afecce0b99b4314545664ed4be413`. Image Lespass :
+`sha256:207075f72ac6550d3ee597c4990e143d7fd98b158c2165c5e27a48436476731f`.
+Les images Fedow, Laboutik et Traefik restent celles du manifeste précédent.
+
+- Test Smoke `f997b1a3-f198-4a4c-b709-eadd571f6bba` : `Succeeded`.
+- Manifeste v1.0.8 publié dans Git au commit
+  `95d9f03ea6c3a8b56d630e237955f74a0c98af41`, SHA-256
+  `7e1826ac6a87e9da89465b72777d1846f33cd815e17f24f8a0a70aece03eafa5`.
+- Pipeline Production Aix `5a4c8bda-8f90-4c93-8bce-ba079fc676ea` : validation
+  automatique, approbation de l'artefact exact sur demande explicite de
+  l'utilisateur, puis déploiement SSM et statut final `Succeeded`.
+- Contrôles en HTTPS depuis l'extérieur avec certificats vérifiés : les trois
+  accueils présentent le lien, les trois `/source/` retournent 200 sans connexion,
+  et les quatre archives sur chaque domaine ont les SHA-256 annoncés.
+- Comparaison en lecture seule des archives avec les fichiers exécutés sur Smoke
+  puis Aix : 870 sources Lespass, 110 Fedow et 573 Laboutik contrôlées sans fichier
+  manquant ni écart ; commits et digests concordent avec le manifeste actif.
+- Healthcheck applicatif et Celery réussi ; timer de sauvegarde Aix actif.
+  Les 78 tests locaux de déploiement passent. La première candidate avait révélé
+  une incompatibilité de chemin dans les settings Laboutik, corrigée et testée
+  avant toute promotion Aix.
+
+Accès publics :
+
+- <https://galas-am-aix.rezal.fr/source/>
+- <https://fedow.galas-am-aix.rezal.fr/source/>
+- <https://cashless.galas-am-aix.rezal.fr/source/>
+
+Ces vérifications prouvent l'accès et la correspondance des sources contrôlées.
+Elles ne constituent pas une reconstruction indépendante intégrale des trois
+applications, une nouvelle validation de paiement réel ou une conclusion sur
+les éventuels manquements historiques.
 
 ## Mécanisme préparé
 
