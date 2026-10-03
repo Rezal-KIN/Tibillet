@@ -255,7 +255,7 @@ TiBillet est porté par la [Coopérative Code Commun](https://codecommun.coop), 
 
 [AGPLv3](./LICENSE) — Libre, et ça le restera.
 
-Ce dépôt est le fork Rezal-KIN avec les personnalisations des galas. Voir les
+Ce dépôt est le fork AM-Rezal avec les personnalisations des galas. Voir les
 [auteurs et modifications](NOTICE.md) et [l’accès aux sources de chaque instance](deploy/docs/operations/agpl-source-offer.md).
 
 ---
