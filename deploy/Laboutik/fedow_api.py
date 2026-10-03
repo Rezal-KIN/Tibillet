@@ -634,7 +634,6 @@ class FedowAPI():
         # Envoie les moyens de paiements cashless, badge et adhésion déja existant à Fedow
         assets_to_send = []
         # Sera utilisé que pour les instances CASHLESS en cours
-        enable_gift_asset_sync = str(os.environ.get("ENABLE_GIFT_ASSET_SYNC", "0")).lower() in ("1", "true", "yes", "on")
 
         asset = MoyenPaiement.objects.get(categorie=MoyenPaiement.LOCAL_EURO)
         assets_to_send.append({
@@ -647,18 +646,17 @@ class FedowAPI():
                 moyen_paiement=asset) else timezone.now().isoformat()
         })
 
-        # Les cadeaux sont désactivés par défaut pour éviter la création automatique d'un asset "cadeau" sur Fedow.
-        if enable_gift_asset_sync:
-            asset_g = MoyenPaiement.objects.get(categorie=MoyenPaiement.LOCAL_GIFT)
-            assets_to_send.append({
-                "uuid": str(asset_g.pk),
-                "name": asset_g.name,
-                "currency_code": f"{asset_g.name[:2]}{asset_g.categorie[1:]}".upper(),
-                "category": "TNF",
-                "created_at": ArticleVendu.objects.filter(moyen_paiement=asset_g).order_by(
-                    'date_time').first().date_time.isoformat() if ArticleVendu.objects.filter(
-                    moyen_paiement=asset_g) else timezone.now().isoformat()
-            })
+        # Les cadeaux
+        asset_g = MoyenPaiement.objects.get(categorie=MoyenPaiement.LOCAL_GIFT)
+        assets_to_send.append({
+            "uuid": str(asset_g.pk),
+            "name": asset_g.name,
+            "currency_code": f"{asset_g.name[:2]}{asset_g.categorie[1:]}".upper(),
+            "category": "TNF",
+            "created_at": ArticleVendu.objects.filter(moyen_paiement=asset_g).order_by(
+                'date_time').first().date_time.isoformat() if ArticleVendu.objects.filter(
+                moyen_paiement=asset_g) else timezone.now().isoformat()
+        })
 
         responses = []
         for message in assets_to_send:

@@ -63,8 +63,8 @@ Patches concernés :
 - [`Fedow/custom_patches/fedow_dashboard/suivi.html`](Fedow/custom_patches/fedow_dashboard/suivi.html)
 - [`Fedow/custom_patches/fedow_dashboard/index.html`](Fedow/custom_patches/fedow_dashboard/index.html)
 
-### Synchronisation des dons inter-caisses (Laboutik)
-Variable `ENABLE_GIFT_ASSET_SYNC` sur les instances additionnelles pour activer/désactiver la synchronisation des actifs de type don entre les caisses d'un même événement.
+### Synchronisation des monnaies (Laboutik)
+La synchronisation vers Fedow utilise le comportement TiBillet standard : monnaie locale et monnaie cadeau.
 
 ---
 
