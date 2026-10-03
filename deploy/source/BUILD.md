@@ -41,7 +41,7 @@ docker build -f laboutik/dockerfile -t gala-laboutik-source laboutik
 ```
 
 La construction nécessite le téléchargement des images Python, paquets APT et
-dépendances Python publiques. Elle ne nécessite ni accès au compte AWS Rezal ni
+dépendances Python publiques. Elle ne nécessite ni accès au compte AWS AM-Rezal ni
 identifiant de production. Les archives correspondent aux sources applicatives ;
 elles ne promettent pas un binaire identique octet pour octet aux images publiées.
 
@@ -65,7 +65,7 @@ elles ne promettent pas un binaire identique octet pour octet aux images publié
    `migrate_schemas`, puis `install` et `configure_gala_apex` pour Lespass ; `install`
    pour Laboutik après disponibilité des autres services. Les commandes spécifiques
    aux releases AWS (SSM, ECR, Secrets Manager, sauvegardes S3) servent au déploiement
-   Rezal et ne sont pas des prérequis à une installation locale.
+   AM-Rezal et ne sont pas des prérequis à une installation locale.
 
 Les options existantes et variables de configuration sont décrites dans les
 README originaux et `deployment/deploy/README.md`. Lancer les commandes depuis
@@ -79,6 +79,14 @@ version du déploiement, vérifie les archives originales par SHA-256 et refuse 
 image dont le commit source n'a pas été vérifié. Il n'archive jamais le répertoire
 en service ni son historique Git. Les archives d'anciennes releases sont conservées.
 
-Les trois services Nginx exposent `/source/` et les interfaces concernées y donnent
-un accès visible. Pour une nouvelle image Fedow/Laboutik, vérifier son commit et
-ses écarts avant d'actualiser `deploy/source/image-sources.json`.
+Les sources de production sont publiées dans les Releases du dépôt public
+<https://github.com/Rezal-KIN/Tibillet/releases>, sous un tag
+`sources-<release>-<commit du déploiement sur 12 caractères>`. Les quatre archives
+jointes à la Release constituent les sources complètes, avec `BUILD.md`,
+`LICENSE.txt`, `SHA256SUMS` et `source-manifest.json`. Elles restent accessibles
+indépendamment du serveur du gala, notamment lorsque celui-ci est arrêté.
+
+Les trois services exposent une page `/source/` qui renvoie vers ces téléchargements
+GitHub. Les interfaces concernées y donnent un accès visible. Pour une nouvelle
+image Fedow/Laboutik, vérifier son commit et ses écarts avant d'actualiser
+`deploy/source/image-sources.json`.

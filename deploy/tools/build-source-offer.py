@@ -24,6 +24,7 @@ from pathlib import Path, PurePosixPath
 SHA = re.compile(r"^[0-9a-f]{40}$")
 RELEASE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 REPOSITORIES = {"TiBillet/Fedow", "TiBillet/LaBoutik"}
+GITHUB_REPOSITORY = "Rezal-KIN/Tibillet"
 PRIVATE_DIRS = {".git", ".context", ".venv", "node_modules", "__pycache__",
                 "database", "logs", "backup", "Backup", "certs", "ssh"}
 NOTICE = """TiBillet was created by its upstream authors, including Cooperative Code Commun.
@@ -170,7 +171,8 @@ def write_archive(path: Path, files: dict[str, tuple[bytes, int]]) -> str:
 
 
 def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
-          deployment_commit: str = "HEAD", index_output: Path | None = None) -> dict:
+          deployment_commit: str = "HEAD", index_output: Path | None = None,
+          github_release: bool = False) -> dict:
     if manifest.get("application_repository") != "Rezal-KIN/Tibillet":
         raise ValueError("source offer must target the public Rezal fork")
     if not RELEASE.fullmatch(str(manifest.get("release_id", ""))):
@@ -187,7 +189,7 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
     release_root.parent.mkdir(parents=True, exist_ok=True)
     output.chmod(0o755)
     release_root.parent.chmod(0o755)
-    build_guide = (Path(__file__).resolve().parents[1] / "source" / "BUILD.md").read_bytes()
+    build_guide = deployment["deploy/source/BUILD.md"][0]
     source_info = {
         "schema_version": 1, "release_id": manifest["release_id"],
         "application_repository": "Rezal-KIN/Tibillet", "deployment_commit": deploy_commit,
@@ -261,7 +263,9 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
             os.replace(stage, release_root)
             # TemporaryDirectory expects its original directory to still exist.
             stage.mkdir()
-    page = render_page(source_info, release_name)
+    if github_release:
+        verify_github_release(release_root, release_name)
+    page = render_page(source_info, release_name, github_release=github_release)
     index_output = index_output or output / "index.html"
     index_output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=index_output.parent, mode="w", encoding="utf-8", delete=False) as tmp:
@@ -272,12 +276,54 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
     return source_info
 
 
-def render_page(info: dict, release_name: str) -> str:
+def github_release_tag(release_name: str) -> str:
+    if not RELEASE.fullmatch(release_name):
+        raise ValueError("invalid GitHub source release name")
+    return f"sources-{release_name}"
+
+
+def verify_github_release(release_root: Path, release_name: str) -> None:
+    """Require all exact source assets to be publicly available before deployment."""
+    tag = github_release_tag(release_name)
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/tags/{tag}",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "AM-Rezal-source-offer"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        release = json.load(response)
+    if release.get("draft") or release.get("tag_name") != tag:
+        raise ValueError("GitHub source release is not public")
+    assets = {asset["name"]: asset for asset in release.get("assets", [])}
+    base = f"https://github.com/{GITHUB_REPOSITORY}/releases/download/{tag}"
+    for path in release_root.iterdir():
+        asset = assets.get(path.name, {})
+        if asset.get("browser_download_url") != f"{base}/{path.name}":
+            raise ValueError(f"GitHub source asset missing: {path.name}")
+        expected = hashlib.sha256(path.read_bytes()).hexdigest()
+        digest = asset.get("digest")
+        if digest is None:
+            # Older release assets may not expose a digest. Check their actual
+            # bytes instead, bounded by the expected file's length.
+            with urllib.request.urlopen(asset["browser_download_url"], timeout=120) as response:
+                digest = "sha256:" + hashlib.sha256(response.read(path.stat().st_size + 1)).hexdigest()
+        if digest != f"sha256:{expected}":
+            raise ValueError(f"GitHub source asset checksum mismatch: {path.name}")
+
+
+def render_page(info: dict, release_name: str, github_release: bool = False) -> str:
+    base = f"releases/{release_name}"
+    hosting = ""
+    if github_release:
+        tag = github_release_tag(release_name)
+        base = f"https://github.com/{GITHUB_REPOSITORY}/releases/download/{tag}"
+        hosting = (f'<p>Les sources sont hébergées sur GitHub et restent accessibles lorsque cette instance est arrêtée. '
+                   f'<a href="https://github.com/{GITHUB_REPOSITORY}/releases/tag/{tag}">Ouvrir la Release GitHub</a>.</p>')
+    def archive_url(spec: dict) -> str:
+        return f"{base}/{Path(spec['archive']).name}" if github_release else spec["archive"]
     links = []
     for component, spec in info["components"].items():
-        links.append(f'<li><a href="{html.escape(spec["archive"])}">Télécharger les sources {component.capitalize()}</a>'
+        links.append(f'<li><a href="{html.escape(archive_url(spec))}">Télécharger les sources {component.capitalize()}</a>'
                      f'<p>Version : <code>{spec["commit"]}</code> — modifications du déploiement incluses.</p></li>')
-    base = f"releases/{release_name}"
     return f'''<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Code source de cette instance — AGPLv3</title>
@@ -287,9 +333,10 @@ def render_page(info: dict, release_name: str) -> str:
 les étudier, les modifier et les redistribuer selon la licence GNU AGPLv3.</p>
 <p>TiBillet est développé par ses auteurs, dont la coopérative Code Commun.
 Cette instance utilise des personnalisations maintenues par AM-Rezal.</p>
+{hosting}
 <h2>Sources de la version utilisée</h2><p>Release : <code>{html.escape(info['release_id'])}</code></p>
 <ul>{''.join(links)}
-<li><a href="{info['deployment_archive']['archive']}">Télécharger les scripts et fichiers de déploiement</a></li></ul>
+<li><a href="{html.escape(archive_url(info['deployment_archive']))}">Télécharger les scripts et fichiers de déploiement</a></li></ul>
 <p><a href="{base}/BUILD.md">Instructions de reconstruction</a> ·
 <a href="{base}/SHA256SUMS">Empreintes SHA-256 des archives</a> ·
 <a href="{base}/source-manifest.json">Références exactes des sources</a></p>
@@ -311,12 +358,14 @@ def main() -> None:
     parser.add_argument("--deployment-commit", default="HEAD")
     parser.add_argument("--index-output", type=Path, help="prepare the index outside public/ until deployment is healthy")
     parser.add_argument("--verify-working-tree", action="store_true", help="refuse unversioned changes in deployment source")
+    parser.add_argument("--github-release", action="store_true", help="require matching published GitHub assets and link to them")
     args = parser.parse_args()
     try:
         if args.verify_working_tree:
             verify_working_tree(args.repository, revision(args.repository, args.deployment_commit))
         info = build(args.repository, json.loads(args.manifest.read_text()),
-                     json.loads(args.catalog.read_text()), args.output, args.cache, args.deployment_commit, args.index_output)
+                     json.loads(args.catalog.read_text()), args.output, args.cache, args.deployment_commit, args.index_output,
+                     github_release=args.github_release)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:
         raise SystemExit(f"Source offer could not be built: {exc}") from exc
     print(f"Source offer built for {info['release_id']} from {info['deployment_commit']}")

@@ -94,6 +94,39 @@ les éventuels manquements historiques.
   des nouveaux conteneurs. Le nouvel index est activé seulement après leur
   healthcheck, puis son accès HTTP est vérifié sur les trois domaines.
 
+## Hébergement indépendant du serveur du gala
+
+Les archives de production sont hébergées dans les [Releases GitHub](https://github.com/Rezal-KIN/Tibillet/releases).
+Le serveur du gala peut être arrêté sans couper ces téléchargements. La page
+`/source/` reste un sommaire accessible lorsque le site fonctionne ; ses huit
+liens de téléchargement pointent directement vers GitHub. La Release peut aussi
+être partagée directement, sans passer par le domaine AWS.
+
+Après validation Smoke, préparer le manifeste de production depuis ses images
+et son commit exacts, puis publier les sources **avant** la promotion :
+
+```sh
+python3 deploy/tools/build-source-offer.py \
+  --repository . --manifest releases/gala-am-aix/<release>.json \
+  --catalog deploy/source/image-sources.json \
+  --deployment-commit <commit-applicatif-complet-validé-sur-Smoke> \
+  --output .context/sources-github --cache .context/source-cache
+python3 deploy/tools/publish-source-release.py \
+  .context/sources-github/releases/<release>-<commit-sur-12-caractères>
+```
+
+La publication nécessite une connexion locale `gh` au dépôt ; aucun identifiant
+GitHub n’est installé sur la VM. Le script publie uniquement les huit fichiers
+préparés, vérifie leurs empreintes, puis rend la Release publique. Il refuse de
+remplacer des fichiers existants par des octets différents.
+
+La production utilise `--github-release` : les huit assets publics doivent avoir
+les mêmes empreintes que les sources générées depuis les commits déployés. Sinon,
+le déploiement s’arrête avant le démarrage de la nouvelle version. Smoke conserve
+son offre locale pour pouvoir vérifier une candidate avant sa publication.
+Les instructions de reconstruction proviennent aussi du commit du déploiement,
+afin de conserver des archives identiques entre préparation et production.
+
 ## Génération et contrôle
 
 Depuis la racine du dépôt, avec Python 3.10 ou supérieur et Git :
