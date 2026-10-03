@@ -264,3 +264,15 @@ un `TypeError` avant l'initialisation Laboutik : son `BASE_DIR` est une chaîne
 de templates. Un test évalue les déclarations réelles de settings des deux
 applications sans secrets ni imports d'intégrations. Aix n'a pas été promu
 sur cette candidate échouée.
+
+Offre AGPL maintenant déployée sur Aix v1.0.8 : commit applicatif/patches
+`91941740979afecce0b99b4314545664ed4be413`, manifeste Git `95d9f03e`.
+Test `f997b1a3-f198-4a4c-b709-eadd571f6bba` et Production
+`5a4c8bda-8f90-4c93-8bce-ba079fc676ea` terminés Succeeded.
+Contrôles extérieurs TLS, liens visibles, trois pages /source/ et douze
+téléchargements SHA-256 réussis. Comparaison de 870/110/573 fichiers source
+Lespass/Fedow/Laboutik avec les archives sans écart, sur Smoke et Aix.
+Timer backup actif. Les 78 tests passent. Le rôle gala-operator ne possède
+pas PutApprovalResult ; approbation donnée avec le rôle gala-elevated existant
+après vérification du compte et de l'artefact exact, conformément à la demande
+explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
