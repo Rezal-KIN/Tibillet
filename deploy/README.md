@@ -33,6 +33,10 @@ Portefeuille fédéré — gère les actifs monétaires (tokens cashless, fiat),
 - Compose : postgres + django + nginx
 - Patches : [`Fedow/custom_patches/`](Fedow/custom_patches/)
 
+Le serializer Fedow utilise directement la version native de l'image : son
+ancienne copie et son montage ont été retirés. Voir le
+[retrait documenté de G](../TECH_DOC/features-enlevees/G-reparations-fedow.md).
+
 ### Lespass (`Lespass/`)
 Billetterie, gestion des membres et agenda fédéré. Supporte le multi-tenant (plusieurs lieux sous un même domaine racine).
 
@@ -138,4 +142,3 @@ Versions disponibles sur Docker Hub :
 - [tibillet/fedow](https://hub.docker.com/r/tibillet/fedow/tags)
 
 Pour Lespass (build from source), voir la procédure de mise à jour du submodule dans `.claude/NOTES.md`.
-

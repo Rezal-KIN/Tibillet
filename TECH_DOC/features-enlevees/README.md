@@ -14,6 +14,7 @@ pas le comportement à partir d'une description.
 | C | Happy hour et substitution des prix | `4e20db20` | [C-happy-hour.md](C-happy-hour.md) |
 | D | Limite de deux terminaux, éviction FIFO et exemption admin | `e27aa554` | [D-limite-terminaux.md](D-limite-terminaux.md) |
 | F | Option de désactivation de la synchronisation de monnaie cadeau | `50a6906f` | [F-option-monnaie-cadeau.md](F-option-monnaie-cadeau.md) |
+| G | Réparations automatiques et ancienne copie du serializer Fedow | Voir l'historique de G | [G-reparations-fedow.md](G-reparations-fedow.md) |
 
 Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
 article, solde, transaction ou réglage de base de production n'a été modifié.
@@ -25,7 +26,7 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | A | Garder le parcours QR de connexion/liaison/recharge |
 | B | Garder le guide de connexion rapide et l'interface d'accueil associée |
 | E | Garder l'enregistrement des cartes inconnues |
-| G | Nécessité non établie ; examiner le retrait de la surcharge et revenir au serializer upstream |
+| G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
 | H | Garder le suivi financier en lecture ; il n'est pas une simple documentation |
 | I | Montages ajoutés par notre déploiement ; distinguer les réglages nécessaires des différences superflues |
 | J / K | Pas de décision de retrait reçue |
@@ -64,6 +65,7 @@ Archive SHA-256 : `9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763
 
 [verify-restored-code.py](verify-restored-code.py) compare le texte complet de cinq
 unités restaurées avec l'archive upstream vérifiée. Il ne normalise pas le texte.
+Il vérifie aussi la provenance du serializer Fedow et l'absence de sa surcharge G.
 Depuis la racine du dépôt :
 
 ```sh
@@ -90,8 +92,11 @@ La création normale d'un utilisateur TiBillet lui associe déjà un wallet
 ils ne sont pas requis pour ces chemins nominaux. Leur nécessité sur les données
 d'Aix n'est pas vérifiée. La perte d'atomicité portée par cette vieille copie est,
 elle, reproduite : voir l'[investigation conservée](../audits/2026-10-03-fork/INVESTIGATION.md).
-G n'a pas été modifié dans ce lot. La suite proposée est un retour à son fichier
-upstream après contrôle des états que les réparations tentaient de compenser.
+G est maintenant retiré à la demande de l'utilisateur : son montage et la vieille
+copie disparaissent. Le fichier natif de l'image reprend la main ; les nouvelles
+vérifications locales sont dans [G-reparations-fedow.md](G-reparations-fedow.md).
+La présence éventuelle de données anciennes incomplètes reste à contrôler en
+lecture seule avant une promotion de production.
 
 I : nous avons ajouté les copies montées de `settings.py`, pas inventé la
 configuration Django. Fedow remplace SQLite par PostgreSQL, ajuste les hôtes/debug
