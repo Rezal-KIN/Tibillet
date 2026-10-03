@@ -565,7 +565,7 @@ def check_carte(request):
             fedowApi = FedowAPI()
             # CardValidator. Mets à jour les assets/tokens depuis Fedow
             serializer_from_fedow = fedowApi.NFCcard.retrieve(tag_id_request)
-        except Exception as e:
+        except FileNotFoundError as e:
             logger.warning(f"Carte inconnue dans Fedow, tentative enregistrement : {e}")
             try:
                 fedowApi = FedowAPI()
@@ -589,9 +589,16 @@ def check_carte(request):
                 logger.error(f"Echec enregistrement carte : {e2}")
                 data = {
                     'background': '#e93363',
-                    'error_msg': _('Carte inconnue'),
+                    'error_msg': _("Impossible d'enregistrer la carte auprès de Fedow. Réessayez."),
                 }
                 return render(request, 'popup_check_carte.html', data)
+        except Exception as e:
+            logger.error(f"Check carte FEDOW : {e}")
+            data = {
+                'background': '#e93363',
+                'error_msg': _('Impossible de vérifier la carte auprès de Fedow. Réessayez.'),
+            }
+            return render(request, 'popup_check_carte.html', data)
 
         carte = CarteCashless.objects.get(tag_id=tag_id_request)
         serializer = CarteCashlessSerializer(carte)

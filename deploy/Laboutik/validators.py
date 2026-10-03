@@ -177,18 +177,22 @@ class DataAchatDepuisClientValidator(serializers.Serializer):
             if self.config.can_fedow():
                 fedowAPI = FedowAPI()
                 try:
-                    self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
-                except Exception:
-                    carte, created = CarteCashless.objects.get_or_create(
-                        tag_id=tag,
-                        defaults={'number': tag, 'uuid_qrcode': _uuid.uuid4()}
-                    )
-                    if not carte.uuid_qrcode:
-                        carte.uuid_qrcode = _uuid.uuid4()
-                        carte.number = carte.number or tag
-                        carte.save()
-                    fedowAPI.NFCcard.create([carte])
-                    self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
+                    try:
+                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
+                    except FileNotFoundError:
+                        carte, created = CarteCashless.objects.get_or_create(
+                            tag_id=tag,
+                            defaults={'number': tag, 'uuid_qrcode': _uuid.uuid4()}
+                        )
+                        if not carte.uuid_qrcode:
+                            carte.uuid_qrcode = _uuid.uuid4()
+                            carte.number = carte.number or tag
+                            carte.save()
+                        fedowAPI.NFCcard.create([carte])
+                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
+                except Exception as e:
+                    logger.error(f"Vérification/enregistrement carte FEDOW : {e}")
+                    raise serializers.ValidationError(_("Impossible de vérifier ou d'enregistrer la carte auprès de Fedow. Réessayez."))
             self.card = CarteCashless.objects.get(tag_id=tag)
         return value.upper() if value else None
 

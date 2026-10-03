@@ -14,7 +14,7 @@ pas le comportement à partir d'une description.
 | C | Happy hour et substitution des prix | `4e20db20` | [C-happy-hour.md](C-happy-hour.md) |
 | D | Limite de deux terminaux, éviction FIFO et exemption admin | `e27aa554` | [D-limite-terminaux.md](D-limite-terminaux.md) |
 | F | Option de désactivation de la synchronisation de monnaie cadeau | `50a6906f` | [F-option-monnaie-cadeau.md](F-option-monnaie-cadeau.md) |
-| G | Réparations automatiques et ancienne copie du serializer Fedow | Voir l'historique de G | [G-reparations-fedow.md](G-reparations-fedow.md) |
+| G | Réparations automatiques et ancienne copie du serializer Fedow | `35cc9918` | [G-reparations-fedow.md](G-reparations-fedow.md) |
 
 Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
 article, solde, transaction ou réglage de base de production n'a été modifié.
@@ -25,11 +25,12 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | --- | --- |
 | A | Garder le parcours QR de connexion/liaison/recharge |
 | B | Garder le guide de connexion rapide et l'interface d'accueil associée |
-| E | Garder l'enregistrement des cartes inconnues |
+| E | Conservé et corrigé : enregistrement uniquement sur carte introuvable, délais réseau TiBillet restaurés |
 | G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
 | H | Garder le suivi financier en lecture ; il n'est pas une simple documentation |
 | I | Montages ajoutés par notre déploiement ; distinguer les réglages nécessaires des différences superflues |
-| J / K | Pas de décision de retrait reçue |
+| J | Garder pour l'instant l'installateur reprenable |
+| K | Conserver l'offre de sources ; risque de blocage d'un nouveau déploiement documenté séparément |
 | L | Décision reportée : ne pas retirer pour le moment |
 
 Les propositions de nouveaux modules/table de sessions du document du 3 octobre
@@ -63,7 +64,7 @@ l'infrastructure. Ils ne modifient pas les données financières existantes.
 Référence LaBoutik : `TiBillet/LaBoutik@3fdba313c2dea172bfaa6a06ebab05e1caf62490`.
 Archive SHA-256 : `9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd`.
 
-[verify-restored-code.py](verify-restored-code.py) compare le texte complet de cinq
+[verify-restored-code.py](verify-restored-code.py) compare le texte complet de sept
 unités restaurées avec l'archive upstream vérifiée. Il ne normalise pas le texte.
 Il vérifie aussi la provenance du serializer Fedow et l'absence de sa surcharge G.
 Depuis la racine du dépôt :
@@ -75,13 +76,19 @@ python3 TECH_DOC/features-enlevees/verify-restored-code.py
 Le script utilise l'archive locale déjà présente dans `.context/source-cache/`.
 L'option `--archive` permet d'utiliser une autre copie, à condition que son checksum
 soit identique. Le résultat conservé est dans [restoration-receipt.json](restoration-receipt.json).
-Il atteste seulement les unités listées, pas tous les fichiers applicatifs.
+Il atteste seulement les unités listées et le retrait de la surcharge G, pas tous
+les fichiers applicatifs ni le code d'une instance en service.
 
-Validation de ce lot : cinq tests locaux de prix/payload terminal, neuf tests de
+Validation initiale C/D/F : cinq tests locaux de prix/payload terminal, neuf tests de
 publication des sources, identité textuelle des cinq unités restaurées, contrôle
 des autres fonctions modifiées et syntaxe Python 3.8. Un appel instrumenté confirme
 la synchronisation native des deux monnaies avec l'ancienne option à `0` ou `1`.
 Cela ne constitue pas un test complet de caisse ou de production.
+
+Validation suivante G/E : huit tests de carte/réseau supplémentaires (22 tests
+LaBoutik/publication au total), sept unités restaurées identiques au texte
+TiBillet, serializer Fedow sans surcharge et neuf scénarios natifs sur PostgreSQL
+local. Les méthodes et limites sont dans les documents G et la suite de l'audit.
 
 ## G et I : ce que les sources permettent d'établir
 
@@ -107,5 +114,7 @@ base existante, sans migration implicite vers une autre base. I reste inchangé.
 
 L reste inchangé et sa décision est reportée. La configuration Nginx contient les
 routes applicatives et les alias admin ; elle n'est pas une fonctionnalité de
-paiement. H et E restent conservés dans leurs fichiers actuels, avec les limites
-déjà recensées dans l'audit. Aucune refonte de ces fonctions n'a été faite ici.
+paiement. H reste inchangé ; E reçoit seulement une correction limitée de ses
+branches d'erreur, sans nouveau module ni modèle. Les décisions et les limites
+actualisées de E, I, J, K et H sont dans
+[la suite de l'audit](../audits/2026-10-03-suite-G-E-K-H.md).

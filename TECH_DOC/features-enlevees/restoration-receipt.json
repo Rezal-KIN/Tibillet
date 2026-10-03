@@ -59,6 +59,28 @@
       "upstream_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
       "restored_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
       "exact_text_match": true
+    },
+    {
+      "feature": "E",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": null,
+      "function_name": "_get",
+      "byte_length": 1449,
+      "upstream_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+      "restored_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+      "exact_text_match": true
+    },
+    {
+      "feature": "E",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": null,
+      "function_name": "_post",
+      "byte_length": 1471,
+      "upstream_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+      "restored_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+      "exact_text_match": true
     }
   ],
   "native_image_files": [

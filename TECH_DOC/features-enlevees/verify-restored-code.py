@@ -18,6 +18,8 @@ UNITS = [
     ("D", "webview/views.py", "deploy/Laboutik/views.py", None, "paiement"),
     ("F", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py",
      "FedowAPI", "send_assets_from_cashless"),
+    ("E", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py", None, "_get"),
+    ("E", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py", None, "_post"),
 ]
 
 
