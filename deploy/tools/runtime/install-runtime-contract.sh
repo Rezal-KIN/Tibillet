@@ -30,9 +30,9 @@ install -d -m 0755 "$runtime_library" /etc/tibillet-gala /var/lib/tibillet-gala
 # migrations. Install the same persistent headroom on first boot and upgrades.
 bash "$REPO_ROOT/deploy/tools/runtime/ensure-host-swap.sh"
 for script in \
-  backup-postgres.sh deploy-release-from-s3.sh deploy-release.sh \
+  backup-postgres.sh configure-gala-admin.py deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
-  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py \
+  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py fedow-sqlite.py \
   reclaim-deployment-space.sh restore-postgres.sh \
   verify-backup-restore.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do

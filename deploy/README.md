@@ -30,8 +30,12 @@ Fedow et Laboutik utilisent des images Docker publiées par TiBillet sur Docker 
 Portefeuille fédéré — gère les actifs monétaires (tokens cashless, fiat), les transactions entre lieux et l'intégration Stripe.
 
 - Image : `tibillet/fedow`
-- Compose : postgres + django + nginx
-- Patches : [`Fedow/custom_patches/`](Fedow/custom_patches/)
+- Compose : memcached + django (SQLite) + nginx
+- Configuration conservée : [`Fedow/settings.py`](Fedow/settings.py)
+
+Le serializer Fedow utilise directement la version native de l'image : son
+ancienne copie et son montage ont été retirés. Voir le
+[retrait documenté de G](../TECH_DOC/features-enlevees/G-reparations-fedow.md).
 
 ### Lespass (`Lespass/`)
 Billetterie, gestion des membres et agenda fédéré. Supporte le multi-tenant (plusieurs lieux sous un même domaine racine).
@@ -45,33 +49,31 @@ Caisse cashless pour les points de vente. Plusieurs instances peuvent tourner en
 
 - Image : `tibillet/laboutik`
 - Compose : postgres + redis + memcached + django + nginx
-- Patches : [`Laboutik/settings.py`](Laboutik/settings.py), [`Laboutik/views.py`](Laboutik/views.py), [`Laboutik/validators.py`](Laboutik/validators.py), [`Laboutik/fedow_api.py`](Laboutik/fedow_api.py)
+- Sources personnalisées : [`Laboutik/settings.py`](Laboutik/settings.py), [`Laboutik/install.py`](Laboutik/install.py), [`Laboutik/views.py`](Laboutik/views.py), [`Laboutik/validators.py`](Laboutik/validators.py)
+
+Le client Fedow utilise directement le fichier natif de l’image. Les sources
+de vues/validation reprennent TiBillet à l’identique, sauf l’enregistrement
+automatique de carte conservé. Les anciennes divergences de billets, adhésions,
+carte primaire et erreurs sont retirées : voir le
+[dossier de retrait LaBoutik](../TECH_DOC/features-enlevees/LaBoutik-ecarts-herites/README.md).
 
 ---
 
 ## Fonctionnalités additionnelles
 
-### Happy Hour automatique (Laboutik)
-Bascule automatiquement sur une grille de prix réduits sur une plage horaire configurable. Les prix sont chargés depuis un fichier JSON monté dans le container.
+### Prix des articles (Laboutik)
+Les prix affichés et contrôlés sont ceux des articles enregistrés en base. La personnalisation happy hour a été retirée ; son ancien fichier de prix et ses variables d’environnement ne sont plus utilisés.
 
-Variables `.env` concernées : `HAPPY_HOUR_START`, `HAPPY_HOUR_END`, `HAPPY_HOUR_PRICE_FILE`
+### Dashboard natif (Fedow)
+Le dashboard utilise directement les vues, routes et templates de l'image
+TiBillet. Les six montages du suivi Gala ont été retirés le 5 octobre 2026 ;
+le code précédent est conservé dans le [dossier H](../TECH_DOC/features-enlevees/H-dashboard-financier/README.md).
+Les routes Gala `/dashboard/suivi/` et `/dashboard/suivi/data/` disparaissent.
+L'accueil réseau reste public selon le comportement natif ; les détails monnaie
+et lieu nécessitent un compte administrateur actif.
 
-Fichier de prix à créer sur le serveur : `Laboutik/www/happy_hour_prices.json`
-```json
-{"biere": 2.50, "soft": 1.50}
-```
-
-### Dashboard de suivi de gala (Fedow)
-Interface temps réel pour suivre les consommations par bar/caisse pendant un événement : totaux par actif monétaire, filtrage par lieu, suivi de session.
-
-Patches concernés :
-- [`Fedow/custom_patches/fedow_dashboard/views.py`](Fedow/custom_patches/fedow_dashboard/views.py)
-- [`Fedow/custom_patches/fedow_dashboard/urls.py`](Fedow/custom_patches/fedow_dashboard/urls.py)
-- [`Fedow/custom_patches/fedow_dashboard/suivi.html`](Fedow/custom_patches/fedow_dashboard/suivi.html)
-- [`Fedow/custom_patches/fedow_dashboard/index.html`](Fedow/custom_patches/fedow_dashboard/index.html)
-
-### Synchronisation des dons inter-caisses (Laboutik)
-Variable `ENABLE_GIFT_ASSET_SYNC` sur les instances additionnelles pour activer/désactiver la synchronisation des actifs de type don entre les caisses d'un même événement.
+### Synchronisation des monnaies (Laboutik)
+La synchronisation vers Fedow utilise le comportement TiBillet standard : monnaie locale et monnaie cadeau.
 
 ---
 
@@ -145,4 +147,3 @@ Versions disponibles sur Docker Hub :
 - [tibillet/fedow](https://hub.docker.com/r/tibillet/fedow/tags)
 
 Pour Lespass (build from source), voir la procédure de mise à jour du submodule dans `.claude/NOTES.md`.
-

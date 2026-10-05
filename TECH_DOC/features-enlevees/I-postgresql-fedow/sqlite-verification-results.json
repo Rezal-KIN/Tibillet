@@ -1,0 +1,99 @@
+{
+  "django": "4.2.30",
+  "sqlite": "3.53.4",
+  "scope": "unchanged native Fedow serializers and models; isolated SQLite WAL; deterministic failures and two-worker duplicate race; fake secrets; external network prohibited; no production load test",
+  "results": [
+    {
+      "variant": "upstream",
+      "case": "local_success",
+      "accepted": true,
+      "errors": "{}",
+      "client_balance": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "failed_local_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 0,
+      "issuer_balance_after_failure": 0,
+      "client_balance_after_failure": 0,
+      "retry_accepted": true,
+      "retry_error": "{}",
+      "issuer_balance_after_retry": 0,
+      "client_balance_after_retry": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "failed_stripe_refill",
+      "error": "RuntimeError: injected REFILL failure",
+      "creation_rows_after_failure": 0,
+      "issuer_balance_after_failure": 0,
+      "client_balance_after_failure": 0,
+      "retry_accepted": true,
+      "retry_error": "{}",
+      "issuer_balance_after_retry": 0,
+      "client_balance_after_retry": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "concurrent_same_stripe_checkout",
+      "outcomes": [
+        {
+          "exception": "IntegrityError",
+          "error": "UNIQUE constraint failed: fedow_core_transaction.checkout_stripe_id, fedow_core_transaction.action"
+        },
+        {
+          "accepted": true,
+          "errors": "{}"
+        }
+      ],
+      "creation_rows": 1,
+      "refill_rows": 1,
+      "issuer_balance": 0,
+      "client_balance": 1000
+    },
+    {
+      "variant": "upstream",
+      "case": "model_interleaving",
+      "balances": [
+        0,
+        1000,
+        2000
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "archived_fusion_asset_validation",
+      "accepted": true
+    },
+    {
+      "variant": "upstream",
+      "case": "void_multi_place",
+      "accepted": true,
+      "remaining_places": [
+        "OtherPlace"
+      ]
+    },
+    {
+      "variant": "upstream",
+      "case": "local_refill_with_malformed_null_checkout_mint",
+      "accepted": true,
+      "errors": "{}"
+    },
+    {
+      "variant": "upstream",
+      "case": "two_invoices_with_empty_session_id",
+      "checkout_rows": 2,
+      "errors": []
+    },
+    {
+      "variant": "upstream",
+      "case": "encrypted_stripe_secret_storage",
+      "secret_length": 140,
+      "api_length": 164,
+      "roundtrip": true
+    }
+  ],
+  "assertions_passed": 10,
+  "migration_to_sqlite_exercised": false
+}

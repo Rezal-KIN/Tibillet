@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Restore each Gala PostgreSQL dump into a disposable, network-isolated
-# container. Never connects to or writes into a live database.
+# Restore PostgreSQL and verify Fedow SQLite in disposable isolated targets.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,7 +16,7 @@ require_command docker
 require_command gzip
 require_command sha256sum
 require_command timeout
-require_var POSTGRES_CONTAINERS
+require_command python3
 
 umask 077
 mkdir -p "$(runtime_dir)"
@@ -41,15 +40,31 @@ grep -Fxq "gala=${GALA_SLUG}" "$work_dir/metadata.txt" || fail "backup belongs t
 grep -Fxq "backup_id=${BACKUP_ID}" "$work_dir/metadata.txt" || fail "backup ID does not match metadata"
 (cd "$work_dir" && sha256sum -c SHA256SUMS >/dev/null)
 
-IFS=',' read -r -a source_containers <<< "$POSTGRES_CONTAINERS"
-(( ${#source_containers[@]} > 0 )) || fail "POSTGRES_CONTAINERS is empty"
+# Discover dumps from this backup, not today's host configuration. This also
+# handles historical three-PostgreSQL backups after Fedow PostgreSQL is stopped.
+source_containers=()
+for dump in "$work_dir/"*.sql.gz; do
+  [[ -f "$dump" ]] || continue
+  name="${dump##*/}"
+  source_containers+=("${name%.sql.gz}")
+done
+(( ${#source_containers[@]} > 0 )) || fail "backup has no PostgreSQL dumps"
 for source_container in "${source_containers[@]}"; do
   [[ "$source_container" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$ ]] \
     || fail "unsafe PostgreSQL container name"
   dump_file="$work_dir/${source_container}.sql.gz"
   [[ -s "$dump_file" ]] || fail "backup has no dump for $source_container"
   gzip -t "$dump_file"
-  image="$(docker inspect --format '{{.Config.Image}}' "$source_container")"
+  image="$(sed -n "s/^postgres_image_${source_container}=//p" "$work_dir/metadata.txt")"
+  if [[ -z "$image" ]]; then
+    # Older metadata has no images. These are the exact historical stack
+    # versions; other sources require the original container to still exist.
+    case "$source_container" in
+      fedow_postgres|lespass_postgres) image=postgres:13-bookworm ;;
+      laboutik_postgres) image=postgres:11.5-alpine ;;
+      *) image="$(docker inspect --format '{{.Config.Image}}' "$source_container")" ;;
+    esac
+  fi
   [[ "$image" == postgres:* ]] || fail "unexpected PostgreSQL image for $source_container"
 
   # No host volume, published port, or network access; the restored data is
@@ -80,3 +95,13 @@ for source_container in "${source_containers[@]}"; do
   printf 'Isolated restore verified: gala=%s backup_id=%s source=%s tables=%s\n' \
     "$GALA_SLUG" "$BACKUP_ID" "$source_container" "$table_count"
 done
+
+if grep -Fxq 'fedow_sqlite=1' "$work_dir/metadata.txt"; then
+  [[ -s "$work_dir/fedow.sqlite3.gz" ]] || fail "backup has no Fedow SQLite snapshot"
+  gzip -t "$work_dir/fedow.sqlite3.gz"
+  gzip -dc "$work_dir/fedow.sqlite3.gz" > "$work_dir/fedow-restored.sqlite3"
+  python3 "$SCRIPT_DIR/fedow-sqlite.py" verify "$work_dir/fedow-restored.sqlite3" >/dev/null
+  printf 'Isolated restore verified: gala=%s backup_id=%s source=fedow_sqlite\n' "$GALA_SLUG" "$BACKUP_ID"
+elif [[ -f "$work_dir/fedow.sqlite3.gz" ]]; then
+  fail "Fedow SQLite snapshot is missing its metadata declaration"
+fi

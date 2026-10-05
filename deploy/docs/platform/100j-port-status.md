@@ -1,5 +1,12 @@
 # Portage des personnalisations `Tibillet100J_OG`
 
+Actualisation locale du 5 octobre 2026 : le suivi financier Gala de Fedow est
+retiré au profit du dashboard exact de l'image TiBillet. Les six montages de
+vues/routes/templates disparaissent ; aucun déploiement n'est effectué. Le
+[dossier H](../../../TECH_DOC/features-enlevees/H-dashboard-financier/README.md)
+conserve les sources retirées, la référence et les vérifications. L'état daté
+ci-dessous reste un historique du portage.
+
 État au 26 septembre 2026. Source : inventaire SSH du 22 septembre
 ([inventaire détaillé](tibillet100j-customizations-inventory.md)), archive exacte
 [`legacy-100j-qr-flow`](../../Lespass/legacy-100j-qr-flow/README.md) et comparaison avec

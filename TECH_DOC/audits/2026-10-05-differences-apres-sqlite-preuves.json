@@ -1,0 +1,872 @@
+{
+  "date": "2026-10-05",
+  "scope": "Committed local sources before this audit; no live instance verification or deployment",
+  "head": "7f31acd3cd5699dd83049aac94b017f9facccd29",
+  "lespass_base": {
+    "upstream_commit": "fd7680891c31bbdf6215e7a0750074de89ff5e8e",
+    "equivalent_commit_in_fork": "f0f0d82087a7551dae2d3b835bdd6c0dba4c89a9",
+    "tree": "1c1816a9fed44f433ea31e8711968c0cf246a384"
+  },
+  "image_references": {
+    "schema_version": 1,
+    "fedow": {
+      "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "repository": "TiBillet/Fedow",
+      "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+    },
+    "laboutik": {
+      "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "repository": "TiBillet/LaBoutik",
+      "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+      "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+      "image_overlays": {
+        "docker_push_update.sh": {
+          "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+          "replacements": [
+            [
+              "VERSION=\"1.4\"",
+              "VERSION=\"1.7\""
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "git_difference": {
+    "total_files": 304,
+    "status_counts": {
+      "A": 289,
+      "M": 15
+    },
+    "category_counts": {
+      "documentation et audit": 67,
+      "construction et exclusions Git/Docker": 3,
+      "application Lespass": 16,
+      "déploiement, configuration, tests ou documentation": 151,
+      "source active remplaçant/complétant une image": 16,
+      "archive historique non active": 20,
+      "outil historique; présence ne prouve pas une exécution": 12,
+      "manifestes de release": 14,
+      "tests Lespass": 5
+    },
+    "shortstat": "304 files changed, 42358 insertions(+), 47 deletions(-)"
+  },
+  "overlays": [
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/settings.py",
+      "target": "fedowallet_django/settings.py",
+      "native_exists": true,
+      "native_sha256": "f3fb4086132f30c03a6fc81d117b2ce3197d76c10062dd4ec7ac5c9549222e2b",
+      "current_sha256": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": false,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/urls.py",
+      "target": "fedow_dashboard/urls.py",
+      "native_exists": true,
+      "native_sha256": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+      "current_sha256": "e6058521b5811cc6ba2ff9f0d9dfdb92b86e93c1e67d8d2c7502c2dfe549e7d8",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/views.py",
+      "target": "fedow_dashboard/views.py",
+      "native_exists": true,
+      "native_sha256": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+      "current_sha256": "3005a474131b2166492b34fd65f260fee2b108ce6f00225695e9109ef665cd7f",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [
+          "_bar_label_from_raw_name",
+          "_extract_bar_name_from_metadata",
+          "_match_selected_bar",
+          "_money_snapshot_and_series",
+          "_normalize_bar_name",
+          "_parse_suivi_filters",
+          "_parse_time_flexible",
+          "_read_suivi_session_start",
+          "_to_eur",
+          "suivi",
+          "suivi_data"
+        ],
+        "removed": [
+          "_calcul_cycle_de_vie",
+          "_calcul_monnaie_fondante",
+          "_calcul_temporel",
+          "_charge_courbe_survie",
+          "_dormance_fed",
+          "_masse_par_monnaie",
+          "_pouls_reseau",
+          "_top_lieux",
+          "_unite_categorie",
+          "get_dashboard_asset",
+          "get_dashboard_reseau"
+        ],
+        "modified": [
+          "asset_view",
+          "badgeuse_view",
+          "index",
+          "place_view"
+        ]
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/index.html",
+      "target": "fedow_dashboard/templates/index/index.html",
+      "native_exists": true,
+      "native_sha256": "5a04f66aca7f8bc1285485dd7e821ce55ca720c8c88f60eaa246944df11bbdf6",
+      "current_sha256": "2d7da35a5ca75d99a2bd7e42fcf05c4b6713981020aa22875d3b0a32a81e4fb8",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/suivi.html",
+      "target": "fedow_dashboard/templates/index/suivi.html",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "78bd03c3f1a2314921eae84bb122dc72756ec0cebe915383b69fb7c1dbb3a217",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/base.html",
+      "target": "fedow_dashboard/templates/base.html",
+      "native_exists": true,
+      "native_sha256": "a92e7dcfe2458f43449aaebaf64fd5fe6593b5ce82b06e8e2e0cefa5652c7dba",
+      "current_sha256": "9045b1cc62ac9ae2c4276b0c0358969a900763845be01a04c428f83f4eb8c41e",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/custom_patches/fedow_dashboard/public_index.html",
+      "target": "fedow_dashboard/templates/index.html",
+      "native_exists": true,
+      "native_sha256": "022404aecf4256db57349db74eb2af6c3d400d0ed7ed9a289b88df29fa5d8429",
+      "current_sha256": "14e52924ee2b35c1f11123d5c556aa06a8cebe5cd4fd50165c1598d6b0c475ee",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/settings.py",
+      "target": "Cashless/settings.py",
+      "native_exists": true,
+      "native_sha256": "368ff8960bb8cd83f1272fa7f9c0ad599f84a2d66bee228627017ed9de767361",
+      "current_sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/install.py",
+      "target": "administration/management/commands/install.py",
+      "native_exists": true,
+      "native_sha256": "6fd3cbfd0bd6fddf2d7430709cfc5836a63827c52f7dac277a28bd5aa66e3cc8",
+      "current_sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "Command.handle"
+        ]
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/login.html",
+      "target": "webview/templates/login.html",
+      "native_exists": true,
+      "native_sha256": "01cc77702df119cca39bcd7791887b7faff1b7c8b0f9a2238c03422933920b2d",
+      "current_sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/kiosk_base.html",
+      "target": "htmxview/templates/kiosk/base.html",
+      "native_exists": true,
+      "native_sha256": "c2d41d10dcdf9cd5b033042fbd7d9cefdd70bc56c6089711aa132652d36ee81e",
+      "current_sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/infos.html",
+      "target": "htmxview/templates/appsettings/infos.html",
+      "native_exists": true,
+      "native_sha256": "e49aede8100f9cd429fa7a2f75238155108c72294a7f9ca0759af4f31e20eac3",
+      "current_sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/views.py",
+      "target": "webview/views.py",
+      "native_exists": true,
+      "native_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+      "current_sha256": "a3e9957482c7601b8b65ebb673ce894bdc2362e38ffcd25ccf6db48d3f42d8f0",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [
+          "Commande.methode_BI"
+        ],
+        "modified": [
+          "Commande.methode_AD",
+          "Commande.methode_VT",
+          "check_carte"
+        ]
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/fedow_api.py",
+      "target": "fedow_connect/fedow_api.py",
+      "native_exists": true,
+      "native_sha256": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+      "current_sha256": "377a6b52f742d67ded0d3df855e7d4af095027778847749e54fbb770d6fb0293",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "NFCCard.badge",
+          "NFCCard.create",
+          "NFCCard.retrieve",
+          "Subscription.create_sub",
+          "Transaction.refill_wallet",
+          "Transaction.to_place"
+        ]
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/validators.py",
+      "target": "webview/validators.py",
+      "native_exists": true,
+      "native_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+      "current_sha256": "bf5bb58af65f4d70be383cfa1f4fb6745ca0e7c1a6aa9b818fba56c72a18e8d6",
+      "different_from_native": true,
+      "unchanged_since_previous_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "DataAchatDepuisClientValidator.validate_tag_id"
+        ]
+      }
+    }
+  ],
+  "static_copies": [
+    {
+      "source": "deploy/Lespass/www/static/reunion/css/tibillet.css",
+      "native_source": "BaseBillet/static/reunion/css/tibillet.css",
+      "source_sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+      "native_sha256": "ad7ceacd83ffc8ed98b2d63b6992462bec95855883bab76d5cab4a5f7e6a82e9",
+      "different": true,
+      "introduced_in_fork": "bc5b1a85a59872faf885c3916698042abe91f0d0",
+      "runtime_limit": "www is mounted; start.sh runs collectstatic --no-input. No current served-file or production verification."
+    },
+    {
+      "source": "deploy/Lespass/www/static/reunion/js/membership-form.mjs",
+      "native_source": "BaseBillet/static/reunion/js/membership-form.mjs",
+      "source_sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+      "native_sha256": "3d2776085c2a7c3aba1a76e5178e4992f39407d6726b5eee45db98249c233ecc",
+      "different": true,
+      "introduced_in_fork": "bc5b1a85a59872faf885c3916698042abe91f0d0",
+      "runtime_limit": "www is mounted; start.sh runs collectstatic --no-input. No current served-file or production verification."
+    }
+  ],
+  "mounts": {
+    "scope": "tracked active stack definitions; no new live Docker inspection",
+    "head": "7f31acd3cd5699dd83049aac94b017f9facccd29",
+    "rows": [
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./sqlite-database",
+        "target": "/home/fedow/Fedow/database",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "7f31acd3cd5699dd83049aac94b017f9facccd29"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./www",
+        "target": "/home/fedow/Fedow/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./logs",
+        "target": "/home/fedow/Fedow/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./settings.py",
+        "target": "/home/fedow/Fedow/fedowallet_django/settings.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/urls.py",
+        "target": "/home/fedow/Fedow/fedow_dashboard/urls.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/views.py",
+        "target": "/home/fedow/Fedow/fedow_dashboard/views.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/index.html",
+        "target": "/home/fedow/Fedow/fedow_dashboard/templates/index/index.html",
+        "mode": "rw",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/suivi.html",
+        "target": "/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html",
+        "mode": "rw",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/base.html",
+        "target": "/home/fedow/Fedow/fedow_dashboard/templates/base.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./custom_patches/fedow_dashboard/public_index.html",
+        "target": "/home/fedow/Fedow/fedow_dashboard/templates/index.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "../source/admin-templates",
+        "target": "/home/fedow/Fedow/source_templates",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_postgres",
+        "source": "./database/data",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./settings.py",
+        "target": "/DjangoFiles/Cashless/settings.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./install.py",
+        "target": "/DjangoFiles/administration/management/commands/install.py",
+        "mode": "ro",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/login.html",
+        "target": "/DjangoFiles/webview/templates/login.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/kiosk_base.html",
+        "target": "/DjangoFiles/htmxview/templates/kiosk/base.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/infos.html",
+        "target": "/DjangoFiles/htmxview/templates/appsettings/infos.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "../source/admin-templates",
+        "target": "/DjangoFiles/source_templates",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./views.py",
+        "target": "/DjangoFiles/webview/views.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./fedow_api.py",
+        "target": "/DjangoFiles/fedow_connect/fedow_api.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./validators.py",
+        "target": "/DjangoFiles/webview/validators.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_postgres",
+        "source": "./database",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "/var/run/docker.sock",
+        "target": "/var/run/docker.sock",
+        "mode": "ro",
+        "category": "socket Docker",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "./acme.json",
+        "target": "/acme.json",
+        "mode": "rw",
+        "category": "certificats TLS",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      }
+    ],
+    "unique_mounts_per_service_total": 46,
+    "raw_declarations_total": 49
+  },
+  "function_difference_method": "Exact source text including decorators, comments and formatting; not all textual differences change behavior.",
+  "native_fedow_database_assignment_is_exact": true,
+  "dashboard_access_source_findings": {
+    "native_staff_decorators_removed": [
+      "asset_view",
+      "place_view"
+    ],
+    "custom_views_without_login_or_staff_checks": [
+      "suivi",
+      "suivi_data"
+    ],
+    "paths": [
+      "/dashboard/asset/<uuid>/",
+      "/dashboard/place/<uuid>/",
+      "/dashboard/suivi/",
+      "/dashboard/suivi/data/"
+    ],
+    "live_exposure_checked": false
+  },
+  "removed_postgresql_archive_sha256": "b2183af42d3d7986933ac3786e751e4f647e2d13b9cb25da891597ada42aeb6f",
+  "limitations": [
+    "Fixed original fork and image source references, not current upstream main.",
+    "Three new audit artifacts are excluded from the compared committed HEAD.",
+    "Data directories, secrets and generated files outside Git are not inventoried.",
+    "Read-only source inspection does not prove live financial, QR, cashier or payment correctness."
+  ]
+}

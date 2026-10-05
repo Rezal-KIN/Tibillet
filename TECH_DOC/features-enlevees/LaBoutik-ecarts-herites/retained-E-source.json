@@ -1,0 +1,50 @@
+{
+  "reference": {
+    "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+    "repository": "TiBillet/LaBoutik",
+    "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+    "image_overlays": {
+      "docker_push_update.sh": {
+        "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+        "replacements": [
+          [
+            "VERSION=\"1.4\"",
+            "VERSION=\"1.7\""
+          ]
+        ]
+      }
+    }
+  },
+  "previous_commit": "6c373f10ca07718fea590328c9112ea58e042e2b",
+  "files": [
+    {
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "notice": "# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.\n# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.\n",
+      "retained_feature": "E - registration on confirmed card-not-found only",
+      "replacements": [
+        {
+          "old": "        except Exception as e:\n            # Carte inconnue (FileNotFoundError) = cas terrain normal : pas de log.\n            # Les autres exceptions sont de vraies pannes Fedow : on garde le log error.\n            # / Unknown card is normal (no log); other errors are real failures (keep log).\n            if not isinstance(e, FileNotFoundError):\n                logger.error(f\"Check carte FEDOW : {e}\")\n            data = {\n                'background': '#e93363',\n                'error_msg': _('Carte inconnue'),\n            }\n            return render(request, 'popup_check_carte.html', data)\n",
+          "new": "        except FileNotFoundError as e:\n            logger.warning(f\"Carte inconnue dans Fedow, tentative enregistrement : {e}\")\n            try:\n                fedowApi = FedowAPI()\n                import uuid\n                carte, created = CarteCashless.objects.get_or_create(\n                    tag_id=tag_id_request,\n                    defaults={\n                        'number': tag_id_request,\n                        'uuid_qrcode': uuid.uuid4(),\n                    }\n                )\n                if created:\n                    logger.info(f\"Carte vierge créée dans Laboutik : {tag_id_request}\")\n                elif not carte.uuid_qrcode:\n                    carte.uuid_qrcode = uuid.uuid4()\n                    carte.number = carte.number or tag_id_request\n                    carte.save()\n                fedowApi.NFCcard.create([carte])\n                serializer_from_fedow = fedowApi.NFCcard.retrieve(tag_id_request)\n            except Exception as e2:\n                logger.error(f\"Echec enregistrement carte : {e2}\")\n                data = {\n                    'background': '#e93363',\n                    'error_msg': _(\"Impossible d'enregistrer la carte auprès de Fedow. Réessayez.\"),\n                }\n                return render(request, 'popup_check_carte.html', data)\n        except Exception as e:\n            logger.error(f\"Check carte FEDOW : {e}\")\n            data = {\n                'background': '#e93363',\n                'error_msg': _('Impossible de vérifier la carte auprès de Fedow. Réessayez.'),\n            }\n            return render(request, 'popup_check_carte.html', data)\n"
+        }
+      ],
+      "upstream_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+      "restored_sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6"
+    },
+    {
+      "upstream_path": "webview/validators.py",
+      "local_path": "deploy/Laboutik/validators.py",
+      "notice": "# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.\n# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.\n",
+      "retained_feature": "E - registration on confirmed card-not-found only",
+      "replacements": [
+        {
+          "old": "    def validate_tag_id(self, value):\n        if value:\n            if self.config.can_fedow():\n                fedowAPI = FedowAPI()\n                self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(value.upper())\n\n            # On va chercher l'objet après la requete Fedow pour l'avoir à jour des modifs (création wallet, assets, etc ...)\n            self.card = CarteCashless.objects.get(tag_id=value.upper())\n        return value.upper() if value else None\n",
+          "new": "    def validate_tag_id(self, value):\n        if value:\n            import uuid as _uuid\n            tag = value.upper()\n            if self.config.can_fedow():\n                fedowAPI = FedowAPI()\n                try:\n                    try:\n                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)\n                    except FileNotFoundError:\n                        carte, created = CarteCashless.objects.get_or_create(\n                            tag_id=tag,\n                            defaults={'number': tag, 'uuid_qrcode': _uuid.uuid4()}\n                        )\n                        if not carte.uuid_qrcode:\n                            carte.uuid_qrcode = _uuid.uuid4()\n                            carte.number = carte.number or tag\n                            carte.save()\n                        fedowAPI.NFCcard.create([carte])\n                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)\n                except Exception as e:\n                    logger.error(f\"Vérification/enregistrement carte FEDOW : {e}\")\n                    raise serializers.ValidationError(_(\"Impossible de vérifier ou d'enregistrer la carte auprès de Fedow. Réessayez.\"))\n            self.card = CarteCashless.objects.get(tag_id=tag)\n        return value.upper() if value else None\n"
+        }
+      ],
+      "upstream_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+      "restored_sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e"
+    }
+  ]
+}

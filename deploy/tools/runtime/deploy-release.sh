@@ -79,7 +79,8 @@ for group in "${compose_groups[@]}"; do
 done
 
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
-  "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs"
+  "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs" \
+  "$REPO_ROOT/deploy/Fedow/sqlite-database"
 prepare_writable_mounts "$LABOUTIK_IMAGE" tibillet \
   "$REPO_ROOT/deploy/Laboutik/www" "$REPO_ROOT/deploy/Laboutik/logs" \
   "$REPO_ROOT/deploy/Laboutik/backup"
@@ -148,6 +149,11 @@ timeout 120s docker exec -i fedow_django sh -lc \
 timeout 120s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_refill
 
+# Reuse the existing bootstrap accounts in all three databases. Credentials
+# come from Secrets Manager; only a Django hash reaches the configuration tool.
+python3 "$SCRIPT_DIR/configure-gala-admin.py" --gala "$GALA_SLUG" \
+  --credentials-file "$(runtime_dir)/admin.json" --apply
+
 healthy=false
 for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then
@@ -170,9 +176,13 @@ for domain in "$LESPASS_PUBLIC_DOMAIN" "$FEDOW_PUBLIC_DOMAIN" "$LABOUTIK_PUBLIC_
 done
 # A fresh Gala must have a recoverable database snapshot before its first
 # release is marked deployed. Existing Galas are already covered by preflight.
-if [[ ! -s "$(runtime_dir)/last-successful-backup" ]]; then
+fedow_storage_state="$(python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" --check-only)"
+# Take a first SQLite backup even if a historical PostgreSQL backup exists.
+if [[ "$fedow_storage_state" == initialized || ! -s "$(runtime_dir)/last-successful-backup" ]]; then
   "$SCRIPT_DIR/backup-postgres.sh" "$CONFIG_PATH"
 fi
+# Seal only after that upload succeeded; a failed first backup must be retried.
+python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" >/dev/null
 # Enable the periodic timer only after databases exist and one upload worked.
 # install-runtime-contract intentionally does not start it during bootstrap.
 systemctl enable --now "tibillet-gala-backup@${GALA_SLUG}.timer"

@@ -70,3 +70,6 @@ timeout 15s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run celery -A TiBillet inspect ping --timeout=5 \
   >/dev/null 2>&1 || fail "Lespass Celery worker did not answer broker ping"
 printf 'local healthy service=lespass_celery status=responsive\n'
+python3 "$SCRIPT_DIR/configure-gala-admin.py" --gala "$GALA_SLUG" \
+  --credentials-file "$(runtime_dir)/admin.json" >/dev/null \
+  || fail "shared administrator accounts are not configured"

@@ -86,7 +86,14 @@ Les noms de domaine communs y sont déclarés ; le runtime refuse un écart avec
 les noms approuvés dans Terraform et le catalogue Foundation. Sur l'EC2, le
 script runtime lit le secret généré du gala, le secret Stripe de son
 environnement et le secret mail, puis construit les trois fichiers
-`fedow.env`, `laboutik.env`, `lespass.env` en mode `0600`. Les domaines,
+`fedow.env`, `laboutik.env`, `lespass.env` et `admin.json` en mode `0600`. Le
+dernier fichier contient seulement le nom administrateur commun et son
+empreinte Django PBKDF2 SHA256 ; le mot de passe en clair n'est pas conservé.
+Les accès admin sont lus séparément dans la version marquée `GALA_ADMIN` du
+même secret : `{"username":"admin","password_hash":"EMPREINTE_DJANGO"}`.
+La version `AWSCURRENT` et son schéma mail restent inchangés pour les anciennes
+releases. Le runtime exige cette version pour configurer les administrations au premier
+déploiement, sans commande manuelle supplémentaire. Les domaines,
 connexions interservices, noms PostgreSQL et paramètres communs sont assemblés
 automatiquement. Smoke configure le backend e-mail Django « dummy » et son
 groupe réseau bloque les ports SMTP sortants : aucun mail aux participants ne

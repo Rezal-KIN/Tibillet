@@ -1,14 +1,4 @@
 services:
-  fedow_postgres:
-    image: postgres:13-bookworm
-    restart: always
-    container_name: fedow_postgres
-    hostname: fedow_postgres
-    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
-    volumes:
-      - ./database:/var/lib/postgresql/data
-    networks:
-      - fedow_backend
   fedow_memcached:
     image: memcached:1.6
     container_name: fedow_memcached
@@ -24,19 +14,12 @@ services:
     env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
     user: fedow
     links:
-      - fedow_postgres:postgres
       - fedow_memcached:memcached
     volumes:
+      - ./sqlite-database:/home/fedow/Fedow/database
       - ./www:/home/fedow/Fedow/www
       - ./logs:/home/fedow/Fedow/logs
       - ./settings.py:/home/fedow/Fedow/fedowallet_django/settings.py
-      - ./custom_patches/fedow_core/serializers.py:/home/fedow/Fedow/fedow_core/serializers.py
-      - ./custom_patches/fedow_dashboard/urls.py:/home/fedow/Fedow/fedow_dashboard/urls.py
-      - ./custom_patches/fedow_dashboard/views.py:/home/fedow/Fedow/fedow_dashboard/views.py
-      - ./custom_patches/fedow_dashboard/index.html:/home/fedow/Fedow/fedow_dashboard/templates/index/index.html
-      - ./custom_patches/fedow_dashboard/suivi.html:/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html
-      - ./custom_patches/fedow_dashboard/base.html:/home/fedow/Fedow/fedow_dashboard/templates/base.html:ro
-      - ./custom_patches/fedow_dashboard/public_index.html:/home/fedow/Fedow/fedow_dashboard/templates/index.html:ro
       - ../source/admin-templates:/home/fedow/Fedow/source_templates:ro
     networks:
       - fedow_backend

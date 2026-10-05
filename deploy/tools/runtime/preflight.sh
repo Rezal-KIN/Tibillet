@@ -39,6 +39,8 @@ else
   last_backup="initial-deployment"
 fi
 
+check_fedow_storage
+
 # Docker images need workspace both while pulled and while old images remain.
 avail_kib="$(df -Pk "${REPO_ROOT}" | awk 'NR == 2 { print $4 }')"
 (( avail_kib >= ${MIN_FREE_SPACE_KIB:-10485760} )) || fail "less than required free space remains"

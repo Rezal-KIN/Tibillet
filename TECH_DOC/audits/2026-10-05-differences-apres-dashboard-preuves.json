@@ -1,0 +1,1017 @@
+{
+  "date": "2026-10-05",
+  "scope": "Exact local committed snapshot after the dashboard rollback; no server inspection or deployment",
+  "head": "e62ddf7194887bd5c4eb2736aa2fd51b134b9577",
+  "lespass_base": {
+    "upstream_commit": "fd7680891c31bbdf6215e7a0750074de89ff5e8e",
+    "equivalent_commit_in_fork": "f0f0d82087a7551dae2d3b835bdd6c0dba4c89a9",
+    "tree": "1c1816a9fed44f433ea31e8711968c0cf246a384"
+  },
+  "image_references": {
+    "schema_version": 1,
+    "fedow": {
+      "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "repository": "TiBillet/Fedow",
+      "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+    },
+    "laboutik": {
+      "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "repository": "TiBillet/LaBoutik",
+      "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+      "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+      "image_overlays": {
+        "docker_push_update.sh": {
+          "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+          "replacements": [
+            [
+              "VERSION=\"1.4\"",
+              "VERSION=\"1.7\""
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "git_difference": {
+    "total_files": 303,
+    "status_counts": {
+      "A": 288,
+      "M": 15
+    },
+    "category_counts": {
+      "documentation et audit": 72,
+      "construction et exclusions Git/Docker": 3,
+      "application Lespass": 16,
+      "déploiement, configuration, tests ou documentation": 151,
+      "source active remplaçant/complétant une image": 10,
+      "archive historique non active": 20,
+      "outil historique; présence ne prouve pas une exécution": 12,
+      "manifestes de release": 14,
+      "tests Lespass": 5
+    },
+    "shortstat": "303 files changed, 42310 insertions(+), 47 deletions(-)"
+  },
+  "file_history_method": "First and latest changes since the fork on its first-parent lineage; not necessarily original authorship date.",
+  "overlays": [
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/settings.py",
+      "target": "fedowallet_django/settings.py",
+      "native_exists": true,
+      "native_sha256": "f3fb4086132f30c03a6fc81d117b2ce3197d76c10062dd4ec7ac5c9549222e2b",
+      "current_sha256": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "diff_sha256": "684671bda600c790a3ebf652c5846a84a7751b87704c10172a9007dd69285e14"
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/settings.py",
+      "target": "Cashless/settings.py",
+      "native_exists": true,
+      "native_sha256": "368ff8960bb8cd83f1272fa7f9c0ad599f84a2d66bee228627017ed9de767361",
+      "current_sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "diff_sha256": "bdf9783abc41d4fb87d929eaab3581ee84470d1147f928dbbb70ef6d7ce7581b"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/install.py",
+      "target": "administration/management/commands/install.py",
+      "native_exists": true,
+      "native_sha256": "6fd3cbfd0bd6fddf2d7430709cfc5836a63827c52f7dac277a28bd5aa66e3cc8",
+      "current_sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "Command.handle"
+        ]
+      },
+      "diff_sha256": "e26783cb416178e0aecdc99a46dc3a677b1cb85177409ee872b1fb285aa00de8"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/login.html",
+      "target": "webview/templates/login.html",
+      "native_exists": true,
+      "native_sha256": "01cc77702df119cca39bcd7791887b7faff1b7c8b0f9a2238c03422933920b2d",
+      "current_sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "diff_sha256": "f7d0f0c698b3d6ac74fdbe8d84a9cc58c3b457fc4143d3fb261090ef0727ff86"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/kiosk_base.html",
+      "target": "htmxview/templates/kiosk/base.html",
+      "native_exists": true,
+      "native_sha256": "c2d41d10dcdf9cd5b033042fbd7d9cefdd70bc56c6089711aa132652d36ee81e",
+      "current_sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "diff_sha256": "6fba589942d36d5f55eb6f43f8c751062f3415728a1d3426ce449f2b6d884355"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/infos.html",
+      "target": "htmxview/templates/appsettings/infos.html",
+      "native_exists": true,
+      "native_sha256": "e49aede8100f9cd429fa7a2f75238155108c72294a7f9ca0759af4f31e20eac3",
+      "current_sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "diff_sha256": "77fd74c8b0d2c9c4cf294eed588dd014696e2510c589b4e489f940b9384f3aa9"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      }
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/views.py",
+      "target": "webview/views.py",
+      "native_exists": true,
+      "native_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+      "current_sha256": "a3e9957482c7601b8b65ebb673ce894bdc2362e38ffcd25ccf6db48d3f42d8f0",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [
+          "Commande.methode_BI"
+        ],
+        "modified": [
+          "Commande.methode_AD",
+          "Commande.methode_VT",
+          "check_carte"
+        ]
+      },
+      "diff_sha256": "cc5bed84ceb1733558336b4536a4efc01e76048d86c3c35abe15d5613ec1a619"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/fedow_api.py",
+      "target": "fedow_connect/fedow_api.py",
+      "native_exists": true,
+      "native_sha256": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+      "current_sha256": "377a6b52f742d67ded0d3df855e7d4af095027778847749e54fbb770d6fb0293",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "NFCCard.badge",
+          "NFCCard.create",
+          "NFCCard.retrieve",
+          "Subscription.create_sub",
+          "Transaction.refill_wallet",
+          "Transaction.to_place"
+        ]
+      },
+      "diff_sha256": "4d3a1b43276a5e15ca910ed6087581613e19186729775b27fc8bc789d77d0f16"
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/validators.py",
+      "target": "webview/validators.py",
+      "native_exists": true,
+      "native_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+      "current_sha256": "bf5bb58af65f4d70be383cfa1f4fb6745ca0e7c1a6aa9b818fba56c72a18e8d6",
+      "different_from_native": true,
+      "unchanged_since_sqlite_inventory": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "DataAchatDepuisClientValidator.validate_tag_id"
+        ]
+      },
+      "diff_sha256": "818032863257f739474f3d06a7669f607e30b66bcd8896b9050607f1581fcba1"
+    }
+  ],
+  "unique_local_overlay_files": 10,
+  "static_copies": [
+    {
+      "source": "deploy/Lespass/www/static/reunion/css/tibillet.css",
+      "native_source": "BaseBillet/static/reunion/css/tibillet.css",
+      "source_sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+      "native_sha256": "ad7ceacd83ffc8ed98b2d63b6992462bec95855883bab76d5cab4a5f7e6a82e9",
+      "different": true,
+      "introduced_in_fork": "bc5b1a85a59872faf885c3916698042abe91f0d0",
+      "runtime_limit": "www is mounted; start.sh runs collectstatic --no-input. No current served-file or production verification."
+    },
+    {
+      "source": "deploy/Lespass/www/static/reunion/js/membership-form.mjs",
+      "native_source": "BaseBillet/static/reunion/js/membership-form.mjs",
+      "source_sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+      "native_sha256": "3d2776085c2a7c3aba1a76e5178e4992f39407d6726b5eee45db98249c233ecc",
+      "different": true,
+      "introduced_in_fork": "bc5b1a85a59872faf885c3916698042abe91f0d0",
+      "runtime_limit": "www is mounted; start.sh runs collectstatic --no-input. No current served-file or production verification."
+    }
+  ],
+  "mounts": {
+    "scope": "tracked active stack definitions; no new live Docker inspection",
+    "head": "e62ddf7194887bd5c4eb2736aa2fd51b134b9577",
+    "rows": [
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./sqlite-database",
+        "target": "/home/fedow/Fedow/database",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "7f31acd3cd5699dd83049aac94b017f9facccd29"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./www",
+        "target": "/home/fedow/Fedow/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./logs",
+        "target": "/home/fedow/Fedow/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./settings.py",
+        "target": "/home/fedow/Fedow/fedowallet_django/settings.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "../source/admin-templates",
+        "target": "/home/fedow/Fedow/source_templates",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_postgres",
+        "source": "./database/data",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./settings.py",
+        "target": "/DjangoFiles/Cashless/settings.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./install.py",
+        "target": "/DjangoFiles/administration/management/commands/install.py",
+        "mode": "ro",
+        "category": "code/configuration Python remplace",
+        "declarations": 1,
+        "introduction_first_parent": "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/login.html",
+        "target": "/DjangoFiles/webview/templates/login.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/kiosk_base.html",
+        "target": "/DjangoFiles/htmxview/templates/kiosk/base.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./source_templates/infos.html",
+        "target": "/DjangoFiles/htmxview/templates/appsettings/infos.html",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "../source/admin-templates",
+        "target": "/DjangoFiles/source_templates",
+        "mode": "ro",
+        "category": "template remplace",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./views.py",
+        "target": "/DjangoFiles/webview/views.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./fedow_api.py",
+        "target": "/DjangoFiles/fedow_connect/fedow_api.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./validators.py",
+        "target": "/DjangoFiles/webview/validators.py",
+        "mode": "rw",
+        "category": "code/configuration Python remplace",
+        "declarations": 2,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_postgres",
+        "source": "./database",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "offre sources AGPL",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "fichiers www (medias/static/prix)",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "journaux",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "/var/run/docker.sock",
+        "target": "/var/run/docker.sock",
+        "mode": "ro",
+        "category": "socket Docker",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "./acme.json",
+        "target": "/acme.json",
+        "mode": "rw",
+        "category": "certificats TLS",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      }
+    ],
+    "unique_mounts_per_service_total": 40,
+    "raw_declarations_total": 43
+  },
+  "mount_category_counts": {
+    "base persistante": 3,
+    "fichiers www (medias/static/prix)": 7,
+    "journaux": 7,
+    "code/configuration Python remplace": 6,
+    "template remplace": 5,
+    "configuration Nginx": 3,
+    "offre sources AGPL": 3,
+    "sauvegardes": 2,
+    "configuration SSH": 2,
+    "socket Docker": 1,
+    "certificats TLS": 1
+  },
+  "native_database_assignments_exact": {
+    "fedow": true,
+    "laboutik": true,
+    "lespass": true
+  },
+  "unchanged_lespass_checks": {
+    "BaseBillet/models.py": true,
+    "BaseBillet/views.py": true,
+    "BaseBillet/templates/reunion/views/account/balance.html": true,
+    "pyproject.toml": true,
+    "poetry.lock": true,
+    "LICENSE": true
+  },
+  "native_fedow_dashboard": {
+    "feature": "H",
+    "reference_repository": "TiBillet/Fedow",
+    "reference_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "reference_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+    "source_override_removed": true,
+    "shared_template_override_absent": true,
+    "files": [
+      {
+        "upstream_path": "fedow_dashboard/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/admin.py",
+        "upstream_sha256": "b2e328e31f08dc907100505521d13ee6a9ea67a240655d051120011ce49cfaf8",
+        "byte_length": 63
+      },
+      {
+        "upstream_path": "fedow_dashboard/apps.py",
+        "upstream_sha256": "8786b57b13804157ca8accb8a6fc86f5ebc7efe075f0bdb0ac1a2676d691a16b",
+        "byte_length": 161
+      },
+      {
+        "upstream_path": "fedow_dashboard/migrations/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/models.py",
+        "upstream_sha256": "563734a765db00f804e87c9317abe597df00e1e0e103902f690aac738910f404",
+        "byte_length": 57
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist.zip",
+        "upstream_sha256": "8fa2016a3dee1e204bd1623e050dcf477e9d28c13bb98a1f58f57e0fd40cdd38",
+        "byte_length": 1470438
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css",
+        "upstream_sha256": "22b464461c1d3b621c3f6fb5b678b6531ab0a704d0e1bd078ddd371b87473db0",
+        "byte_length": 237950
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css.map",
+        "upstream_sha256": "ae5430d563ba9975d8543cfb00650e283b18c19c9603461a8460f2372af03f21",
+        "byte_length": 608300
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css",
+        "upstream_sha256": "c0bcf7898fdc3b87babca678cd19a8e3ef570e931c80a3afbffcc453738c951a",
+        "byte_length": 194901
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css.map",
+        "upstream_sha256": "ff724ca73ac50a9391851129cd451c98e8c3015a28ff851f97dad247b052a577",
+        "byte_length": 522639
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js",
+        "upstream_sha256": "4ea6de9832c8e17c55a323a97dfbfe1532f9a0f9e74f46bfa962c9cb6fc035e8",
+        "byte_length": 145543
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js.map",
+        "upstream_sha256": "e0fcd2fa3a0e8ee661dcf986bb9dc2d21c3edb637ac8cf0c2287c55ec31e62fa",
+        "byte_length": 309348
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js",
+        "upstream_sha256": "9bcd4d0f29dc6556ebeeff44eaa0965f0c7f7308ee58394708cce2f698cca1b0",
+        "byte_length": 60404
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js.map",
+        "upstream_sha256": "973689199c4c7417a62153086e699c22e26c5ac1febaf7115cedab8f42230e17",
+        "byte_length": 216913
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/css/main.css",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/bars.svg",
+        "upstream_sha256": "d076a48a74769f64db2fb6b7ec0f6da8a948795eafbb1eac7e87ffaa606b706c",
+        "byte_length": 2320
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/baseline-home-work.svg",
+        "upstream_sha256": "6789f8f8513c30b1edbc694694d0c023cb9a712e59bc68ffc56f541f23b67512",
+        "byte_length": 240
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/edit.svg",
+        "upstream_sha256": "f29b50a54d4f92f63e2adc7393da388ce301aec63658ac27a82ce10aeffc671e",
+        "byte_length": 658
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/fav_blanc.png",
+        "upstream_sha256": "c555b8b91a547479f16eb937f9e556f7e02c2a1444670921084bb276bd676ef7",
+        "byte_length": 7990
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/fedow_circle.svg",
+        "upstream_sha256": "3008b5fbeaf0183678cf35ed4640fe9bac8bf642964f6b483515d70998c71847",
+        "byte_length": 18464
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/frame-reload.svg",
+        "upstream_sha256": "a4e9706871acab2821c682838fb9a2c269024f131db6ad5ac54509d4e4c74ede",
+        "byte_length": 536
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/img.png",
+        "upstream_sha256": "129671667098e89d1c0d8daac638d9631940e68b777ed270e2245e3d75985b1a",
+        "byte_length": 34591
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/user-4-fill.svg",
+        "upstream_sha256": "ba8b1f5020b91c61cc6a9bbfeaeb07ff1e8c065109706090ad8e1a368fe0851b",
+        "byte_length": 987
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/view-grid-detail.svg",
+        "upstream_sha256": "69c603aa7e8d35a99e0d5cd855de589e3943ff67ddd9c7ecbd08bf6958457a85",
+        "byte_length": 347
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/chart.umd.4.4.1.min.js",
+        "upstream_sha256": "d2af8974e95271638772e9e9524db5b9a6f58d6ec2d5d781400447b4a31c681e",
+        "byte_length": 205399
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/fedow_charts.js",
+        "upstream_sha256": "9bc145e4f853457fb6d81ae86dd9ed913da48449bb3693a471c80b85a8d1aff9",
+        "byte_length": 6075
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/fedow_simulateur.js",
+        "upstream_sha256": "90e6de004b61b6d67b9400bb731d283925a50e3fd394d12234b8656aaea3e381",
+        "byte_length": 15382
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.d.ts",
+        "upstream_sha256": "50f4c4b412fafb7c622ec0d43a6c40a8756c245a49317b99d01777e54ffb0e85",
+        "byte_length": 12561
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.6.js",
+        "upstream_sha256": "cbb723c305cf6d6315c890909815523588509e2e092a59f8cfc4a885829689d5",
+        "byte_length": 46044
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.7.js",
+        "upstream_sha256": "30c95cb75e7f7c9471c2bf43fa3db0a30a39077764295b15c405869fed7e5764",
+        "byte_length": 46674
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/hyperscript.0.9.11.min.js",
+        "upstream_sha256": "9e63e5162f36c11d8621ab025251a7e28eb421266f1cb10e2b4dcbbbb91a7d1e",
+        "byte_length": 99758
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/loading-states.js",
+        "upstream_sha256": "d9f5823548e5bae7c1b2e7882580dd5b881dae1b7aae089e35211937e9887d32",
+        "byte_length": 5116
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css",
+        "upstream_sha256": "71756f2c107af344d1fcbad15380edcadc1d5a8ebea46941bf4544fbad4b02e6",
+        "byte_length": 517381
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css.map",
+        "upstream_sha256": "7e1fa71d3f8473b2c462dc5d281478ed9db481edf9901881aa14a41aad6b90a9",
+        "byte_length": 1223696
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js",
+        "upstream_sha256": "dec116081d7f72b3ebb6187e10639f12e418014c88e7a0982ebbfd417d6b8572",
+        "byte_length": 29580
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js.map",
+        "upstream_sha256": "3f7d8ac0ee80d431bdf14a1b54901f02fe1d26b7fe2f438d1f8727c04aad63b6",
+        "byte_length": 20121
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.css",
+        "upstream_sha256": "8f59bd46307f0fd8e02b7da8bb8179fc5ea8ccbfe885d622425e8064c2937491",
+        "byte_length": 410231
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.js",
+        "upstream_sha256": "8f267b0c5ab6ff8a51a4dcbc6ef88e31cc51a4fd6c76a573338a2e11580282fe",
+        "byte_length": 18516
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_card.html",
+        "upstream_sha256": "3b8017f31a9daa105ace1cba3c95233f47394013dba6ecaa68419b5cc0229d13",
+        "byte_length": 1332
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_transactions.html",
+        "upstream_sha256": "e3ad1a103deadc90805707d20b626b541b2607b38c3c294b57e7dd140e8914a4",
+        "byte_length": 35941
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_transactions_membership.html",
+        "upstream_sha256": "22bb454d47ee830f79590d2a0abfaab2d0dfe322afeed54536b947d5d102d21b",
+        "byte_length": 4992
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/badgeuse.html",
+        "upstream_sha256": "03fc1ab34995e631c99edc634eb4e89dc3f8f492153bb57c4acb64a1bcd0b9d5",
+        "byte_length": 3741
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/base.html",
+        "upstream_sha256": "a92e7dcfe2458f43449aaebaf64fd5fe6593b5ce82b06e8e2e0cefa5652c7dba",
+        "byte_length": 2291
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/htmx/spinner.html",
+        "upstream_sha256": "3f275ada6513c6e0df8192e41b85925a5634e605a886eeb8b5a16c178574b1f5",
+        "byte_length": 1390
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/index.html",
+        "upstream_sha256": "022404aecf4256db57349db74eb2af6c3d400d0ed7ed9a289b88df29fa5d8429",
+        "byte_length": 952
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/index/index.html",
+        "upstream_sha256": "5a04f66aca7f8bc1285485dd7e821ce55ca720c8c88f60eaa246944df11bbdf6",
+        "byte_length": 13835
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/place/place.html",
+        "upstream_sha256": "a378150696601999a449127c96744b4e0ee278502585e8e79cf1cea3119c4dad",
+        "byte_length": 1324
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/place/place_card.html",
+        "upstream_sha256": "6debc6152bca41ea60fbb4e48decb75a34fdf2bad415c8c00874f97371b4c8b6",
+        "byte_length": 1545
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/tailwind/index.html",
+        "upstream_sha256": "1ca7bdedce211309b84a97c67c20c6f5ea570fba33984a64c8495398a26f164d",
+        "byte_length": 7882
+      },
+      {
+        "upstream_path": "fedow_dashboard/templatetags/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/templatetags/fedow_dashboard_tags.py",
+        "upstream_sha256": "33e14d4e1b66cf800989d2e0359224a7a27dff742d5b0fe35f03417050d2f901",
+        "byte_length": 680
+      },
+      {
+        "upstream_path": "fedow_dashboard/tests.py",
+        "upstream_sha256": "9ab6c6191360e63c1b4c9b5659aef348a743c9e078be68190917369e4e9563e8",
+        "byte_length": 60
+      },
+      {
+        "upstream_path": "fedow_dashboard/urls.py",
+        "upstream_sha256": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+        "byte_length": 404
+      },
+      {
+        "upstream_path": "fedow_dashboard/views.py",
+        "upstream_sha256": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+        "byte_length": 27645
+      }
+    ]
+  },
+  "dashboard_access_source_findings": {
+    "native_staff_decorators_present": [
+      "asset_view",
+      "place_view"
+    ],
+    "network_index_public": true,
+    "gala_suivi_routes_removed": true,
+    "live_exposure_checked": false
+  },
+  "removed_postgresql_archive_sha256": "b2183af42d3d7986933ac3786e751e4f647e2d13b9cb25da891597ada42aeb6f",
+  "removed_dashboard_archive_sha256": "274a98de88d8be12a8f7d8720f02696035a22125d5c3b34fbf1d43dd8c84713a",
+  "original_audit_files_verified_unchanged": 40,
+  "prior_untracked_audits_preserved": [
+    {
+      "path": "TECH_DOC/audits/2026-10-05-differences-apres-sqlite-fichiers.tsv",
+      "sha256": "2acbebb954568d3fcec6cf6977ab1850ba9a22783e0215289de6648e1fd81f17"
+    },
+    {
+      "path": "TECH_DOC/audits/2026-10-05-differences-apres-sqlite-preuves.json",
+      "sha256": "7dfe0beae18ba3d4620a14376be7ef143e730a483bad0c5fcdd9f66b2d8559a4"
+    },
+    {
+      "path": "TECH_DOC/audits/2026-10-05-differences-apres-sqlite.md",
+      "sha256": "5af7da8cc036d35d8d41a539ed014caa9e6b3274a5965f9d7a1bad05424328b3"
+    }
+  ],
+  "limitations": [
+    "Fixed fork/image references, not upstream latest main.",
+    "Prior untracked audits and the three new audit outputs are outside the audited commit.",
+    "Database content, private environments, generated assets and ignored files are excluded.",
+    "Source differences do not prove live malfunction, financial correctness or legal compliance."
+  ]
+}

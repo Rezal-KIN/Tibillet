@@ -32,6 +32,13 @@ class HealthcheckContractTests(unittest.TestCase):
             timeout = bin_dir / "timeout"
             timeout.write_text("#!/bin/sh\nshift\nexec \"$@\"\n", encoding="utf-8")
             timeout.chmod(0o755)
+            python = bin_dir / "python3"
+            python.write_text(
+                '#!/bin/sh\ncase "$1" in\n'
+                '  */configure-gala-admin.py) [ "$MOCK_ADMIN_READY" = true ]; exit $? ;;\n'
+                'esac\nexit 2\n', encoding="utf-8",
+            )
+            python.chmod(0o755)
             config = root / "gala.conf"
             config.write_text(
                 f'GALA_SLUG="gala-smoke"\nAWS_REGION="eu-west-3"\n'
@@ -43,15 +50,17 @@ class HealthcheckContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
             env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
-            for running, ping, expected_success in (
-                ("false", "false", False),
-                ("true", "false", False),
-                ("true", "true", True),
+            for running, ping, admin, expected_success in (
+                ("false", "false", "true", False),
+                ("true", "false", "true", False),
+                ("true", "true", "false", False),
+                ("true", "true", "true", True),
             ):
                 with self.subTest(running=running, ping=ping):
                     result = subprocess.run(
                         ["bash", str(HEALTHCHECK), str(config)],
-                        env={**env, "MOCK_CELERY_RUNNING": running, "MOCK_CELERY_PING": ping},
+                        env={**env, "MOCK_CELERY_RUNNING": running, "MOCK_CELERY_PING": ping,
+                             "MOCK_ADMIN_READY": admin},
                         text=True,
                         capture_output=True,
                         check=False,

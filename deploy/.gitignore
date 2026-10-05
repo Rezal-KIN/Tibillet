@@ -196,3 +196,9 @@ releases/*.json
 # Per-gala registry: real entries name real domains/status, never commit them
 registry/*.json
 !registry/examples/*.json
+
+# Fedow SQLite data and sidecars (never version or publish)
+**/sqlite-database/
+**/*.sqlite3
+**/*.sqlite3-wal
+**/*.sqlite3-shm

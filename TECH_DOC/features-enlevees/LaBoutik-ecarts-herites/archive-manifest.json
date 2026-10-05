@@ -1,0 +1,33 @@
+{
+  "repository": "Rezal-KIN/Tibillet",
+  "commit": "6c373f10ca07718fea590328c9112ea58e042e2b",
+  "scope": "Versioned source/config only; no private environment, database or runtime data",
+  "files": [
+    {
+      "path": "deploy/Laboutik/views.py",
+      "git_blob": "486a6b03313900b0b47cfa17139afb9a0a467a62",
+      "byte_length": 67992,
+      "sha256": "a3e9957482c7601b8b65ebb673ce894bdc2362e38ffcd25ccf6db48d3f42d8f0"
+    },
+    {
+      "path": "deploy/Laboutik/validators.py",
+      "git_blob": "9151fa0a68386ad10470d7cc16b9d1a00c1122a6",
+      "byte_length": 18665,
+      "sha256": "bf5bb58af65f4d70be383cfa1f4fb6745ca0e7c1a6aa9b818fba56c72a18e8d6"
+    },
+    {
+      "path": "deploy/Laboutik/fedow_api.py",
+      "git_blob": "e25b672c57abc3aaf357b9d28a9b6f06fc214527",
+      "byte_length": 29301,
+      "sha256": "377a6b52f742d67ded0d3df855e7d4af095027778847749e54fbb770d6fb0293"
+    },
+    {
+      "path": "deploy/Laboutik/docker-compose.yml",
+      "git_blob": "418301fca7a7f3536c08349f184994ed4a753d14",
+      "byte_length": 3332,
+      "sha256": "3f224e438ebdf1a97afed11f622b1ea5d097f9d99db671b2bd22bdb5976cbb01"
+    }
+  ],
+  "archive": "reference-6c373f10.tar.gz",
+  "archive_sha256": "987c2a1f1d770309d3dcedb9fb6f5f77733ff4156be784ed17490b632da2dd7a"
+}

@@ -21,6 +21,18 @@ GENERATED_FIELDS = {
     "active_gala_api_token",
 }
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
+ADMIN_HASH = re.compile(r"pbkdf2_sha256\$[1-9][0-9]{4,6}\$[a-zA-Z0-9]+\$[a-zA-Z0-9+/]{43}=")
+
+
+def admin_credentials(source: dict[str, object] | None) -> dict[str, str]:
+    admin = source
+    if not isinstance(admin, dict) or set(admin) != {"username", "password_hash"}:
+        raise ValueError("shared admin credentials are missing or invalid")
+    username = text_field(admin, "username")
+    encoded = text_field(admin, "password_hash")
+    if not re.fullmatch(r"[a-zA-Z0-9_.@+-]{1,150}", username) or not ADMIN_HASH.fullmatch(encoded):
+        raise ValueError("shared admin username or password hash is invalid")
+    return {"username": username, "password_hash": encoded}
 
 
 def read_json(path: Path, label: str) -> dict[str, object]:
@@ -64,6 +76,7 @@ def assemble(
     generated: dict[str, object], stripe_secret: dict[str, object],
     mail_secret: dict[str, object], fedow_domain: str,
     laboutik_domain: str, lespass_domain: str, smoke: bool,
+    admin_secret: dict[str, object] | None = None, require_admin: bool = False,
 ) -> dict[str, str]:
     if set(generated) != GENERATED_FIELDS or generated.get("schema_version") != 1:
         raise ValueError("generated secret schema is invalid")
@@ -71,6 +84,7 @@ def assemble(
         raise ValueError("shared Stripe schema is invalid")
     if set(mail_secret) != {"schema_version", "mail", "site", "test_recipient"} or mail_secret.get("schema_version") != 1:
         raise ValueError("shared mail schema is invalid")
+    admin = admin_credentials(admin_secret) if require_admin or admin_secret is not None else None
     for domain in (fedow_domain, laboutik_domain, lespass_domain):
         if not DOMAIN.fullmatch(domain):
             raise ValueError("invalid configured Gala domain")
@@ -189,11 +203,14 @@ def assemble(
         "CELERY_BACKEND": "redis://redis:6379/0",
         **common, **stripe_lines, **mail_lines,
     }
-    return {
+    files = {
         "fedow.env": "".join(dotenv_line(key, value) for key, value in fedow.items()),
         "laboutik.env": "".join(dotenv_line(key, value) for key, value in laboutik.items()),
         "lespass.env": "".join(dotenv_line(key, value) for key, value in lespass.items()),
     }
+    if admin:
+        files["admin.json"] = json.dumps(admin) + "\n"
+    return files
 
 
 def write_files(output_dir: Path, contents: dict[str, str]) -> None:
@@ -220,13 +237,14 @@ def main() -> None:
     parser.add_argument("--laboutik-domain", required=True)
     parser.add_argument("--lespass-domain", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--admin", required=True, type=Path)
     args = parser.parse_args()
     files = assemble(
         read_json(args.generated, "generated secret"),
         read_json(args.stripe, "shared Stripe secret"),
         read_json(args.mail, "shared mail secret"),
         args.fedow_domain, args.laboutik_domain, args.lespass_domain,
-        args.smoke == "true",
+        args.smoke == "true", read_json(args.admin, "shared admin secret"), require_admin=True,
     )
     write_files(args.output_dir, files)
 

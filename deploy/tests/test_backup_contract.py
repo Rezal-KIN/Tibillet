@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import subprocess
 import tempfile
 import unittest
@@ -22,7 +23,7 @@ class BackupContractTests(unittest.TestCase):
             docker.write_text(
                 "#!/bin/sh\n"
                 "case \"$1\" in\n"
-                "  inspect) [ \"$2\" = '--format' ] && echo true; exit 0 ;;\n"
+                "  inspect) case \"$3\" in *Mounts*) printf '%s' \"${MOCK_FEDOW_MOUNT:-}\" ;; *Config.Image*) echo postgres:13-bookworm ;; *Running*) echo true ;; esac; exit 0 ;;\n"
                 "  exec) printf 'CREATE TABLE backed_up (id integer);\\n'; exit 0 ;;\n"
                 "esac\nexit 2\n",
                 encoding="utf-8",
@@ -47,7 +48,8 @@ class BackupContractTests(unittest.TestCase):
             )
             env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
                    "MOCK_UPLOADED": str(saved)}
-            result = subprocess.run(["bash", str(RUNTIME / "backup-postgres.sh"), str(config)],
+            command = ["bash", str(RUNTIME / "backup-postgres.sh"), str(config)]
+            result = subprocess.run(command,
                                     env=env, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue((root / "runtime/gala-verification/last-successful-backup").is_file())
@@ -57,6 +59,37 @@ class BackupContractTests(unittest.TestCase):
             checked = subprocess.run(["sha256sum", "-c", "SHA256SUMS"], cwd=saved,
                                      text=True, capture_output=True, check=False)
             self.assertEqual(checked.returncode, 0, checked.stderr)
+            # Same historical config after cutover: Fedow must become a SQLite
+            # snapshot, rather than trying to dump the removed PG container.
+            mount = root / "deploy/Fedow/sqlite-database"
+            mount.mkdir(parents=True)
+            db = sqlite3.connect(mount / "db.sqlite3")
+            db.execute("PRAGMA journal_mode=WAL")
+            for table in ("django_migrations", "fedow_core_configuration", "fedow_core_wallet",
+                          "fedow_core_token", "fedow_core_transaction", "fedow_core_card"):
+                db.execute(f'CREATE TABLE "{table}" (id INTEGER PRIMARY KEY)')
+                db.execute(f'INSERT INTO "{table}" VALUES (1)')
+            db.commit()
+            hybrid = root / "hybrid"
+            env.update(MOCK_UPLOADED=str(hybrid), MOCK_FEDOW_MOUNT=str(mount))
+            result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            db.close()
+            self.assertEqual(len(list(hybrid.glob("*.sql.gz"))), 2)
+            self.assertTrue((hybrid / "fedow.sqlite3.gz").is_file())
+            self.assertIn("fedow_sqlite=1", (hybrid / "metadata.txt").read_text())
+            checked = subprocess.run(["sha256sum", "-c", "SHA256SUMS"], cwd=hybrid,
+                                     text=True, capture_output=True, check=False)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            # A missing active SQLite must fail without replacing the last
+            # successful backup or silently creating an empty database.
+            backup_marker = root / "runtime/gala-verification/last-successful-backup"
+            previous_marker = backup_marker.read_bytes()
+            (mount / "db.sqlite3").unlink()
+            result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(backup_marker.read_bytes(), previous_marker)
+            self.assertFalse((mount / "db.sqlite3").exists())
 
     def test_initial_deploy_exception_ends_with_first_release(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

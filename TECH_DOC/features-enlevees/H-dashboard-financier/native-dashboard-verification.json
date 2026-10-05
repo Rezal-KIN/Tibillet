@@ -1,0 +1,93 @@
+{
+  "scope": "Native unmodified Fedow dashboard views/models/templates with synthetic data and in-memory SQLite; Django test client, local memory cache, no network or production image. Outer URL registration reproduces dashboard/admin mounting only.",
+  "django_version": "4.2.30",
+  "sqlite_version": "3.53.4",
+  "fedow_reference": {
+    "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "repository": "TiBillet/Fedow",
+    "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+  },
+  "requests": [
+    {
+      "actor": "anonymous",
+      "path": "/dashboard/",
+      "status": 200,
+      "sql_writes": 0
+    },
+    {
+      "actor": "anonymous",
+      "path": "/dashboard/asset/f4576d90-1453-4f17-bef7-4a93b459b7cc/",
+      "status": 302,
+      "sql_writes": 0
+    },
+    {
+      "actor": "anonymous",
+      "path": "/dashboard/place/c3f12aad-2ef3-4ba0-b481-ffc084a5b413/",
+      "status": 302,
+      "sql_writes": 0
+    },
+    {
+      "actor": "anonymous",
+      "path": "/dashboard/suivi/",
+      "status": 404,
+      "sql_writes": 0
+    },
+    {
+      "actor": "anonymous",
+      "path": "/dashboard/suivi/data/",
+      "status": 404,
+      "sql_writes": 0
+    },
+    {
+      "actor": "regular",
+      "path": "/dashboard/asset/f4576d90-1453-4f17-bef7-4a93b459b7cc/",
+      "status": 302,
+      "sql_writes": 0
+    },
+    {
+      "actor": "regular",
+      "path": "/dashboard/place/c3f12aad-2ef3-4ba0-b481-ffc084a5b413/",
+      "status": 302,
+      "sql_writes": 0
+    },
+    {
+      "actor": "staff",
+      "path": "/dashboard/",
+      "status": 200,
+      "sql_writes": 0
+    },
+    {
+      "actor": "staff",
+      "path": "/dashboard/asset/f4576d90-1453-4f17-bef7-4a93b459b7cc/",
+      "status": 200,
+      "sql_writes": 0
+    },
+    {
+      "actor": "staff",
+      "path": "/dashboard/place/c3f12aad-2ef3-4ba0-b481-ffc084a5b413/",
+      "status": 200,
+      "sql_writes": 0
+    },
+    {
+      "actor": "staff",
+      "path": "/admin/",
+      "status": 200,
+      "sql_writes": 0
+    }
+  ],
+  "balances_and_journal_unchanged": true,
+  "asset_lifecycle_euros": {
+    "cree_euros": 10.0,
+    "en_circulation_euros": 7.5,
+    "dans_les_lieux_euros": 2.5,
+    "remis_en_banque_euros": 0.0,
+    "total_actuel_euros": 10.0,
+    "pct_circulation": 75.0,
+    "pct_lieux": 25.0
+  },
+  "asset_cache_first_queries": 11,
+  "asset_cache_second_queries": 0,
+  "missing_survival_curve_returns_empty": true,
+  "admin_source_link_present": true
+}

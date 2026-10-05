@@ -1,4 +1,12 @@
 @font-face {
+    font-family: "DM Serif Text";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../font/dm-serif-text/dm-serif-text.ttf') format('truetype');
+}
+
+@font-face {
     font-family: 'luciole';
     src: url('../font/luciole/luciole.woff2') format('woff2');
     font-weight: normal;
@@ -41,25 +49,137 @@ a {
     color: inherit;
 }
 
+/* Hide memberships entry points on public site */
+a[href="/memberships/"],
+a[href^="/memberships/"] {
+    display: none !important;
+}
+
+/* Hide agenda entry points on public site */
+a[href="/event/"],
+a[href^="/event/"] {
+    display: none !important;
+}
+
 body {
-    font-family: luciole, sans-serif;
+    font-family: "DM Serif Text", serif !important;
+    background-color: #021244 !important;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar .nav-link, .navbar .navbar-brand,
+.btn, .badge {
+    font-family: "DM Serif Text", serif !important;
 }
 
 .display-1 {
-    font-family: Playwrite IS, serif;
+    font-family: "DM Serif Text", serif;
 }
 
 .navbar {
     padding-block: 20px;
+    background-color: #021244 !important;
+    color: #ffffff !important;
 
     .badge {
-        font-family: luciole, sans-serif;
+        font-family: "DM Serif Text", serif;
         font-size: var(--bs-badge-font-size);
     }
 
     .nav-link, .navbar-brand {
-        font: 20px staatliches, sans-serif;
+        font: 20px "DM Serif Text", serif;
     }
+}
+
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .navbar-toggler,
+.navbar .navbar-toggler-icon,
+.navbar .dropdown-toggle,
+.navbar .dropdown-item,
+.navbar .btn,
+.navbar .bi {
+    color: #ffffff !important;
+}
+
+.navbar .navbar-brand-logo {
+    height: 64px;
+    width: auto;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Mobile hamburger menu: keep labels readable on dark navbar */
+.navbar .navbar-collapse,
+.navbar .navbar-collapse .nav-link,
+.navbar .navbar-collapse .dropdown-toggle,
+.navbar .navbar-collapse .btn,
+.navbar .navbar-collapse .bi {
+    color: #ffffff !important;
+}
+
+.navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.navbar .navbar-toggler-icon {
+    filter: invert(1) brightness(1.6);
+}
+
+/* Account page tweaks: hide memberships/bookings entries and improve contrast */
+main.container-lg a[href="/my_account/membership/"],
+main.container-lg a[href="/my_account/my_reservations/"] {
+    display: none !important;
+}
+
+/* Collapse bootstrap grid columns that contain hidden account entries */
+main.container-lg .row > .col:has(> a[href="/my_account/membership/"]),
+main.container-lg .row > .col:has(> a[href="/my_account/my_reservations/"]) {
+    display: none !important;
+}
+
+main.container-lg,
+main.container-lg .lead,
+main.container-lg p,
+main.container-lg span,
+main.container-lg code,
+main.container-lg .btn,
+main.container-lg .btn i,
+main.container-lg .btn span {
+    color: #ffffff !important;
+}
+
+/* Home central card contrast */
+.home-bg h1.display-1,
+.home-bg p.lead,
+.home-bg p.lead.fs-4,
+.home-bg .text-white {
+    color: #111111 !important;
+}
+
+/* Account content readability: keep descriptive texts dark inside light cards */
+main.container-lg .card .lead,
+main.container-lg .card .text-muted,
+main.container-lg .card p,
+main.container-lg .card .card-text,
+main.container-lg .card h1,
+main.container-lg .card h2,
+main.container-lg .card h3,
+main.container-lg .card h4,
+main.container-lg .card h5,
+main.container-lg .card h6 {
+    color: #111111 !important;
+}
+
+/* Wallet details block: white panel with dark table text */
+main.container-lg .table,
+main.container-lg .table thead,
+main.container-lg .table tbody,
+main.container-lg .table tr,
+main.container-lg .table th,
+main.container-lg .table td {
+    background-color: #ffffff !important;
+    color: #111111 !important;
 }
 
 .table th, .table td {

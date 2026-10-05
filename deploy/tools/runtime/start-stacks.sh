@@ -8,6 +8,7 @@ CONFIG_PATH="${1:-}"
 load_gala_config "$CONFIG_PATH"
 require_command docker
 require_var COMPOSE_FILES
+check_fedow_storage
 
 require_command aws
 require_var AWS_REGION

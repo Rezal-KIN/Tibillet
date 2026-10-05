@@ -1,0 +1,44 @@
+{
+  "scope": "Real pinned Fedow source reconstruction from an isolated committed fixture containing the exact current deployment overlays; no application image built or deployment performed.",
+  "fixture_commit": "60a13041922d284f556bdd51c5a4442d45e3fa62",
+  "fixture_tree": "8ee09bf8e5b18753acf04376b626f3f451e88690",
+  "fixture_files_sha256": {
+    "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "deploy/source/BUILD.md": "e6842ebfdf6ccaa95beff2a2a5835b9469d16f8f668ec62d3846ea34856c96b3",
+    "deploy/Fedow/.env.example": "b6895b7d0c554273d891bbd8794e0a4ca242ea38d6cc4644cb242d1c3d30d08a",
+    "deploy/Laboutik/.env.example": "4188b079af3a5b5e866f0356893a845ba931af79345583288cbeccc570fa9915",
+    "deploy/Fedow/docker-compose.yml": "da5a51b3c3db85a5415f75bbcb65663042e1a4ccc799d42c646eb8a1d5384672",
+    "deploy/Laboutik/docker-compose.yml": "3f224e438ebdf1a97afed11f622b1ea5d097f9d99db671b2bd22bdb5976cbb01",
+    "deploy/source/admin-templates/admin/base_site.html": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+    "deploy/Fedow/settings.py": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a",
+    "deploy/Laboutik/settings.py": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+    "deploy/Laboutik/install.py": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+    "deploy/Laboutik/source_templates/login.html": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+    "deploy/Laboutik/source_templates/kiosk_base.html": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+    "deploy/Laboutik/source_templates/infos.html": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+    "deploy/Laboutik/views.py": "a3e9957482c7601b8b65ebb673ce894bdc2362e38ffcd25ccf6db48d3f42d8f0",
+    "deploy/Laboutik/fedow_api.py": "377a6b52f742d67ded0d3df855e7d4af095027778847749e54fbb770d6fb0293",
+    "deploy/Laboutik/validators.py": "bf5bb58af65f4d70be383cfa1f4fb6745ca0e7c1a6aa9b818fba56c72a18e8d6"
+  },
+  "fedow_reference": {
+    "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "repository": "TiBillet/Fedow",
+    "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+  },
+  "fedow_source_archive_sha256": "4613a5504d8b89f23c4693b025bf590c3db7713a53871da450afa3721e1b21b5",
+  "remaining_fedow_overlays": {
+    "fedowallet_django/settings.py": {
+      "source": "deploy/Fedow/settings.py",
+      "sha256": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a"
+    },
+    "source_templates/admin/base_site.html": {
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf"
+    }
+  },
+  "native_dashboard_files_checked": 54,
+  "all_dashboard_bytes_identical": true,
+  "gala_suivi_template_absent": true,
+  "publication_tests_passed": 9
+}

@@ -1,0 +1,92 @@
+--- TiBillet/LaBoutik/administration/management/commands/install.py
++++ deploy/Laboutik/install.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ import socket
+ import sys
+ from time import sleep
+@@ -95,9 +97,18 @@
+ 
+             def _base_config(self, options):
+                 config = Configuration.get_solo()
++                # Never silently repoint an already paired cashless database.
++                # The shared public hostnames are stable across Galas, but a
++                # different configured target still requires explicit review.
++                lespass_url = os.environ['LESPASS_TENANT_URL']
++                fedow_url = os.environ['FEDOW_URL']
++                if config.string_connect and config.billetterie_url and config.billetterie_url.rstrip("/") != lespass_url.rstrip("/"):
++                    raise Exception("Existing Lespass pairing targets another URL")
++                if config.can_fedow() and config.fedow_domain and config.fedow_domain.rstrip("/") != fedow_url.rstrip("/"):
++                    raise Exception("Existing Fedow pairing targets another URL")
+                 config.email = self.admin_email
+-                config.billetterie_url = os.environ['LESPASS_TENANT_URL']
+-                config.fedow_domain = os.environ['FEDOW_URL']
++                config.billetterie_url = lespass_url
++                config.fedow_domain = fedow_url
+ 
+                 if not options.get('tdd'):
+                     config.save()
+@@ -477,23 +488,36 @@
+                 email_first_admin = self.admin_email
+                 admin, created = User.objects.get_or_create(
+                     username=email_first_admin,
+-                    email=email_first_admin,
+-                    is_staff=True,
+-                    is_active=False,
+-                )
++                    defaults={
++                        "email": email_first_admin,
++                        "is_staff": True,
++                        "is_active": False,
++                    },
++                )
++                if not admin.is_staff:
++                    admin.is_staff = True
+                 admin.groups.add(staff_group)
+                 admin.save()
+-                try:
+-                    email_activation(admin.uuid)
+-                except:
+-                    logger.error("Email for admin activation FAILED")
++                if created:
++                    try:
++                        email_activation(admin.uuid)
++                    except Exception:
++                        logger.exception("Email for admin activation FAILED")
+                 call_command('check_permissions')
+                 return admin
+ 
+             def _lespass_handshake(self):
+-                # On ping LesPass
++                # The Lespass pairing is single-use. A deploy can be retried after
++                # that pairing but before the remaining catalogue/admin setup.
++                # Resume from the durable local handshake instead of polling a
++                # Lespass endpoint which correctly returns 405 once paired.
+                 config = Configuration.get_solo()
+                 lespass_url = os.environ['LESPASS_TENANT_URL']
++                if config.string_connect and config.key_billetterie:
++                    if config.billetterie_url.rstrip("/") != lespass_url.rstrip("/"):
++                        raise Exception("Existing Lespass pairing targets another URL")
++                    logger.info("Existing Lespass pairing found; resuming install")
++                    return
+                 lespass_state = None
+                 ping_count = 0
+ 
+@@ -562,9 +586,15 @@
+                 logger.info("Lespass Plugged !")
+ 
+             def _fedow_handshake(self):
+-                # On ping Fedow
++                # A second deployment must not repeat an already successful
++                # handshake or create a second Fedow place.
+                 config = Configuration.get_solo()
+                 fedow_url = os.environ['FEDOW_URL']
++                if config.can_fedow():
++                    if config.fedow_domain.rstrip("/") != fedow_url.rstrip("/"):
++                        raise Exception("Existing Fedow pairing targets another URL")
++                    logger.info("Existing Fedow pairing found; resuming install")
++                    return
+ 
+                 fedow_state = None
+                 ping_count = 0

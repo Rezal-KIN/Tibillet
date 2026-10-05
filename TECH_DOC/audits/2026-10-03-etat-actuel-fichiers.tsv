@@ -1,0 +1,293 @@
+status	path	category
+A	.claude/CLAUDE.md	documentation et audit
+A	.claude/NOTES.md	documentation et audit
+A	.claude/OBJECTIFS.md	documentation et audit
+M	.dockerignore	construction et exclusions Git/Docker
+M	.gitignore	construction et exclusions Git/Docker
+M	AUTHORS.md	documentation et audit
+M	Administration/admin/dashboard.py	application Lespass
+M	Administration/admin/site.py	application Lespass
+A	Administration/management/commands/configure_gala_apex.py	application Lespass
+A	Administration/management/commands/configure_gala_refill.py	application Lespass
+M	AuthBillet/utils.py	application Lespass
+M	BaseBillet/tasks.py	application Lespass
+A	BaseBillet/templates/emails/qr_connexion.html	application Lespass
+M	BaseBillet/templates/reunion/views/home.html	application Lespass
+A	BaseBillet/templates/reunion/views/qr_check_email.html	application Lespass
+A	BaseBillet/templates/reunion/views/qr_landing.html	application Lespass
+M	BaseBillet/templates/reunion/views/register.html	application Lespass
+M	BaseBillet/urls.py	application Lespass
+A	BaseBillet/views_qr_card.py	application Lespass
+A	NOTICE.md	documentation et audit
+M	README.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-choix-et-propositions.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/ALL_SHA256SUMS	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/INDEX.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/INVENTAIRE-100J-VOLUMES.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/INVESTIGATION.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/README.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/SHA256SUMS	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/VOLUMES.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/all-files.tsv	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/comparison.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_core__serializers.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__templates__base.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__templates__index.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__templates__index__index.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__templates__index__suivi.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__urls.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedow_dashboard__views.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-fedowallet_django__settings.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-results.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/fedow-source_templates__admin__base_site.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/file-history.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-Cashless__settings.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-administration__management__commands__install.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-fedow_connect__fedow_api.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-htmxview__templates__appsettings__infos.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-htmxview__templates__kiosk__base.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-results.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-source_templates__admin__base_site.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-webview__templates__login.html.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-webview__validators.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/laboutik-webview__views.py.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/lespass-application.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/lespass-build.diff	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/original-import-history.txt	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/overlays.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/README.md	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/inventory_mounts.py	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/prepare_sources.py	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/requirements-observed.txt	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/run_fedow_probe.py	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/probes/run_laboutik_probe.py	documentation et audit
+A	TECH_DOC/audits/2026-10-03-fork/volumes.json	documentation et audit
+A	TECH_DOC/audits/2026-10-03-suite-G-E-K-H.md	documentation et audit
+A	TECH_DOC/features-enlevees/C-happy-hour.md	documentation et audit
+A	TECH_DOC/features-enlevees/D-limite-terminaux.md	documentation et audit
+A	TECH_DOC/features-enlevees/F-option-monnaie-cadeau.md	documentation et audit
+A	TECH_DOC/features-enlevees/G-reparations-fedow.md	documentation et audit
+A	TECH_DOC/features-enlevees/G-verification-results.json	documentation et audit
+A	TECH_DOC/features-enlevees/README.md	documentation et audit
+A	TECH_DOC/features-enlevees/restoration-receipt.json	documentation et audit
+A	TECH_DOC/features-enlevees/verify-restored-code.py	documentation et audit
+M	TiBillet/settings.py	application Lespass
+A	deploy/.gitignore	déploiement, configuration, tests ou documentation
+A	deploy/.gitmodules	déploiement, configuration, tests ou documentation
+A	deploy/Fedow/.env.example	déploiement, configuration, tests ou documentation
+A	deploy/Fedow/custom_patches/fedow_dashboard/base.html	source active remplaçant/complétant une image
+A	deploy/Fedow/custom_patches/fedow_dashboard/index.html	source active remplaçant/complétant une image
+A	deploy/Fedow/custom_patches/fedow_dashboard/public_index.html	source active remplaçant/complétant une image
+A	deploy/Fedow/custom_patches/fedow_dashboard/suivi.html	source active remplaçant/complétant une image
+A	deploy/Fedow/custom_patches/fedow_dashboard/urls.py	source active remplaçant/complétant une image
+A	deploy/Fedow/custom_patches/fedow_dashboard/views.py	source active remplaçant/complétant une image
+A	deploy/Fedow/docker-compose.release.yml	déploiement, configuration, tests ou documentation
+A	deploy/Fedow/docker-compose.yml	déploiement, configuration, tests ou documentation
+A	deploy/Fedow/nginx/django.conf	déploiement, configuration, tests ou documentation
+A	deploy/Fedow/settings.py	source active remplaçant/complétant une image
+A	deploy/Laboutik/.env.example	déploiement, configuration, tests ou documentation
+A	deploy/Laboutik/docker-compose.release.yml	déploiement, configuration, tests ou documentation
+A	deploy/Laboutik/docker-compose.yml	déploiement, configuration, tests ou documentation
+A	deploy/Laboutik/fedow_api.py	source active remplaçant/complétant une image
+A	deploy/Laboutik/install.py	source active remplaçant/complétant une image
+A	deploy/Laboutik/nginx/laboutique.conf	déploiement, configuration, tests ou documentation
+A	deploy/Laboutik/settings.py	source active remplaçant/complétant une image
+A	deploy/Laboutik/source_templates/infos.html	source active remplaçant/complétant une image
+A	deploy/Laboutik/source_templates/kiosk_base.html	source active remplaçant/complétant une image
+A	deploy/Laboutik/source_templates/login.html	source active remplaçant/complétant une image
+A	deploy/Laboutik/validators.py	source active remplaçant/complétant une image
+A	deploy/Laboutik/views.py	source active remplaçant/complétant une image
+A	deploy/Laboutik_100-jours-225/docker-compose.yml	archive historique non active
+A	deploy/Laboutik_100-jours-225/fedow_api.py	archive historique non active
+A	deploy/Laboutik_100-jours-225/nginx/laboutique.conf	archive historique non active
+A	deploy/Laboutik_100-jours-225/settings.py	archive historique non active
+A	deploy/Laboutik_100-jours-225/validators.py	archive historique non active
+A	deploy/Laboutik_100-jours-225/views.py	archive historique non active
+A	deploy/Lespass-v2/.env.example	archive historique non active
+A	deploy/Lespass-v2/app	archive historique non active
+A	deploy/Lespass-v2/docker-compose.yml	archive historique non active
+A	deploy/Lespass-v2/nginx/default.conf	archive historique non active
+A	deploy/Lespass/.env.example	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/app	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/docker-compose.release.yml	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/docker-compose.yml	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/legacy-100j-qr-flow/README.md	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/templates/emails/base.html	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/templates/emails/connexion.html	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/templates/reunion/views/qr_check_email.html	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/templates/reunion/views/qr_landing.html	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/templates/reunion/views/register.html	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/urls.py	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/views.py	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/custom_patches/BaseBillet/views_balance_total.py	archive historique non active
+A	deploy/Lespass/legacy-100j-qr-flow/source/Lespass/docker-compose.yml	archive historique non active
+A	deploy/Lespass/nginx/lespass.conf	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/www/static/reunion/css/tibillet.css	déploiement, configuration, tests ou documentation
+A	deploy/Lespass/www/static/reunion/js/membership-form.mjs	déploiement, configuration, tests ou documentation
+A	deploy/README.md	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-active-gala-apply.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-active-gala-plan.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-foundation-apply.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-foundation-finalize.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-foundation-plan.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-production-validate.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-production.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-test-deploy.yml	déploiement, configuration, tests ou documentation
+A	deploy/buildspec/tibillet-test.yml	déploiement, configuration, tests ou documentation
+A	deploy/docs/ARCHITECTURE-GALAS.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/aws-access.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/active-gala-and-shared-integrations.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/admin-access-and-local-refunds.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/agpl-source-offer.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/backup-restore.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/foundation-pipeline-bootstrap.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/gala-registry.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/incident.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/new-gala-deployment-and-development-workflow.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/operations/start-stop-dormance.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/100j-port-status.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/bapts-runtime-inventory.json	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/bapts-runtime-inventory.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/inventory-method.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/scope-and-change-gates.md	déploiement, configuration, tests ou documentation
+A	deploy/docs/platform/tibillet100j-customizations-inventory.md	déploiement, configuration, tests ou documentation
+A	deploy/infra/README.md	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform-bootstrap/.terraform.lock.hcl	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform-bootstrap/main.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform-bootstrap/outputs.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform-bootstrap/variables.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform-bootstrap/versions.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/.terraform.lock.hcl	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/active-gala-delivery.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/active-gala.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/budget.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/delivery.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/examples/backend.hcl.example	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/examples/gala.auto.tfvars.example	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/foundation-delivery.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/gala-instances.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/identity-center.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/locals.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/modules/gala/bootstrap-runtime.sh.tftpl	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/modules/gala/main.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/modules/gala/outputs.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/modules/gala/variables.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/organization.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/outputs.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/production-delivery.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/production-validation.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/providers.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/scripts/import-current-gala.sh	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/shared-integrations.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/storage.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/test-deployment.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/variables.tf	déploiement, configuration, tests ou documentation
+A	deploy/infra/terraform/versions.tf	déploiement, configuration, tests ou documentation
+A	deploy/ops/policy/denied-targets.yaml	déploiement, configuration, tests ou documentation
+A	deploy/ops/policy/runtime-allowlist.yaml	déploiement, configuration, tests ou documentation
+A	deploy/registry/examples/gala-am-aix-2027.example.json	déploiement, configuration, tests ou documentation
+A	deploy/releases/examples/gala-v1-release.json	déploiement, configuration, tests ou documentation
+A	deploy/source/.gitignore	déploiement, configuration, tests ou documentation
+A	deploy/source/BUILD.md	déploiement, configuration, tests ou documentation
+A	deploy/source/admin-templates/admin/base_site.html	source active remplaçant/complétant une image
+A	deploy/source/image-sources.json	déploiement, configuration, tests ou documentation
+A	deploy/systemd/tibillet-gala-backup.service	déploiement, configuration, tests ou documentation
+A	deploy/systemd/tibillet-gala-backup.timer	déploiement, configuration, tests ou documentation
+A	deploy/systemd/tibillet-gala-stacks.service	déploiement, configuration, tests ou documentation
+A	deploy/test-images.json	déploiement, configuration, tests ou documentation
+A	deploy/tests/policy/test_runtime_scope.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_active_gala_switch.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_backup_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_fedow_webhook_bootstrap.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_gala_credentials.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_gala_refill_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_healthcheck_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_host_swap_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_laboutik_article_prices.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_laboutik_card_registration.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_laboutik_install_resume.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_lespass_compose_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_lespass_email_settings.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_promotion_contract.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_qr_smoke_card_script.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_reclaim_deployment_space.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_source_offer.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_validate_foundation_inputs.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_validate_release.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_verify_foundation_plan.py	déploiement, configuration, tests ou documentation
+A	deploy/tests/test_verify_gala_bootstrap.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/INFISICAL.md	déploiement, configuration, tests ou documentation
+A	deploy/tools/aws/install-sso-profile.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/build-source-offer.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/create-smoke-manifest.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/deploy-smoke-candidate.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/initialize-gala-credentials.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/publish-source-release.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/reconcile-inactive-gala-outbound.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/backup-postgres.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/configure-gala-admin.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/create-qr-smoke-card.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/deploy-release-from-s3.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/deploy-release.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/ensure-host-swap.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/examples/gala.conf.example	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/fetch-runtime-secret.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/healthcheck.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/install-runtime-contract.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/lib.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/materialize-runtime-env.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/preflight.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/reclaim-deployment-space.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/reconcile-fedow-webhook.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/reconcile-runtime.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/restore-postgres.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/run-qr-smoke-e2e.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/start-stacks.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/stop-stacks.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/validate-release.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/runtime/verify-backup-restore.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/scripts/attach_product_images.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/attach_product_images_by_pdv.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/attach_product_images_inline.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/attach_product_images_standalone.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/backup_soldes.sh	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/create_oenolss_bar.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/create_shots_bar.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/delete_two_cards.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/delete_two_cards_force_laboutik.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/emoji_boissons.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/find_cards_members.py	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/scripts/reset_soldes.sh	outil historique; présence ne prouve pas une exécution
+A	deploy/tools/setup.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/setup_infisical.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/start-stacks-on-boot.sh	déploiement, configuration, tests ou documentation
+A	deploy/tools/switch-active-gala.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/validate-foundation-inputs.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/validate-promotion.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/validate-runtime-scope.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/verify-foundation-plan.py	déploiement, configuration, tests ou documentation
+A	deploy/tools/verify-gala-bootstrap.py	déploiement, configuration, tests ou documentation
+A	deploy/traefik/docker-compose.release.yml	déploiement, configuration, tests ou documentation
+A	deploy/traefik/docker-compose.yml	déploiement, configuration, tests ou documentation
+M	dockerfile	construction et exclusions Git/Docker
+M	fedow_connect/fedow_api.py	application Lespass
+A	releases/gala-am-aix/gala-am-aix-v1.0.0.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.1.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.10.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.11.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.2.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.3.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.4.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.5.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.6.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.7.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.8.json	manifestes de release
+A	releases/gala-am-aix/gala-am-aix-v1.0.9.json	manifestes de release
+A	releases/gala-first-run-20260926/production.json	manifestes de release
+A	releases/gala-verification/production.json	manifestes de release
+M	seo/templates/seo/partials/tibillet_community_links.html	application Lespass
+A	tests/pytest/test_configure_gala_apex.py	tests Lespass
+A	tests/pytest/test_configure_gala_refill.py	tests Lespass
+A	tests/pytest/test_fedow_local_transport.py	tests Lespass
+A	tests/pytest/test_qr_card_fedow_e2e.py	tests Lespass
+A	tests/pytest/test_qr_card_onboarding.py	tests Lespass

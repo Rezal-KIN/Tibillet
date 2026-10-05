@@ -16,9 +16,9 @@ BASE = [
     "--region",
     "eu-west-3",
     "--instance",
-    "i-00000000000000000",
+    "i-0037b98572fccdff2",
     "--instance-name",
-    "tibillet-gala-not-provisioned",
+    "tibillet-gala-paris-gala-smoke",
 ]
 
 
@@ -33,7 +33,7 @@ def run(*extra: str) -> subprocess.CompletedProcess[str]:
 
 
 class RuntimeScopeTests(unittest.TestCase):
-    def test_allows_provisioning_placeholder_only(self) -> None:
+    def test_allows_managed_smoke_instance(self) -> None:
         result = run()
 
         self.assertEqual(result.returncode, 0)
@@ -57,8 +57,8 @@ class RuntimeScopeTests(unittest.TestCase):
 
     def test_rejects_unapproved_instance(self) -> None:
         args = BASE.copy()
-        args[args.index("i-00000000000000000")] = "i-0123456789abcdef0"
-        args[args.index("tibillet-gala-not-provisioned")] = "tibillet-gala-gala-am-aix-2027"
+        args[args.index("i-0037b98572fccdff2")] = "i-0123456789abcdef0"
+        args[args.index("tibillet-gala-paris-gala-smoke")] = "tibillet-gala-gala-am-aix-2027"
         result = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=False)
 
         self.assertEqual(result.returncode, 1)

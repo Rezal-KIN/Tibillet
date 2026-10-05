@@ -1,0 +1,101 @@
+{
+  "scope": "Real pinned LaBoutik/Fedow source reconstruction from an isolated committed fixture containing exact current deployment overlays; no application image built or deployment performed.",
+  "laboutik_reference": {
+    "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+    "repository": "TiBillet/LaBoutik",
+    "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+    "image_overlays": {
+      "docker_push_update.sh": {
+        "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+        "replacements": [
+          [
+            "VERSION=\"1.4\"",
+            "VERSION=\"1.7\""
+          ]
+        ]
+      }
+    }
+  },
+  "laboutik_source_archive_sha256": "1c2d1aade192fb283884bf64d818efddcd50f0350250f6dbdb9e71a415374220",
+  "native_laboutik_api_exact": true,
+  "native_laboutik_api_sha256": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+  "remaining_laboutik_overlays": {
+    "docker_push_update.sh": {
+      "source": "audited image build change",
+      "sha256": "efe82633d89db32be3fba68207133932eca388e5b898eabc07115a9ad8ee10ea"
+    },
+    "Cashless/settings.py": {
+      "source": "deploy/Laboutik/settings.py",
+      "sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870"
+    },
+    "administration/management/commands/install.py": {
+      "source": "deploy/Laboutik/install.py",
+      "sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588"
+    },
+    "webview/templates/login.html": {
+      "source": "deploy/Laboutik/source_templates/login.html",
+      "sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b"
+    },
+    "htmxview/templates/kiosk/base.html": {
+      "source": "deploy/Laboutik/source_templates/kiosk_base.html",
+      "sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd"
+    },
+    "htmxview/templates/appsettings/infos.html": {
+      "source": "deploy/Laboutik/source_templates/infos.html",
+      "sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4"
+    },
+    "source_templates/admin/base_site.html": {
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf"
+    },
+    "webview/views.py": {
+      "source": "deploy/Laboutik/views.py",
+      "sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6"
+    },
+    "webview/validators.py": {
+      "source": "deploy/Laboutik/validators.py",
+      "sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e"
+    }
+  },
+  "fixture_commit": "a93fed60b89ee957944584062a4b4bee5528e3cd",
+  "fixture_tree": "d7b7367fa5e7408267dfffff5094d05f00b67d08",
+  "fixture_files_sha256": {
+    "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "deploy/source/BUILD.md": "e6842ebfdf6ccaa95beff2a2a5835b9469d16f8f668ec62d3846ea34856c96b3",
+    "deploy/Fedow/.env.example": "b6895b7d0c554273d891bbd8794e0a4ca242ea38d6cc4644cb242d1c3d30d08a",
+    "deploy/Laboutik/.env.example": "4188b079af3a5b5e866f0356893a845ba931af79345583288cbeccc570fa9915",
+    "deploy/Fedow/docker-compose.yml": "da5a51b3c3db85a5415f75bbcb65663042e1a4ccc799d42c646eb8a1d5384672",
+    "deploy/Laboutik/docker-compose.yml": "a13dbb2418811f34bbc22147cb77eed7f8a184bbc1b02f0a117ab263be0873da",
+    "deploy/source/admin-templates/admin/base_site.html": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+    "deploy/Fedow/settings.py": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a",
+    "deploy/Laboutik/settings.py": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+    "deploy/Laboutik/install.py": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+    "deploy/Laboutik/source_templates/login.html": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+    "deploy/Laboutik/source_templates/kiosk_base.html": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+    "deploy/Laboutik/source_templates/infos.html": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+    "deploy/Laboutik/views.py": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6",
+    "deploy/Laboutik/validators.py": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e"
+  },
+  "fedow_reference": {
+    "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "repository": "TiBillet/Fedow",
+    "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+  },
+  "fedow_source_archive_sha256": "4613a5504d8b89f23c4693b025bf590c3db7713a53871da450afa3721e1b21b5",
+  "remaining_fedow_overlays": {
+    "fedowallet_django/settings.py": {
+      "source": "deploy/Fedow/settings.py",
+      "sha256": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a"
+    },
+    "source_templates/admin/base_site.html": {
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf"
+    }
+  },
+  "native_dashboard_files_checked": 54,
+  "all_dashboard_bytes_identical": true,
+  "gala_suivi_template_absent": true,
+  "publication_tests_passed": 9
+}
