@@ -1,9 +1,11 @@
 # Protocole de déploiement d'un gala et de livraison quotidienne
 
-**Statut : architecture cible arrêtée, pas procédure AWS déjà entièrement
-opérationnelle.** Voir [l'architecture et les écarts actuels](../ARCHITECTURE-GALAS.md).
-Ne pas lancer une création réelle en supposant que les étapes cible existent
-déjà dans les pipelines installées.
+**Statut vérifié le 6 octobre 2026 : Foundation, Test et Production exécutées avec
+succès sur une EC2 neuve, avec validation avant approbation.** Les preuves et les limites
+de l'essai sur une EC2 neuve figurent dans
+[l'audit du premier lancement](first-launch-validation-2026-10-05.md).
+L'essai utilise les commits explicites d'une branche : leur intégration dans
+`main` et la bascule publique sont des étapes distinctes.
 
 Ce document décrit deux flux distincts : la création d'un nouveau gala, puis
 la livraison normale d'une évolution applicative. Ils ne doivent pas être
@@ -80,9 +82,9 @@ cashless.galas-am-aix.rezal.fr → Laboutik
    pas. En cas d'échec partiel, corriger le code versionné puis relancer le
    même gala sans réparer son EC2 à la main.
 
-La pipeline AWS installée actuellement demande encore slug, domaine, VPC,
-subnet, AMI et capacité, avec une approbation de plan. Elle doit être alignée
-sur cette cible **avant** le test de création demandé ici.
+La pipeline AWS vérifiée demande seulement `GalaName`. Les actions
+`PlanNewGala`, `ApplyCheckedPlan` et `InitializeGalaSecrets` ont été exécutées
+pour la nouvelle instance de l'audit, sans remplacement d'Aix ou Smoke.
 
 Le premier bootstrap de cette pipeline reste une action Terraform manuelle :
 une pipeline ne peut pas se créer avant d'exister. Son rôle CodeBuild élevé est
@@ -128,7 +130,7 @@ chargement des trois fichiers `0600` figurent dans
 
 ### 5. Valider la chaîne Test partagée
 
-Dans la cible, un push sur **`main`** lance la pipeline commune. Celle-ci
+La pipeline installée dispose d'un déclencheur sur **`main`**. Celle-ci
 construit et contrôle les images nécessaires puis les
 déploie **automatiquement sur l'unique EC2 `gala-smoke`**, sans numéro de
 release métier ni approbation. Le SHA Git et les digests restent consignés :
@@ -137,10 +139,10 @@ release métier ni approbation. Le SHA Git et les digests restent consignés :
 sha-<commit Git> → digest sha256:…
 ```
 
-La pipeline actuelle s'arrête après avoir construit **Lespass seulement** :
-ce n'est pas encore un déploiement sur Smoke. Le protocole cible exige le
-statut final `Succeeded` et un contrôle de l'application réellement exécutée
-sur Smoke. Un build ECR réussi seul ne vaut pas validation du test.
+Les étapes installées construisent Lespass puis déploient la candidate par
+SSM sur Smoke. L'essai a vérifié ce déploiement depuis un commit explicite de
+la branche. Il exige le statut final `Succeeded` et un contrôle de l'application
+réellement exécutée : un build ECR réussi seul ne vaut pas validation du test.
 Smoke utilise les clés Stripe **test** du même compte que les clés **live**
 des galas réels. Le déploiement Test ne déplace jamais l'IP publique ; la
 pipeline « Gala actif » peut néanmoins attribuer volontairement cette IP à
@@ -188,14 +190,12 @@ et l'ID de l'EC2 cible. Une nouvelle révision ou un autre manifeste exige une
 doit être en écriture unique et correspondre octet pour octet à l'artefact
 validé ; aucun `latest` ni remplacement silencieux après l'approbation.
 
-**Écart actuel à corriger avant ce test :** la pipeline installée place
-`ApprovePromotion` avant la validation automatique effectuée par CodeBuild.
-Le code vérifie le format des digests, le slug et la plateforme, mais ne prouve
-pas encore que les quatre images correspondent à une candidate testée sur
-Smoke. Le protocole cible inverse ces étapes et ajoute cette preuve ; on ne
-doit pas présenter le contrôle actuel comme déjà complet. L'écriture unique
-de l'objet S3 et l'identité exacte entre l'artefact approuvé et déployé sont
-également à faire respecter par le code, pas seulement par cette procédure.
+La pipeline vérifiée place `ValidatePromotion` avant `ApprovePromotion`.
+La validation compare le commit applicatif et les quatre images au marqueur
+immuable du déploiement Smoke réussi. Le déploiement reçoit ensuite cet
+artefact, vérifie son SHA256 approuvé et refuse de remplacer un objet S3
+de release par des octets différents. L'audit conserve l'artefact téléchargé
+et l'ID d'exécution contrôlés avant l'approbation.
 
 La commande SSM ne vise que l'instance définie par Terraform. Elle vérifie le manifeste,
 le secret, l'espace disque et les conditions de backup avant le démarrage des
@@ -232,7 +232,7 @@ Pour permettre un retour rapide, son EC2 reste en marche par défaut :
 2. Lancer les tests pertinents localement.
 3. Ouvrir une PR, faire relire puis fusionner dans `main`.
 4. La pipeline Test construit la candidate liée au commit de fusion et la
-   déploie sur l'unique EC2 Smoke (cible non encore implémentée). Elle ne
+   déploie sur l'unique EC2 Smoke. Elle ne
    modifie aucune EC2 Production.
 
 Les changements applicatifs ne modifient pas l'infrastructure. Les changements
@@ -306,13 +306,16 @@ pas de vérifier les prérequis ni de laisser une trace de l'artefact approuvé.
 
 ## État actuel de l'outillage
 
-Foundation, la pipeline Production manuelle par gala et le build Test Lespass
-existent, mais **le parcours cible ci-dessus n'a pas été validé de bout en
-bout**. La Test ne déploie pas encore Smoke ; Foundation demande encore des
-paramètres techniques et une approbation de plan ; la validation automatique
-Production vient encore après l'approbation. Les changements locaux de clés
-générées, d'IP partagée et de pipeline Gala actif ne sont pas encore appliqués
-dans AWS. Ne pas confondre code préparé et fonctionnalité déployée.
+Les définitions AWS de Foundation, Test et Production ont été relues pendant
+l'essai du premier lancement. Foundation crée une EC2 dédiée depuis un nom ;
+Test déploie réellement sur Smoke ; Production exige une preuve de Test avant
+l'approbation et cible l'EC2 du gala concerné. Consulter l'audit daté pour les
+statuts finaux, les défauts corrigés et les contrôles exécutés.
+
+Le déclencheur `main` est configuré, mais cet essai utilise des commits
+explicites de la branche de travail. Il ne prouve pas une fusion dans `main`,
+une bascule Gala actif, un paiement ou la réception d'un email réel. Le DNS et l'IP publique
+d'Aix sont conservés pendant cet essai.
 
 ## Références
 

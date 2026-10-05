@@ -19,8 +19,13 @@ pas le comportement à partir d'une description.
 | I | Backend PostgreSQL de Fedow et élargissement SQL des secrets Stripe | `7f31acd3` | [I-postgresql-fedow](I-postgresql-fedow/README.md) |
 | LaBoutik | Écarts hérités des billets, adhésions, carte primaire, doublons et erreurs | Lot local du 5 octobre 2026 après `6c373f10` | [LaBoutik-ecarts-herites](LaBoutik-ecarts-herites/README.md) |
 
-Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
-article, solde, transaction ou réglage de base de production n'a été modifié.
+Au moment des premiers retraits, ces modifications étaient locales et non
+déployées. Elles sont maintenant poussées sur la branche et validées sur Smoke
+puis sur une nouvelle EC2, avec les preuves dans
+[l'audit du premier lancement](../../deploy/docs/operations/first-launch-validation-2026-10-05.md).
+Aix n'a pas été mise à cette version et les derniers changements ne sont pas
+fusionnés dans `main`. Les anciennes données Smoke ont été archivées avant
+ses essais sur bases vides ; aucun solde existant n'a été transféré vers SQLite.
 
 ## Choix conservés ou en attente
 
@@ -31,7 +36,7 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | E | Conservé et corrigé : enregistrement uniquement sur carte introuvable, délais réseau TiBillet restaurés |
 | G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
 | H | Retiré à la demande de l'utilisateur le 5 octobre 2026 ; dashboard natif de l'image, aucun montage de remplacement |
-| I | Retour SQLite implémenté localement pour Fedow ; base vide choisie, PostgreSQL archivé, démarrage des trois services à vérifier sur une instance neuve : [dossier](I-postgresql-fedow/README.md) |
+| I | Fedow SQLite natif démarré sur une instance neuve ; PostgreSQL Smoke archivé, sauvegarde mixte et restauration isolée vérifiées : [audit du lancement](../../deploy/docs/operations/first-launch-validation-2026-10-05.md) et [configuration archivée](I-postgresql-fedow/README.md) |
 | J | Garder pour l'instant l'installateur reprenable |
 | K | Conserver l'offre de sources ; risque de blocage d'un nouveau déploiement documenté séparément |
 | L | Décision reportée : ne pas retirer pour le moment |
@@ -126,9 +131,11 @@ l'utilisateur choisit de revenir à SQLite pour Fedow. La configuration PostgreS
 et ses dépendances sont archivées à l'identique dans
 [I-postgresql-fedow](I-postgresql-fedow/README.md). Le dépôt utilise maintenant
 le bloc SQLite natif. L’utilisateur choisit ensuite
-une base vide, l’ancien PostgreSQL restant conservé ; aucun transfert ni
-effacement distant n’a été effectué. Les sauvegardes mixtes sont vérifiées
-localement. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
+une base vide, l'ancien PostgreSQL restant conservé. Les anciennes données
+Smoke ont ensuite été archivées dans S3 et sur son disque avant les essais
+des pipelines ; aucune migration de ces données vers SQLite n'est réalisée.
+Le premier lancement et une restauration isolée des sauvegardes mixtes ont
+été vérifiés sur AWS. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
 
 L reste inchangé et sa décision est reportée. La configuration Nginx contient les
 routes applicatives et les alias admin ; elle n'est pas une fonctionnalité de
