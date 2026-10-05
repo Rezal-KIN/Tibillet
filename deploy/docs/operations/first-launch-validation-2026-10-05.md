@@ -8,8 +8,10 @@ Le gala Aix conserve son instance et son IP publique pendant cet essai.
 instance a été créée, initialisée sans données préexistantes et redémarrée
 sans réparation manuelle. Les accès admin, le site, les cartes, la lecture QR,
 Celery, les sauvegardes et la restauration isolée ont été vérifiés. Un défaut
-du contrôle admin a été corrigé et retesté avant la promotion. Les derniers
-changements restent sur la branche, à intégrer dans `main` après revue.
+du contrôle admin a été corrigé et retesté avant la promotion. La PR #103
+est ensuite fusionnée dans `main` le 6 octobre (heure de Paris) ; la pipeline
+Test déclenchée automatiquement et la bascule publique sont aussi réussies.
+La section complémentaire ci-dessous distingue ces contrôles de l'essai initial.
 Le premier déploiement SSM de la nouvelle instance a duré 9 min 44 s.
 
 
@@ -213,3 +215,111 @@ première tentative sont conservées dans les archives déjà indiquées.
 Les reçus et sondes temporaires sont sous `.context/first-boot/`, gitignoré.
 Les preuves durables essentielles (commits, digests du manifeste, exécutions,
 backup et limites) restent consignées dans ce document versionné.
+
+## Complément du 6 octobre : intégration et validation publique
+
+La revue a confirmé les restaurations natives et l'absence de nouveau blocage.
+Les 107 tests de déploiement passent à nouveau avant fusion ; les cinq contrôles
+de politique, l'identité des sources restaurées et `git diff --check` sont valides.
+La PR [#103](https://github.com/Rezal-KIN/Tibillet/pull/103) est fusionnée avec
+le HEAD contrôlé `791711ed5791f8fe5d0bbab2269d59d5b948f1d4`, sans suppression
+ni renommage de la branche. Commit de fusion :
+`a219b5d6346dafdd8f0037e3dae5548962617c70`.
+
+Le push dans `main` déclenche automatiquement Test par `WebhookV2` : exécution
+`0f2c6544-b752-4400-a497-49628e2e5e1f`, statut final `Succeeded`.
+Le déploiement SSM `9599ad8f-b0e4-4caa-bdb6-547b02d0c526` réussit en 5 min 15 s.
+Le marqueur S3 `test-validated/smoke-a219b5d6346dafdd8f0037e3dae5548962617c70.json`
+correspond au commit exact et aux digests attendus. Image Lespass construite :
+`318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:a25cde4c34612ebfdb521b7929cdc7e81a972afc9a92a1833298b01fb3501a5f`.
+Les images Fedow, LaBoutik et Traefik restent celles du manifeste initial.
+
+La démonstration conserve sa release `v1.0.0` issue du commit `3a215c66`.
+Le diff entre ce commit et le commit fusionné ne touche que trois documents
+et le manifeste de release : les sources applicatives et les scripts runtime
+testés sont identiques. Ce complément ne prétend pas avoir redéployé l'image
+Lespass nouvellement construite sur la démonstration ou sur Aix.
+
+L'EC2 de démonstration est démarrée puis activée temporairement par la pipeline
+Gala actif, exécution `d83e5330-5035-4222-b598-b6d9f4ba6b7e`, statut `Succeeded`.
+Le plan téléchargé est relu avant approbation : même commit `main`, cible
+`i-00cb72994b875e92d`, ancien détenteur Aix `i-0801aa8a2273838aa`, même Elastic IP
+`51.44.90.200`, groupe public et domaine attendus. Le contrôle local SSM
+`0614a8f3-2c92-4892-9156-e955eff81310` réussit avant déplacement de l'IP.
+La procédure versionnée redémarre Traefik puis vérifie le HTTPS strict avant
+de changer le marqueur `active-gala`. Aucun changement DNS n'est effectué.
+
+Les trois noms publics répondent 200 avec validation TLS activée, TLS 1.3 et
+certificats Let's Encrypt couvrant leur nom. Les certificats observés expirent
+le 3 janvier 2027. Les connexions admin des trois services, le refus d'un mauvais
+mot de passe, l'alias cashless `/admin`, le formulaire QR, l'accueil et `/source/`
+passent sur les domaines publics. Les quatre assets ont toujours les octets
+attendus. Aucun navigateur contrôlable n'est connecté à cette session : ces
+contrôles HTTP ne constituent pas une validation visuelle.
+
+La carte de test `6F1992A1`, QR `74a4fee2-ad4f-42bb-ad48-3baae15d9732`, est prête
+avec un portefeuille éphémère sans token ni transaction. La sonde SSM
+`38c88767-95c5-4b6e-a98c-b25028edd533` confirme Stripe en mode réel ; la lecture
+`e4eba74b-eb8f-43b9-8423-01ac0db55538` confirme qu'aucun parcours n'est encore
+démarré sur cette carte à l'instant du contrôle. Un QR local est généré et
+redécodé vers l'URL attendue. Aucun paiement n'est effectué par l'agent.
+Une première sonde a échoué sur un mauvais répertoire d'exécution ; la sonde
+corrigée utilise le répertoire et Poetry natifs, sans modification du serveur.
+
+La réception de l'invitation admin et le parcours email restent à confirmer.
+La connexion Gmail disponible dans cette session demande une réauthentification ;
+elle n'a donc pas permis de vérifier la boîte de réception. Les remboursements
+restent reportés. Les reçus complets, le plan, la sonde et le QR sont conservés
+sous `.context/first-boot/` ; aucun mot de passe en clair n'est ajouté à ces fichiers.
+
+## Choix utilisateur : poursuivre le paiement en mode test
+
+L'utilisateur confirme ensuite avoir reçu l'invitation LaBoutik dans
+`kin.rezal@gmail.com`. La réception est donc confirmée par le destinataire ;
+la connexion via le lien n'est pas encore vérifiée.
+Il demande de poursuivre sur l'instance de test sans argent réel.
+
+Le retour vers Aix `f2cc606f-8a4e-47be-8b6e-937ae1ed832e` est arrêté au stade
+d'approbation, avant toute application. La pipeline Gala actif cible ensuite
+Smoke : exécution `d3ccea98-6931-40c5-8166-2d4ab5a0e027`, statut final `Succeeded`.
+Le plan exact est téléchargé et contrôlé avant approbation : même commit `main`,
+cible `i-0037b98572fccdff2`, ancien détenteur démonstration
+`i-00cb72994b875e92d`, même IP, groupe public et domaine attendus.
+Le contrôle local SSM `718eee1f-fa02-4252-b271-09cca8ac3c92` réussit.
+Le marqueur `active-gala` devient `gala-smoke` après validation HTTPS stricte.
+
+Les gardes réels confirment `STRIPE_TEST` et une clé `sk_test_` dans Fedow et
+Lespass ; les valeurs des clés ne sont jamais imprimées. LaBoutik ne porte
+pas de clé Stripe. Lespass utilise le backend email dummy sur Smoke : cette
+instance ne vérifie donc pas la livraison SMTP réelle. Plusieurs erreurs
+de la sonde temporaire (attribut Django absent puis guillemets shell) sont
+corrigées avant tout scan ; aucune réparation applicative n'est nécessaire.
+
+Un premier scan de préparation rencontre un timeout de lecture de 5 secondes
+vers Fedow. La vue renvoie le message d'échec prévu et ne crée pas la carte.
+La cause précise de ce délai n'est pas établie ; ce succès ultérieur ne vaut
+pas test de charge. Une sonde de charge instantanée montre les conteneurs
+principaux actifs et sans redémarrage. Après le contrôle local et la bascule,
+SSM `37fcba7e-38ea-4f76-a81b-83baee475599` réussit : scan d'une nouvelle carte,
+création dans LaBoutik/Fedow, puis deuxième scan sans doublon. La création
+automatique native par signal et le traitement natif d'une carte déjà connue
+fonctionnent aussi pendant ce contrôle.
+
+Carte prête pour l'utilisateur : tag `BABBADAC`, QR
+`83f91f5a-5a33-434a-8664-3ba42b3f5926`, URL
+`https://galas-am-aix.rezal.fr/qr/83f91f5a-5a33-434a-8664-3ba42b3f5926/`.
+Le QR local est généré et redécodé. La lecture SSM
+`e3c8cb2f-9a7d-4124-8ecb-ad772035fcf6` confirme un portefeuille éphémère
+sans token, transaction ni Checkout, en mode Stripe test.
+Les trois authentifications admin, le refus d'un mauvais mot de passe,
+l'alias `/admin`, les assets exacts, `/source/` et le formulaire QR passent
+ensuite publiquement sur Smoke avec validation TLS activée.
+
+Smoke reste temporairement actif pour permettre le paiement simulé par
+l'utilisateur avec une carte de test Stripe. Le paiement et son crédit
+ne sont pas encore exécutés à la clôture de cette préparation. La vérification
+suivante devra comparer le montant payé en test, le solde et les transactions
+Fedow, avant de rétablir Aix par la pipeline. Aucun paiement réel n'est requis
+pour cette étape. L'EC2 de démonstration, désormais sans IP partagée ni groupe
+public, est mise à l'arrêt ; son disque et ses sauvegardes restent conservés.
+Aix est aussi conservée et aucune nouvelle release n'y est déployée.
