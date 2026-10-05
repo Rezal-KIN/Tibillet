@@ -78,7 +78,11 @@ les éventuels manquements historiques.
 
 - Lespass conserve les liens et crédits officiels, et ajoute un lien `/source/`
   au pied de page partagé ainsi qu'au menu d'administration.
-- Fedow ajoute le lien à son template partagé, à son accueil public et à son admin.
+- Depuis le rollback local du 5 octobre 2026, Fedow conserve le lien dans son
+  admin, l'accès `/source/` et l'en-tête HTTP `Link`. Les copies de templates du
+  dashboard et de l'accueil public sont retirées : leurs liens de pied de page
+  disparaissent. Les constats des releases précédentes ci-dessus restent
+  historiques. Voir le [dossier de retrait H](../../../TECH_DOC/features-enlevees/H-dashboard-financier/README.md).
 - Laboutik ajoute le lien à la connexion, au kiosque, aux informations de caisse
   et à son admin. Le lien ne donne aucun accès supplémentaire aux données métier.
 - Les trois Nginx servent le même répertoire public en lecture seule sous
@@ -152,8 +156,11 @@ nécessite un nouvel audit et une actualisation du catalogue.
 
 Après promotion, vérifier sans authentification :
 
-1. `/source/` sur les trois domaines, accessible sans paiement et avec un lien
-   visible depuis les écrans utilisés (publics et administratifs).
+1. `/source/` sur les trois domaines, accessible sans paiement ; vérifier les
+   liens visibles conservés (Lespass, LaBoutik et administration Fedow) ainsi
+   que l'en-tête `Link` de Fedow. Son dashboard natif n'a plus notre lien visible
+   de pied de page. Ce contrôle décrit l'accès technique, sans conclure à la
+   suffisance juridique de cette visibilité.
 2. Télécharger les quatre archives, `SHA256SUMS` et `source-manifest.json` ; vérifier
    les empreintes et la concordance avec la release en service.
 3. Contrôler que les fichiers montés correspondent aux overlays annoncés et que

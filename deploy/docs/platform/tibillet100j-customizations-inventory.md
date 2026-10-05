@@ -1,5 +1,11 @@
 # Inventaire des personnalisations — `Tibillet100J_OG`
 
+Actualisation locale du 5 octobre 2026 : le dashboard financier Gala et ses six
+montages sont retirés de `deploy/Fedow/`. Le dashboard natif de l'image reprend
+la main. Les chemins et constats de cet inventaire décrivent l'état historique
+du 22 septembre ; le [dossier H](../../../TECH_DOC/features-enlevees/H-dashboard-financier/README.md)
+documente la décision actuelle et conserve les copies exactes retirées.
+
 ## Statut de dérogation
 
 Cet inventaire a été produit par une session SSH **manuelle, strictement en lecture seule**,

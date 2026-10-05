@@ -15,7 +15,8 @@ pas le comportement à partir d'une description.
 | D | Limite de deux terminaux, éviction FIFO et exemption admin | `e27aa554` | [D-limite-terminaux.md](D-limite-terminaux.md) |
 | F | Option de désactivation de la synchronisation de monnaie cadeau | `50a6906f` | [F-option-monnaie-cadeau.md](F-option-monnaie-cadeau.md) |
 | G | Réparations automatiques et ancienne copie du serializer Fedow | `35cc9918` | [G-reparations-fedow.md](G-reparations-fedow.md) |
-| I | Backend PostgreSQL de Fedow et élargissement SQL des secrets Stripe | Ce lot local | [I-postgresql-fedow](I-postgresql-fedow/README.md) |
+| H | Dashboard financier Gala et copies de ses vues, routes et templates | Lot local du 5 octobre 2026 | [H-dashboard-financier](H-dashboard-financier/README.md) |
+| I | Backend PostgreSQL de Fedow et élargissement SQL des secrets Stripe | `7f31acd3` | [I-postgresql-fedow](I-postgresql-fedow/README.md) |
 
 Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
 article, solde, transaction ou réglage de base de production n'a été modifié.
@@ -28,7 +29,7 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | B | Garder le guide de connexion rapide et l'interface d'accueil associée |
 | E | Conservé et corrigé : enregistrement uniquement sur carte introuvable, délais réseau TiBillet restaurés |
 | G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
-| H | Garder le suivi financier en lecture ; il n'est pas une simple documentation |
+| H | Retiré à la demande de l'utilisateur le 5 octobre 2026 ; dashboard natif de l'image, aucun montage de remplacement |
 | I | Retour SQLite implémenté localement pour Fedow ; base vide choisie, PostgreSQL archivé, démarrage des trois services à vérifier sur une instance neuve : [dossier](I-postgresql-fedow/README.md) |
 | J | Garder pour l'instant l'installateur reprenable |
 | K | Conserver l'offre de sources ; risque de blocage d'un nouveau déploiement documenté séparément |
@@ -67,7 +68,8 @@ Archive SHA-256 : `9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763
 
 [verify-restored-code.py](verify-restored-code.py) compare le texte complet de sept
 unités restaurées avec l'archive upstream vérifiée. Il ne normalise pas le texte.
-Il vérifie aussi la provenance du serializer Fedow et l'absence de sa surcharge G.
+Il vérifie aussi la provenance du serializer et du dashboard Fedow, l'absence de
+leurs surcharges G/H et le bloc SQLite natif.
 Depuis la racine du dépôt :
 
 ```sh
@@ -77,7 +79,9 @@ python3 TECH_DOC/features-enlevees/verify-restored-code.py
 Le script utilise l'archive locale déjà présente dans `.context/source-cache/`.
 L'option `--archive` permet d'utiliser une autre copie, à condition que son checksum
 soit identique. Le résultat conservé est dans [restoration-receipt.json](restoration-receipt.json).
-Il atteste seulement les unités listées et le retrait de la surcharge G, pas tous
+Le contrôle complémentaire de H est conservé dans son
+[reçu du 5 octobre](H-dashboard-financier/restoration-receipt.json).
+Il atteste seulement les unités listées et le retrait des surcharges G/H, pas tous
 les fichiers applicatifs ni le code d'une instance en service.
 
 Validation initiale C/D/F : cinq tests locaux de prix/payload terminal, neuf tests de
@@ -123,7 +127,9 @@ localement. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
 
 L reste inchangé et sa décision est reportée. La configuration Nginx contient les
 routes applicatives et les alias admin ; elle n'est pas une fonctionnalité de
-paiement. H reste inchangé ; E reçoit seulement une correction limitée de ses
+paiement. H est retiré et archivé dans le [dossier H](H-dashboard-financier/README.md) ;
+E reçoit seulement une correction limitée de ses
 branches d'erreur, sans nouveau module ni modèle. Les décisions et les limites
 actualisées de E, I, J, K et H sont dans
-[la suite de l'audit](../audits/2026-10-03-suite-G-E-K-H.md).
+[la suite de l'audit](../audits/2026-10-03-suite-G-E-K-H.md), état historique
+antérieur au retrait de H.

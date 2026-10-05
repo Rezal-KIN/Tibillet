@@ -73,6 +73,16 @@ def verify(archive_path, fedow_archive_path=None):
         raise ValueError("Fedow serializer is still replaced by a mount")
     if (ROOT / "deploy/Fedow/custom_patches/fedow_core/serializers.py").exists():
         raise ValueError("Legacy G serializer still exists in the active deployment")
+    dashboard_target = "/home/fedow/Fedow/fedow_dashboard"
+    if any(target.rstrip("/") == dashboard_target
+           or target.startswith(dashboard_target + "/")
+           or dashboard_target.startswith(target.rstrip("/") + "/")
+           for target in targets):
+        raise ValueError("Fedow dashboard is still replaced by a mount")
+    if any(path.is_file() for path in
+           (ROOT / "deploy/Fedow/custom_patches/fedow_dashboard").rglob("*")):
+        raise ValueError("Legacy H dashboard still exists in the active deployment")
+    native_dashboard_files = []
     with tarfile.open(fedow_archive_path, "r:gz") as archive:
         member = next(member for member in archive.getmembers()
                       if member.isfile() and "/".join(Path(member.name).parts[1:]) == native_path)
@@ -80,6 +90,19 @@ def verify(archive_path, fedow_archive_path=None):
         settings_member = next(member for member in archive.getmembers()
                                if member.isfile() and "/".join(Path(member.name).parts[1:]) == "fedowallet_django/settings.py")
         native_settings = archive.extractfile(settings_member).read().decode("utf-8")
+        for member in archive.getmembers():
+            path = "/".join(Path(member.name).parts[1:])
+            if not member.isfile() or not path.startswith("fedow_dashboard/"):
+                continue
+            data = archive.extractfile(member).read()
+            if path.startswith("fedow_dashboard/templates/"):
+                template_path = path[len("fedow_dashboard/templates/"):]
+                if (ROOT / "deploy/source/admin-templates" / template_path).exists():
+                    raise ValueError("Shared template directory overrides dashboard: " + template_path)
+            native_dashboard_files.append({
+                "upstream_path": path, "upstream_sha256": hashlib.sha256(data).hexdigest(),
+                "byte_length": len(data),
+            })
     def database_text(source):
         node = next(node for node in ast.parse(source).body if isinstance(node, ast.Assign)
                     and any(isinstance(target, ast.Name) and target.id == "DATABASES" for target in node.targets))
@@ -88,7 +111,7 @@ def verify(archive_path, fedow_archive_path=None):
     if restored_database != database_text(native_settings):
         raise ValueError("Fedow DATABASES differs from the exact native SQLite source")
     return {
-        "scope": "Listed LaBoutik units, native Fedow serializer selected by Compose and exact native SQLite DATABASES; no live runtime verification.",
+        "scope": "Listed LaBoutik units, native Fedow serializer/dashboard selected by Compose and exact native SQLite DATABASES; no live runtime verification.",
         "reference_repository": reference["repository"], "reference_commit": reference["commit"],
         "reference_image": reference["image"], "archive_sha256": digest, "units": results,
         "native_image_files": [{
@@ -102,6 +125,12 @@ def verify(archive_path, fedow_archive_path=None):
             "feature": "I", "upstream_path": "fedowallet_django/settings.py",
             "native_commit": fedow["commit"], "exact_text_match": True,
             "sha256": hashlib.sha256(restored_database.encode("utf-8")).hexdigest(),
+        },
+        "native_dashboard": {
+            "feature": "H", "reference_repository": fedow["repository"],
+            "reference_commit": fedow["commit"], "reference_image": fedow["image"],
+            "archive_sha256": fedow_digest, "source_override_removed": True,
+            "shared_template_override_absent": True, "files": native_dashboard_files,
         },
     }
 
@@ -125,4 +154,4 @@ if __name__ == "__main__":
     if args.receipt:
         args.receipt.write_text(serialized, encoding="utf-8")
     print("TiBillet archives verified; " + str(len(result["units"])) +
-          " restored units and native Fedow SQLite DATABASES match exactly; native serializer has no override.")
+          " restored units and native Fedow SQLite DATABASES match exactly; native serializer/dashboard have no override.")

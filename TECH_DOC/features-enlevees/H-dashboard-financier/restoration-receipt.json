@@ -1,0 +1,387 @@
+{
+  "scope": "Listed LaBoutik units, native Fedow serializer/dashboard selected by Compose and exact native SQLite DATABASES; no live runtime verification.",
+  "reference_repository": "TiBillet/LaBoutik",
+  "reference_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+  "reference_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+  "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+  "units": [
+    {
+      "feature": "C",
+      "upstream_path": "webview/validators.py",
+      "local_path": "deploy/Laboutik/validators.py",
+      "class_name": "DataAchatDepuisClientValidator",
+      "function_name": "validate_articles",
+      "byte_length": 1557,
+      "upstream_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+      "restored_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "index",
+      "byte_length": 5397,
+      "upstream_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+      "restored_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "preparation",
+      "byte_length": 6713,
+      "upstream_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+      "restored_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+      "exact_text_match": true
+    },
+    {
+      "feature": "D",
+      "upstream_path": "webview/views.py",
+      "local_path": "deploy/Laboutik/views.py",
+      "class_name": null,
+      "function_name": "paiement",
+      "byte_length": 1114,
+      "upstream_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+      "restored_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+      "exact_text_match": true
+    },
+    {
+      "feature": "F",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": "FedowAPI",
+      "function_name": "send_assets_from_cashless",
+      "byte_length": 1718,
+      "upstream_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+      "restored_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+      "exact_text_match": true
+    },
+    {
+      "feature": "E",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": null,
+      "function_name": "_get",
+      "byte_length": 1449,
+      "upstream_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+      "restored_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+      "exact_text_match": true
+    },
+    {
+      "feature": "E",
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "local_path": "deploy/Laboutik/fedow_api.py",
+      "class_name": null,
+      "function_name": "_post",
+      "byte_length": 1471,
+      "upstream_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+      "restored_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+      "exact_text_match": true
+    }
+  ],
+  "native_image_files": [
+    {
+      "feature": "G",
+      "upstream_path": "fedow_core/serializers.py",
+      "reference_repository": "TiBillet/Fedow",
+      "reference_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "reference_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+      "upstream_sha256": "9e7fe20e720d27cbbb7f2fbb859143fb47f99651d0ae572df7a1159c71d17d69",
+      "byte_length": 70171,
+      "source_override_removed": true
+    }
+  ],
+  "native_database_settings": {
+    "feature": "I",
+    "upstream_path": "fedowallet_django/settings.py",
+    "native_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "exact_text_match": true,
+    "sha256": "5fef99a0549abe58833dafee17d914e5410754e0b8e1775a1f29eee75acffea2"
+  },
+  "native_dashboard": {
+    "feature": "H",
+    "reference_repository": "TiBillet/Fedow",
+    "reference_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "reference_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+    "source_override_removed": true,
+    "shared_template_override_absent": true,
+    "files": [
+      {
+        "upstream_path": "fedow_dashboard/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/admin.py",
+        "upstream_sha256": "b2e328e31f08dc907100505521d13ee6a9ea67a240655d051120011ce49cfaf8",
+        "byte_length": 63
+      },
+      {
+        "upstream_path": "fedow_dashboard/apps.py",
+        "upstream_sha256": "8786b57b13804157ca8accb8a6fc86f5ebc7efe075f0bdb0ac1a2676d691a16b",
+        "byte_length": 161
+      },
+      {
+        "upstream_path": "fedow_dashboard/migrations/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/models.py",
+        "upstream_sha256": "563734a765db00f804e87c9317abe597df00e1e0e103902f690aac738910f404",
+        "byte_length": 57
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist.zip",
+        "upstream_sha256": "8fa2016a3dee1e204bd1623e050dcf477e9d28c13bb98a1f58f57e0fd40cdd38",
+        "byte_length": 1470438
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css",
+        "upstream_sha256": "22b464461c1d3b621c3f6fb5b678b6531ab0a704d0e1bd078ddd371b87473db0",
+        "byte_length": 237950
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css.map",
+        "upstream_sha256": "ae5430d563ba9975d8543cfb00650e283b18c19c9603461a8460f2372af03f21",
+        "byte_length": 608300
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css",
+        "upstream_sha256": "c0bcf7898fdc3b87babca678cd19a8e3ef570e931c80a3afbffcc453738c951a",
+        "byte_length": 194901
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css.map",
+        "upstream_sha256": "ff724ca73ac50a9391851129cd451c98e8c3015a28ff851f97dad247b052a577",
+        "byte_length": 522639
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js",
+        "upstream_sha256": "4ea6de9832c8e17c55a323a97dfbfe1532f9a0f9e74f46bfa962c9cb6fc035e8",
+        "byte_length": 145543
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js.map",
+        "upstream_sha256": "e0fcd2fa3a0e8ee661dcf986bb9dc2d21c3edb637ac8cf0c2287c55ec31e62fa",
+        "byte_length": 309348
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js",
+        "upstream_sha256": "9bcd4d0f29dc6556ebeeff44eaa0965f0c7f7308ee58394708cce2f698cca1b0",
+        "byte_length": 60404
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js.map",
+        "upstream_sha256": "973689199c4c7417a62153086e699c22e26c5ac1febaf7115cedab8f42230e17",
+        "byte_length": 216913
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/css/main.css",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/bars.svg",
+        "upstream_sha256": "d076a48a74769f64db2fb6b7ec0f6da8a948795eafbb1eac7e87ffaa606b706c",
+        "byte_length": 2320
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/baseline-home-work.svg",
+        "upstream_sha256": "6789f8f8513c30b1edbc694694d0c023cb9a712e59bc68ffc56f541f23b67512",
+        "byte_length": 240
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/edit.svg",
+        "upstream_sha256": "f29b50a54d4f92f63e2adc7393da388ce301aec63658ac27a82ce10aeffc671e",
+        "byte_length": 658
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/fav_blanc.png",
+        "upstream_sha256": "c555b8b91a547479f16eb937f9e556f7e02c2a1444670921084bb276bd676ef7",
+        "byte_length": 7990
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/fedow_circle.svg",
+        "upstream_sha256": "3008b5fbeaf0183678cf35ed4640fe9bac8bf642964f6b483515d70998c71847",
+        "byte_length": 18464
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/frame-reload.svg",
+        "upstream_sha256": "a4e9706871acab2821c682838fb9a2c269024f131db6ad5ac54509d4e4c74ede",
+        "byte_length": 536
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/img.png",
+        "upstream_sha256": "129671667098e89d1c0d8daac638d9631940e68b777ed270e2245e3d75985b1a",
+        "byte_length": 34591
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/user-4-fill.svg",
+        "upstream_sha256": "ba8b1f5020b91c61cc6a9bbfeaeb07ff1e8c065109706090ad8e1a368fe0851b",
+        "byte_length": 987
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/img/view-grid-detail.svg",
+        "upstream_sha256": "69c603aa7e8d35a99e0d5cd855de589e3943ff67ddd9c7ecbd08bf6958457a85",
+        "byte_length": 347
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/chart.umd.4.4.1.min.js",
+        "upstream_sha256": "d2af8974e95271638772e9e9524db5b9a6f58d6ec2d5d781400447b4a31c681e",
+        "byte_length": 205399
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/fedow_charts.js",
+        "upstream_sha256": "9bc145e4f853457fb6d81ae86dd9ed913da48449bb3693a471c80b85a8d1aff9",
+        "byte_length": 6075
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/fedow_simulateur.js",
+        "upstream_sha256": "90e6de004b61b6d67b9400bb731d283925a50e3fd394d12234b8656aaea3e381",
+        "byte_length": 15382
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.d.ts",
+        "upstream_sha256": "50f4c4b412fafb7c622ec0d43a6c40a8756c245a49317b99d01777e54ffb0e85",
+        "byte_length": 12561
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.6.js",
+        "upstream_sha256": "cbb723c305cf6d6315c890909815523588509e2e092a59f8cfc4a885829689d5",
+        "byte_length": 46044
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.7.js",
+        "upstream_sha256": "30c95cb75e7f7c9471c2bf43fa3db0a30a39077764295b15c405869fed7e5764",
+        "byte_length": 46674
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/hyperscript.0.9.11.min.js",
+        "upstream_sha256": "9e63e5162f36c11d8621ab025251a7e28eb421266f1cb10e2b4dcbbbb91a7d1e",
+        "byte_length": 99758
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/js/loading-states.js",
+        "upstream_sha256": "d9f5823548e5bae7c1b2e7882580dd5b881dae1b7aae089e35211937e9887d32",
+        "byte_length": 5116
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css",
+        "upstream_sha256": "71756f2c107af344d1fcbad15380edcadc1d5a8ebea46941bf4544fbad4b02e6",
+        "byte_length": 517381
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css.map",
+        "upstream_sha256": "7e1fa71d3f8473b2c462dc5d281478ed9db481edf9901881aa14a41aad6b90a9",
+        "byte_length": 1223696
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js",
+        "upstream_sha256": "dec116081d7f72b3ebb6187e10639f12e418014c88e7a0982ebbfd417d6b8572",
+        "byte_length": 29580
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js.map",
+        "upstream_sha256": "3f7d8ac0ee80d431bdf14a1b54901f02fe1d26b7fe2f438d1f8727c04aad63b6",
+        "byte_length": 20121
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.css",
+        "upstream_sha256": "8f59bd46307f0fd8e02b7da8bb8179fc5ea8ccbfe885d622425e8064c2937491",
+        "byte_length": 410231
+      },
+      {
+        "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.js",
+        "upstream_sha256": "8f267b0c5ab6ff8a51a4dcbc6ef88e31cc51a4fd6c76a573338a2e11580282fe",
+        "byte_length": 18516
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_card.html",
+        "upstream_sha256": "3b8017f31a9daa105ace1cba3c95233f47394013dba6ecaa68419b5cc0229d13",
+        "byte_length": 1332
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_transactions.html",
+        "upstream_sha256": "e3ad1a103deadc90805707d20b626b541b2607b38c3c294b57e7dd140e8914a4",
+        "byte_length": 35941
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/asset_transactions_membership.html",
+        "upstream_sha256": "22bb454d47ee830f79590d2a0abfaab2d0dfe322afeed54536b947d5d102d21b",
+        "byte_length": 4992
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/asset/badgeuse.html",
+        "upstream_sha256": "03fc1ab34995e631c99edc634eb4e89dc3f8f492153bb57c4acb64a1bcd0b9d5",
+        "byte_length": 3741
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/base.html",
+        "upstream_sha256": "a92e7dcfe2458f43449aaebaf64fd5fe6593b5ce82b06e8e2e0cefa5652c7dba",
+        "byte_length": 2291
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/htmx/spinner.html",
+        "upstream_sha256": "3f275ada6513c6e0df8192e41b85925a5634e605a886eeb8b5a16c178574b1f5",
+        "byte_length": 1390
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/index.html",
+        "upstream_sha256": "022404aecf4256db57349db74eb2af6c3d400d0ed7ed9a289b88df29fa5d8429",
+        "byte_length": 952
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/index/index.html",
+        "upstream_sha256": "5a04f66aca7f8bc1285485dd7e821ce55ca720c8c88f60eaa246944df11bbdf6",
+        "byte_length": 13835
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/place/place.html",
+        "upstream_sha256": "a378150696601999a449127c96744b4e0ee278502585e8e79cf1cea3119c4dad",
+        "byte_length": 1324
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/place/place_card.html",
+        "upstream_sha256": "6debc6152bca41ea60fbb4e48decb75a34fdf2bad415c8c00874f97371b4c8b6",
+        "byte_length": 1545
+      },
+      {
+        "upstream_path": "fedow_dashboard/templates/tailwind/index.html",
+        "upstream_sha256": "1ca7bdedce211309b84a97c67c20c6f5ea570fba33984a64c8495398a26f164d",
+        "byte_length": 7882
+      },
+      {
+        "upstream_path": "fedow_dashboard/templatetags/__init__.py",
+        "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_length": 0
+      },
+      {
+        "upstream_path": "fedow_dashboard/templatetags/fedow_dashboard_tags.py",
+        "upstream_sha256": "33e14d4e1b66cf800989d2e0359224a7a27dff742d5b0fe35f03417050d2f901",
+        "byte_length": 680
+      },
+      {
+        "upstream_path": "fedow_dashboard/tests.py",
+        "upstream_sha256": "9ab6c6191360e63c1b4c9b5659aef348a743c9e078be68190917369e4e9563e8",
+        "byte_length": 60
+      },
+      {
+        "upstream_path": "fedow_dashboard/urls.py",
+        "upstream_sha256": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+        "byte_length": 404
+      },
+      {
+        "upstream_path": "fedow_dashboard/views.py",
+        "upstream_sha256": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+        "byte_length": 27645
+      }
+    ]
+  }
+}
