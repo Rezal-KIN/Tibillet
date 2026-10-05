@@ -1,0 +1,13 @@
+{
+  "application_repository": "Rezal-KIN/Tibillet",
+  "fedow_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+  "fork_commit": "3a215c66afa89f12d423feb72eacd7c23086c2bd",
+  "gala_slug": "gala-premier-lancement-2026-10-05",
+  "laboutik_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:167035b8ccedf7437dccf9548cda16af544980d732066b72b804ea07e6c71fbb",
+  "platform": "v1",
+  "release_id": "gala-premier-lancement-2026-10-05-v1.0.0",
+  "schema_generation": "v1",
+  "tibillet_upstream_commit": "3a215c66afa89f12d423feb72eacd7c23086c2bd",
+  "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+}

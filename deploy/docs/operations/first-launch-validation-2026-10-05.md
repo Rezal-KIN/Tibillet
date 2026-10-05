@@ -72,3 +72,12 @@ L'ancien Smoke PostgreSQL est conservé dans S3 (backup
 Les données de cette première tentative sont archivées séparément avant
 une nouvelle exécution sur des bases vides. Aucune réparation applicative
 locale n'est utilisée pour faire réussir le test.
+
+Deuxième Test `a6353411-c1a3-4919-a82d-b21a12bdb5ec` : `Succeeded`,
+commit `3a215c66afa89f12d423feb72eacd7c23086c2bd`. SSM
+`b8cf6247-6ff7-4729-9c7f-9c4d72c3f0f6` réussi sur des bases à nouveau vides.
+Les trois connexions HTTP ont réussi pendant le healthcheck, sans empêcher
+sa validation. Les mots de passe incorrects sont refusés. Les quatre assets
+servis ont les octets attendus ; l'accueil et l'offre de sources répondent 200.
+Le marqueur immuable S3 `test-validated/smoke-3a215c66afa89f12d423feb72eacd7c23086c2bd.json`
+correspond au commit et aux quatre digests du manifeste préparé.
