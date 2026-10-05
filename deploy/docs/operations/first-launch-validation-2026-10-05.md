@@ -37,6 +37,14 @@ des autres champs et lieux, ainsi que le refus d'un portefeuille ou domaine
 inattendu. Les cinq tests ciblés réussissent ; les sept unités TiBillet
 restaurées restent identiques aux sources natives archivées.
 
+Première livraison du correctif : Test `834db2c0-cea5-445d-aa9a-b1a58f77fc8b`,
+commit `94a9bcdf9343f3d2ccb4a56306a12ffa46c994e3`. Image construite, puis
+SSM `a5a26edb-7c50-42b3-9811-cd361cb00c97` arrêté en échec après 3 min 14 s :
+le nouvel outil avait été omis de la liste d'installation runtime. La correction
+ajoute cet outil à `install-runtime-contract.sh` et vérifie sa présence dans
+la régression. Aucun marqueur de validation n'est créé pour cette tentative ;
+aucune réparation du code n'est faite sur l'EC2. Les bases ne sont pas réinitialisées.
+
 **Résultat : Foundation, Test et Production réussies sur AWS.** Une nouvelle
 instance a été créée, initialisée sans données préexistantes et redémarrée
 sans réparation manuelle. Les accès admin, le site, les cartes, la lecture QR,

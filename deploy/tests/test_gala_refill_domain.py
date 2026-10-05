@@ -87,6 +87,9 @@ assert place.lespass_domain == 'other.example.org' and len(writes) == 1
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_deployment_updates_domain_after_apex_and_healthcheck_verifies_it(self):
+        installer = (RUNTIME / 'install-runtime-contract.sh').read_text()
+        installed_scripts = installer.split('for script in', 1)[1].split('; do', 1)[0]
+        self.assertIn('configure-gala-refill-domain.py', installed_scripts.split())
         release = (RUNTIME / 'deploy-release.sh').read_text()
         self.assertLess(release.index('manage.py configure_gala_apex'),
                         release.index('configure-gala-refill-domain.py'))
