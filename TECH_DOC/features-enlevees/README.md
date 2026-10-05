@@ -28,7 +28,7 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | E | Conservé et corrigé : enregistrement uniquement sur carte introuvable, délais réseau TiBillet restaurés |
 | G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
 | H | Garder le suivi financier en lecture ; il n'est pas une simple documentation |
-| I | Montages ajoutés par notre déploiement ; distinguer les réglages nécessaires des différences superflues |
+| I | Retour SQLite décidé pour Fedow ; [configuration PostgreSQL archivée et préparation](I-postgresql-fedow/README.md), transfert et bascule encore à qualifier |
 | J | Garder pour l'instant l'installateur reprenable |
 | K | Conserver l'offre de sources ; risque de blocage d'un nouveau déploiement documenté séparément |
 | L | Décision reportée : ne pas retirer pour le moment |
@@ -110,7 +110,12 @@ configuration Django. Fedow remplace SQLite par PostgreSQL, ajuste les hôtes/de
 et ajoute un répertoire de templates. LaBoutik utilise déjà PostgreSQL dans sa
 référence ; ses différences concernent principalement le répertoire de templates
 et les réglages email. Le retrait des montages doit préserver le branchement à la
-base existante, sans migration implicite vers une autre base. I reste inchangé.
+base existante, sans migration implicite vers une autre base. Le 5 octobre,
+l'utilisateur choisit de revenir à SQLite pour Fedow. La configuration PostgreSQL
+et ses dépendances sont archivées à l'identique dans
+[I-postgresql-fedow](I-postgresql-fedow/README.md). La configuration active reste
+inchangée tant que le transfert des données et les sauvegardes SQLite ne sont
+pas qualifiés. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
 
 L reste inchangé et sa décision est reportée. La configuration Nginx contient les
 routes applicatives et les alias admin ; elle n'est pas une fonctionnalité de
