@@ -149,6 +149,11 @@ timeout 120s docker exec -i fedow_django sh -lc \
 timeout 120s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_refill
 
+# Reuse the existing bootstrap accounts in all three databases. Credentials
+# come from Secrets Manager; only a Django hash reaches the configuration tool.
+python3 "$SCRIPT_DIR/configure-gala-admin.py" --gala "$GALA_SLUG" \
+  --credentials-file "$(runtime_dir)/admin.json" --apply
+
 healthy=false
 for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then

@@ -42,7 +42,15 @@ Django de connexion par mot de passe. La connexion par mail depuis la page
 publique reste disponible. Les autres installations conservent leur parcours
 de connexion par mail à l'entrée de l'administration.
 
-Après déploiement, exécuter sur l'instance cible :
+La pipeline configure désormais ces accès après les installateurs TiBillet,
+avant de valider le healthcheck. Elle réutilise ce même script et les comptes
+existants. Le nom et l'empreinte Django du mot de passe sont lus dans la version
+marquée `GALA_ADMIN` du secret partagé `integrations-mail`, puis dans un `admin.json` privé
+en mode `0600` sur l'hôte. Aucun identifiant administrateur n'est ajouté aux
+variables des conteneurs. L'absence de cette version arrête le déploiement avant le
+démarrage des applications. Le healthcheck vérifie les trois comptes.
+
+Pour une intervention manuelle, exécuter sur l'instance cible :
 
 ```sh
 python3 /opt/tibillet-gala/repository/deploy/tools/runtime/configure-gala-admin.py \
@@ -55,5 +63,10 @@ Leurs emails et relations métier sont conservés. Fedow reçoit un compte
 administrateur si aucun n'existe. Seule l'empreinte Django est stockée en base ;
 aucun mot de passe n'est enregistré dans le dépôt, les manifestes ou les logs.
 Un nom déjà attribué à un autre compte est refusé. Les sauvegardes des bases
-conservent les accès entre les releases ; le script n'est pas exécuté
-automatiquement à chaque déploiement.
+conservent les accès entre les releases. La pipeline applique et vérifie les
+identifiants communs à chaque déploiement ; une rotation se fait dans Secrets
+Manager, suivie d'un nouveau déploiement.
+
+Le premier déploiement nécessite une version `GALA_ADMIN` distincte de
+`AWSCURRENT`. La configuration mail lue par les anciennes releases reste
+identique ; leur redémarrage et leur rollback ne dépendent pas de ce nouvel accès.

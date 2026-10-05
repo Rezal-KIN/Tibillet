@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import stat
 import tempfile
@@ -56,6 +57,23 @@ SHARED_MAIL = {
 
 
 class GeneratedGalaSecretTests(unittest.TestCase):
+    def test_first_boot_requires_admin_hash_without_exposing_it_to_apps(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        admin = {"username": "admin", "password_hash": "pbkdf2_sha256$390000$sampleSalt$" + "A" * 43 + "="}
+        with self.assertRaisesRegex(ValueError, "admin credentials"):
+            renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, require_admin=True)
+        files = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, admin_secret=admin, require_admin=True)
+        self.assertEqual(json.loads(files["admin.json"]), admin)
+        for filename in ("fedow.env", "laboutik.env", "lespass.env"):
+            self.assertNotIn(admin["password_hash"], files[filename])
+        with tempfile.TemporaryDirectory() as directory:
+            renderer.write_files(Path(directory), files)
+            self.assertEqual(stat.S_IMODE(os.stat(Path(directory) / "admin.json").st_mode), 0o600)
+        for bad in ({**admin, "password_hash": "plaintext"}, {**admin, "username": "../admin"}):
+            with self.assertRaisesRegex(ValueError, "invalid"):
+                renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, admin_secret=bad)
+
     def test_laboutik_bootstrap_uses_this_galas_local_services(self) -> None:
         compose = (ROOT / "Laboutik/docker-compose.yml").read_text(encoding="utf-8")
         release = (ROOT / "tools/runtime/deploy-release.sh").read_text(encoding="utf-8")

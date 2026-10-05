@@ -1,0 +1,47 @@
+# Vérification d'un premier lancement — 5 octobre 2026
+
+Objectif : créer une EC2 vide par Foundation, puis livrer exactement les images
+validées par la pipeline Test. Les remboursements locaux restent hors périmètre.
+Le gala Aix conserve son instance et son IP publique pendant cet essai.
+
+## Corrections préparées avant l'essai
+
+- Configuration du compte admin commun intégrée au déploiement avec le script
+  existant, après les installateurs natifs. Les comptes, emails et relations
+  sont préservés. L'empreinte vient de la version `GALA_ADMIN` du secret mail ;
+  sa version `AWSCURRENT` reste identique pour les anciennes releases.
+- CSS et JavaScript personnalisés existants copiés dans les sources statiques
+  Lespass. `collectstatic` peut ainsi les reconstruire sur un disque vide.
+- Logo et police manquants ajoutés aux mêmes sources, avec provenance et licence.
+- Aucun modèle, migration ou traitement financier TiBillet modifié pour l'essai.
+
+## Vérifications locales
+
+106 tests de déploiement et 5 tests de politique réussis. La vérification des
+fichiers restaurés confirme les sept unités natives et les seuls écarts
+conservés dans LaBoutik. Une sonde Django/SQLite vérifie la configuration admin
+et son idempotence ; elle ne prouve pas encore le contexte multi-tenant réel.
+Un `collectstatic` isolé conserve les octets CSS, JS, logo et police.
+
+## Contrôles réels à consigner
+
+| Contrôle | Preuve attendue | État au début de l'essai |
+| --- | --- | --- |
+| Foundation | Exécution réussie, EC2 nouvelle, SSM et cloud-init terminés | À lancer |
+| Test | SHA/digests identiques, déploiement SSM et marqueur S3 de réussite | À lancer |
+| Production du nouveau gala | Artefact approuvé, même SHA/digests, SSM réussi | À lancer |
+| Stockage natif | Fedow SQLite initialisé ; Lespass/LaBoutik PostgreSQL natifs | À vérifier |
+| Appariement | Lespass et LaBoutik reliés au Fedow de cette EC2 | À vérifier |
+| Administrations | Connexion correcte, refus d'un mauvais mot de passe | À vérifier |
+| Site | HTTP, CSS/JS, logo/police, parcours personnalisés | À vérifier |
+| QR et carte | Enregistrement automatique, liaison au compte, recharge test | À vérifier sur Smoke |
+| Sauvegarde | Envoi S3 et restauration dans des bases isolées | À vérifier |
+| Redémarrage | Services et accès opérationnels sans réparation | À vérifier |
+
+Un succès HTTP ou un Checkout Stripe créé n'est pas une preuve de paiement,
+de crédit de portefeuille, de remboursement ni de livraison d'un email.
+Ces limites doivent rester explicites dans le résultat final.
+
+Les IDs d'exécution, logs et reçus non sensibles de l'essai sont conservés dans
+`.context/first-boot/`. Toute correction d'un échec applicatif doit être
+versionnée puis rejouée par la pipeline, sans réparation du code sur l'EC2.

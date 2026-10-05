@@ -24,7 +24,8 @@ mkdir -p "$(runtime_dir)"
 generated_file="$(mktemp "$(runtime_dir)/generated-secret.XXXXXX")"
 stripe_file="$(mktemp "$(runtime_dir)/shared-stripe.XXXXXX")"
 mail_file="$(mktemp "$(runtime_dir)/shared-mail.XXXXXX")"
-cleanup() { rm -f "$generated_file" "$stripe_file" "$mail_file"; }
+admin_file="$(mktemp "$(runtime_dir)/shared-admin.XXXXXX")"
+cleanup() { rm -f "$generated_file" "$stripe_file" "$mail_file" "$admin_file"; }
 trap cleanup EXIT
 
 aws secretsmanager get-secret-value \
@@ -43,11 +44,21 @@ aws secretsmanager get-secret-value \
   --query SecretString \
   --output text > "$mail_file"
 
+# A dedicated version stage preserves the AWSCURRENT mail schema used by
+# older releases. No new secret or additional runtime IAM grant is required.
+aws secretsmanager get-secret-value \
+  --region "$AWS_REGION" \
+  --secret-id "$SHARED_MAIL_SECRET_ARN" \
+  --version-stage GALA_ADMIN \
+  --query SecretString \
+  --output text > "$admin_file"
+
 python3 "$SCRIPT_DIR/materialize-runtime-env.py" \
   --generated "$generated_file" \
   --stripe "$stripe_file" \
   --mail "$mail_file" \
   --smoke "$([[ "$GALA_SLUG" == "gala-smoke" ]] && printf true || printf false)" \
+  --admin "$admin_file" \
   --fedow-domain "$FEDOW_PUBLIC_DOMAIN" \
   --laboutik-domain "$LABOUTIK_PUBLIC_DOMAIN" \
   --lespass-domain "$LESPASS_PUBLIC_DOMAIN" \

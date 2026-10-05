@@ -70,6 +70,9 @@ with context, transaction.atomic():
             user.is_superstaff = True
         user.save()
         assert U.objects.get(pk=user.pk).password == encoded
+    elif encoded:
+        assert user and user.username == username and user.password == encoded
+        assert user.is_active and user.is_staff and user.is_superuser
     print(json.dumps({'service': service, 'username': username, 'status': 'configured' if apply else 'ready'}))
 ''' % ((service, username, password_hash, apply, admin_email),)
 
@@ -80,12 +83,23 @@ def main():
     parser.add_argument('--username', default='admin')
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--password-hash-stdin', action='store_true')
+    parser.add_argument('--credentials-file', type=Path)
     args = parser.parse_args()
-    if args.gala not in {'gala-am-aix', 'gala-smoke'}:
-        parser.error('Gala must be a managed instance in the runtime allowlist')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,62}', args.gala) or args.gala == 'bapts':
+        parser.error('invalid managed Gala slug')
     config = Path('/etc/tibillet-gala/' + args.gala + '.conf').read_text()
     if not re.search(r'^GALA_SLUG=[\"\']?' + re.escape(args.gala) + r'[\"\']?$', config, re.M):
         parser.error('host configuration targets a different Gala')
+    encoded = ''
+    if args.credentials_file:
+        if args.password_hash_stdin:
+            parser.error('choose a credentials file or stdin')
+        from importlib.util import module_from_spec, spec_from_file_location
+        spec = spec_from_file_location('gala_env', Path(__file__).with_name('materialize-runtime-env.py'))
+        renderer = module_from_spec(spec)
+        spec.loader.exec_module(renderer)
+        credentials = renderer.admin_credentials(json.loads(args.credentials_file.read_text()))
+        args.username, encoded = credentials['username'], credentials['password_hash']
     if not re.fullmatch(r'[a-zA-Z0-9_.@+-]{1,150}', args.username):
         parser.error('invalid username')
     admin_email = django_shell('laboutik', "import os,json; print(json.dumps(os.environ['ADMIN_EMAIL']))")
@@ -93,8 +107,13 @@ def main():
     for service in SERVICES:
         print(json.dumps(django_shell(service, account_code(service, args.username, '', False, admin_email))))
     if not args.apply:
+        if encoded:
+            for service in SERVICES:
+                print(json.dumps(django_shell(service, account_code(service, args.username, encoded, False, admin_email))))
         return
-    if args.password_hash_stdin:
+    if encoded:
+        pass
+    elif args.password_hash_stdin:
         import sys
         encoded = sys.stdin.readline().strip()
         if not re.fullmatch(r'pbkdf2_sha256\$[1-9][0-9]{4,6}\$[a-zA-Z0-9]+\$[a-zA-Z0-9+/]{43}=', encoded):
