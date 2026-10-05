@@ -49,7 +49,13 @@ Caisse cashless pour les points de vente. Plusieurs instances peuvent tourner en
 
 - Image : `tibillet/laboutik`
 - Compose : postgres + redis + memcached + django + nginx
-- Patches : [`Laboutik/settings.py`](Laboutik/settings.py), [`Laboutik/views.py`](Laboutik/views.py), [`Laboutik/validators.py`](Laboutik/validators.py), [`Laboutik/fedow_api.py`](Laboutik/fedow_api.py)
+- Sources personnalisées : [`Laboutik/settings.py`](Laboutik/settings.py), [`Laboutik/install.py`](Laboutik/install.py), [`Laboutik/views.py`](Laboutik/views.py), [`Laboutik/validators.py`](Laboutik/validators.py)
+
+Le client Fedow utilise directement le fichier natif de l’image. Les sources
+de vues/validation reprennent TiBillet à l’identique, sauf l’enregistrement
+automatique de carte conservé. Les anciennes divergences de billets, adhésions,
+carte primaire et erreurs sont retirées : voir le
+[dossier de retrait LaBoutik](../TECH_DOC/features-enlevees/LaBoutik-ecarts-herites/README.md).
 
 ---
 

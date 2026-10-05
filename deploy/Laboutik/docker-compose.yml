@@ -50,10 +50,6 @@ services:
       - ./source_templates/infos.html:/DjangoFiles/htmxview/templates/appsettings/infos.html:ro
       - ../source/admin-templates:/DjangoFiles/source_templates:ro
       - ./views.py:/DjangoFiles/webview/views.py
-      - ./fedow_api.py:/DjangoFiles/fedow_connect/fedow_api.py
-      - ./validators.py:/DjangoFiles/webview/validators.py
-      - ./views.py:/DjangoFiles/webview/views.py
-      - ./fedow_api.py:/DjangoFiles/fedow_connect/fedow_api.py
       - ./validators.py:/DjangoFiles/webview/validators.py
     links:
       - laboutik_postgres:postgres

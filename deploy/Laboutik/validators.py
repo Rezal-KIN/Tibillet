@@ -27,7 +27,6 @@ from fedow_connect.fedow_api import FedowAPI
 def dround(value):
     return Decimal(value).quantize(Decimal('1.00'))
 
-
 class NewPeriphPinValidator(serializers.Serializer):
     username = serializers.CharField(max_length=512)
     password = serializers.CharField(max_length=512, write_only=True)

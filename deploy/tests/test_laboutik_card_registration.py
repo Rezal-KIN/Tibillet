@@ -4,6 +4,8 @@ HTTP, ORM and authentication are instrumented. No service or payment is called.
 """
 
 import ast
+import functools
+import importlib.util
 import json
 import types
 import unittest
@@ -14,23 +16,39 @@ from unittest.mock import Mock
 ROOT = Path(__file__).resolve().parents[1] / "Laboutik"
 
 
+@functools.lru_cache(maxsize=None)
+def source_text(filename):
+    if filename != "fedow_api.py":
+        return (ROOT / filename).read_text()
+    # This file now belongs to the pinned image. Reuse the existing source
+    # loader, including its archive SHA-256 check, rather than keeping a copy.
+    spec = importlib.util.spec_from_file_location("card_test_source_offer", ROOT.parent / "tools/build-source-offer.py")
+    offer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(offer)
+    catalog = json.loads((ROOT.parent / "source/image-sources.json").read_text())
+    files = offer.upstream_source(catalog["laboutik"], ROOT.parents[1] / ".context/source-cache")
+    return files["fedow_connect/fedow_api.py"][0].decode()
+
+
 class CardRejected(Exception):
     pass
 
 
 def source_function(filename, name, scope, class_name=None):
-    tree = ast.parse((ROOT / filename).read_text())
+    tree = ast.parse(source_text(filename))
     parent = tree if class_name is None else next(
         node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name
     )
     node = next(node for node in parent.body if isinstance(node, ast.FunctionDef) and node.name == name)
     node.decorator_list = []
-    exec(compile(ast.Module(body=[node], type_ignores=[]), filename, "exec"), scope)
+    future = ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)
+    module = ast.fix_missing_locations(ast.Module(body=[future, node], type_ignores=[]))
+    exec(compile(module, filename, "exec"), scope)
     return scope[name]
 
 
-def response(code):
-    return types.SimpleNamespace(status_code=code, content=b"test response", json=lambda: {})
+def response(code, text="test response"):
+    return types.SimpleNamespace(status_code=code, content=text.encode(), text=text, json=lambda: {})
 
 
 class CardRegistrationTests(unittest.TestCase):
@@ -61,6 +79,9 @@ class CardRegistrationTests(unittest.TestCase):
             "serializers": types.SimpleNamespace(ValidationError=CardRejected), "_": lambda value: value,
             "CarteCashlessSerializer": lambda card: types.SimpleNamespace(data={}),
             "render": lambda request, template, data: data,
+            "Configuration": types.SimpleNamespace(get_solo=lambda: types.SimpleNamespace(
+                verifier_adhesion_paiement_nfc=False,
+            )),
         }
 
     def run_entry(self, entry):
@@ -161,6 +182,15 @@ class CardRegistrationTests(unittest.TestCase):
                 for call in self.post.call_args_list:
                     self.assertEqual(call.args[2], ["existing-card-uuid"])
                 self.card.save.assert_not_called()
+
+    def test_native_duplicate_tag_response_still_requires_successful_reread(self):
+        for entry in ("validator", "scan"):
+            with self.subTest(entry=entry):
+                self.prepare([response(404), response(200)],
+                             [response(400, "first_tag_id already exists")])
+                self.run_entry(entry)
+                self.assertEqual(self.nfc.retrieve.call_count, 2)
+                self.nfc.create.assert_called_once_with([self.card])
 
 
 class NetworkTimeoutTests(unittest.TestCase):

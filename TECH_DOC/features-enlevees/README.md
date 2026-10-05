@@ -17,6 +17,7 @@ pas le comportement à partir d'une description.
 | G | Réparations automatiques et ancienne copie du serializer Fedow | `35cc9918` | [G-reparations-fedow.md](G-reparations-fedow.md) |
 | H | Dashboard financier Gala et copies de ses vues, routes et templates | Lot local du 5 octobre 2026 | [H-dashboard-financier](H-dashboard-financier/README.md) |
 | I | Backend PostgreSQL de Fedow et élargissement SQL des secrets Stripe | `7f31acd3` | [I-postgresql-fedow](I-postgresql-fedow/README.md) |
+| LaBoutik | Écarts hérités des billets, adhésions, carte primaire, doublons et erreurs | Lot local du 5 octobre 2026 après `6c373f10` | [LaBoutik-ecarts-herites](LaBoutik-ecarts-herites/README.md) |
 
 Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
 article, solde, transaction ou réglage de base de production n'a été modifié.
@@ -68,6 +69,9 @@ Archive SHA-256 : `9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763
 
 [verify-restored-code.py](verify-restored-code.py) compare le texte complet de sept
 unités restaurées avec l'archive upstream vérifiée. Il ne normalise pas le texte.
+Il vérifie désormais aussi que le client Fedow de LaBoutik n’est plus remplacé
+et que les fichiers complets de vues/validation sont natifs hors des deux
+exceptions déclarées d’enregistrement des cartes et des notices existantes.
 Il vérifie aussi la provenance du serializer et du dashboard Fedow, l'absence de
 leurs surcharges G/H et le bloc SQLite natif.
 Depuis la racine du dépôt :
@@ -81,8 +85,9 @@ L'option `--archive` permet d'utiliser une autre copie, à condition que son che
 soit identique. Le résultat conservé est dans [restoration-receipt.json](restoration-receipt.json).
 Le contrôle complémentaire de H est conservé dans son
 [reçu du 5 octobre](H-dashboard-financier/restoration-receipt.json).
-Il atteste seulement les unités listées et le retrait des surcharges G/H, pas tous
-les fichiers applicatifs ni le code d'une instance en service.
+Le [reçu LaBoutik](LaBoutik-ecarts-herites/restoration-receipt.json) complète ces
+preuves après le retrait de ses écarts hérités. Ces contrôles ne vérifient pas
+le code d’une instance en service ni l’intégralité des autres réglages applicatifs.
 
 Validation initiale C/D/F : cinq tests locaux de prix/payload terminal, neuf tests de
 publication des sources, identité textuelle des cinq unités restaurées, contrôle

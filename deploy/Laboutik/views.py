@@ -1,10 +1,7 @@
 # AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
 # Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
 import threading
-import os
-import json
 from typing import List
-from decimal import Decimal
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
@@ -13,7 +10,7 @@ from django.core import signing
 from django.db import transaction
 from django.http import JsonResponse, HttpResponseNotFound, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
-from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, serializers
@@ -35,8 +32,13 @@ from webview.serializers import CarteCashlessSerializer, PointDeVenteSerializer,
     debut_fin_journee
 from webview.validators import DataAchatDepuisClientValidator, PreparationValidator, LoginHardwareValidator, \
     NewPeriphPinValidator
+from webview.adhesion import couleur_adhesion, fetch_adhesions
+from webview.billet_lespass import EnvoiBilletErreur, envoyer_reservation_billet
 
 logger = logging.getLogger(__name__)
+from decimal import Decimal
+
+
 
 def login_admin(request):
     user: TibiUser = request.user
@@ -617,9 +619,46 @@ def check_carte(request):
 
         data['background'] = '#b85521'  # FOND ORANGE
         if not serializer_from_fedow['is_wallet_ephemere']:  # We get an user
-            # Check if the membership are OK
+            # Logique historique : vert si un token d'adhesion (SUB) existe cote Fedow.
+            # Attention : c'est de la PRESENCE, pas de la validite (Fedow ne porte pas
+            # la deadline). La validite reelle vient de Lespass, ci-dessous.
+            # / Legacy: green if a Fedow SUB token exists (presence, not validity).
             if data['tokens_membership']:
                 data['background'] = '#339448'  # FOND VERT
+
+        # Si l'option est activee, on enrichit avec la VALIDITE reelle des adhesions
+        # (Lespass), comme au paiement NFC : meme couleur + memes pills.
+        # IMPORTANT : sans cle API (ou Lespass injoignable, ou carte sans wallet),
+        # le flag 'lespass_repondu' reste absent -> le template garde l'affichage
+        # Fedow intact. Un simple check carte ne doit jamais tomber en erreur.
+        # / If enabled, enrich with real validity from Lespass. Without an API key
+        #   (or Lespass down / no wallet) we keep the Fedow display untouched.
+        configuration = Configuration.get_solo()
+        if configuration.verifier_adhesion_paiement_nfc and configuration.lespass_api_key:
+            wallet = carte.get_wallet()
+            if wallet is not None:
+                adhesions_lespass = fetch_adhesions(wallet.uuid, configuration)
+                # 'is not None' (et non 'truthy') : une liste vide = Lespass a repondu
+                # "aucune adhesion" -> on affiche quand meme le bloc Lespass (et pas Fedow).
+                # / Empty list still means Lespass answered: show the Lespass block.
+                if adhesions_lespass is not None:
+                    data['lespass_repondu'] = True
+
+                    # On ne garde que les adhesions valides, deadline convertie en date
+                    # pour le template (Lespass renvoie une date ISO en chaine).
+                    # / Keep only valid memberships, parse the ISO deadline for the template.
+                    adhesions_valides = []
+                    for adhesion in adhesions_lespass:
+                        if adhesion.get('is_valid'):
+                            adhesion_affichee = dict(adhesion)
+                            if adhesion.get('deadline'):
+                                adhesion_affichee['deadline_dt'] = parse_datetime(adhesion['deadline'])
+                            adhesions_valides.append(adhesion_affichee)
+                    data['adhesions_valides'] = adhesions_valides
+
+                    couleur = couleur_adhesion(adhesions_lespass)
+                    if couleur:
+                        data['background'] = couleur
 
         # ancienne réponse
         # return Response(data, status=status.HTTP_200_OK)
@@ -1177,6 +1216,33 @@ class Commande:
 
             self.reponse['route'] = "transaction_nfc"
 
+            # Couleur + liste d'adhesions du porteur (si l'option est activee ET qu'une
+            # cle Lespass est presente). Sans cle, on ne fait RIEN : comportement
+            # identique a avant (pas d'appel, pas de blocage sur wallet manquant).
+            # Le garde 'adhesion_couleur' assure un seul appel par paiement : methode_VT
+            # est appelee par article, et le cache rend de toute facon l'appel idempotent.
+            # / Only if enabled AND a Lespass key is set. Without a key: do nothing
+            #   (same behaviour as before: no call, no block on a missing wallet).
+            if (self.configuration.verifier_adhesion_paiement_nfc
+                    and self.configuration.lespass_api_key
+                    and 'adhesion_couleur' not in self.reponse):
+                wallet = self.carte_db.get_wallet()
+                # Une carte qui paie sans wallet Fedow est un etat anormal : on bloque
+                # la vente avec un message clair plutot que de laisser remonter un
+                # AttributeError opaque. La transaction @atomic est annulee : rien
+                # n'est debite (le push Fedow se fait plus loin, apres la boucle).
+                # / A paying card without a Fedow wallet is abnormal: block with a clear
+                #   message instead of an opaque AttributeError (atomic rollback, no debit).
+                if wallet is None:
+                    logger.warning(f"Paiement NFC : carte {self.carte_db} sans wallet Fedow, adhesion non verifiable.")
+                    raise NotAcceptable(
+                        detail=_("Carte sans wallet Fedow : adhésion non vérifiable, vente annulée."),
+                        code=None,
+                    )
+                adhesions = fetch_adhesions(wallet.uuid, self.configuration)
+                self.reponse['adhesions'] = adhesions or []
+                self.reponse['adhesion_couleur'] = couleur_adhesion(adhesions)
+
     # RECHARGE_EUROS = 'RE'
     def methode_RE(self, article, qty):
         # On check qu'il existe bien un token lié à l'article de recharge
@@ -1272,7 +1338,6 @@ class Commande:
         total = round((article.prix * qty), 2)
         carte_db: CarteCashless = self.carte_db
         self.total_vente_article += total
-        primary_card_fisrtTagId = self.responsable.CarteCashless_Membre.first()
         if not carte_db:
             logger.error('methode_adhesion : Pas de carte')
             raise NotAcceptable(
@@ -1300,21 +1365,35 @@ class Commande:
                 amount=int(self.total_vente_article * 100),
                 article=article,
                 user_card_firstTagId=carte_db.tag_id,
-                primary_card_fisrtTagId=primary_card_fisrtTagId.tag_id
+                # On envoie la carte primaire de la caisse, comme toutes les autres
+                # ventes. Fedow exige une carte declaree primaire POUR CE LIEU : une
+                # carte quelconque du membre responsable ne l'est pas forcement, et
+                # l'adhesion part alors en « Carte primaire non valide ».
+                # / Send the till's primary card, like every other sale. Fedow requires
+                #   a card registered as primary FOR THIS PLACE.
+                primary_card_fisrtTagId=self.primary_card_fisrtTagId
             )
 
             if not adh['verify_hash']:
                 raise NotAcceptable(
-                    detail="Erreur fédération.\n"
-                           "Notez la transaction et contactez un administrateur.",
+                    detail=_("Erreur fédération.\n"
+                             "Notez la transaction et contactez un administrateur."),
                     code=None
                 )
+
+        except NotAcceptable:
+            # create_sub a deja formule un message comprehensible par la caisse
+            # (« Carte primaire non valide »). L'ecraser par le message generique
+            # priverait la personne qui encaisse de la seule information utile.
+            # / create_sub already produced a message the till can act on. Overwriting
+            #   it with the generic one would hide the only useful information.
+            raise
 
         except Exception as e:
             logger.error(f"methode_AD fedowAPI.subscription.create_sub : {e}")
             raise NotAcceptable(
-                detail="Erreur fédération.\n"
-                       "Notez la transaction et contactez un administrateur.",
+                detail=_("Erreur fédération.\n"
+                         "Notez la transaction et contactez un administrateur."),
                 code=None
             )
 
@@ -1347,6 +1426,111 @@ class Commande:
         #     carte_db.save()
         #
         #     logger.warning('methode_adhesion : Pas de membre sur cette carte, on lance une adhesion suspendue')
+
+    # BILLET = 'BI'
+    def methode_BI(self, article, qty):
+        """
+        Vente d'un billet d'évènement en caisse.
+        / Event ticket sale at the POS.
+
+        LOCALISATION : webview/views.py (classe Commande)
+
+        Le billet doit exister côté Lespass pour être scanné à l'entrée.
+        On crée donc la réservation sur Lespass via l'API v2, en synchrone,
+        AVANT d'enregistrer la vente locale.
+        Si Lespass refuse ou ne répond pas : la vente est annulée
+        (transaction atomique), rien n'est débité.
+
+        FLUX :
+        1. Vérifie le moyen de paiement (espèce ou CB uniquement)
+        2. Cherche l'email du client : carte NFC -> membre -> email,
+           sinon email de la Configuration (billet anonyme rattaché à la caisse)
+        3. webview/billet_lespass.py : envoyer_reservation_billet()
+        4. Lespass crée Reservation + Tickets + ligne de vente (origine LaBoutik)
+        5. Enregistre la vente locale (ArticleVendu) avec l'uuid de la
+           réservation Lespass en metadata
+
+        DEPENDENCIES :
+        - Configuration.lespass_api_key (permission "reservation" côté Lespass)
+        - L'uuid de l'article = l'uuid du tarif (Price) Lespass
+        """
+        total = round((article.prix * qty), 2)
+        self.total_vente_article += total
+        config = self.configuration
+
+        # Seuls l'espèce et la carte bancaire sont acceptés pour un billet.
+        # Le cashless impliquerait une transaction Fedow : pas encore géré.
+        # / Only cash and credit card are accepted for tickets (no cashless yet).
+        moyens_acceptes = {
+            MoyenPaiement.CASH: "cash",
+            MoyenPaiement.CREDIT_CARD_NOFED: "card",
+        }
+        if self.moyen_paiement.categorie not in moyens_acceptes:
+            raise NotAcceptable(
+                detail=_("Les billets n'acceptent que espèce ou carte bancaire."),
+                code=None,
+            )
+        payment_method_lespass = moyens_acceptes[self.moyen_paiement.categorie]
+
+        # Email du client : carte NFC -> membre -> email.
+        # Sinon, billet anonyme : on utilise l'email de la caisse.
+        # Le billet (PDF) est envoyé par Lespass à cet email.
+        # / Customer email from the NFC card, else the POS email (anonymous ticket).
+        email_client = None
+        if self.carte_db and self.carte_db.membre and self.carte_db.membre.email:
+            email_client = self.carte_db.membre.email
+        if not email_client:
+            email_client = config.email
+        if not email_client:
+            raise NotAcceptable(
+                detail=_("Aucun email disponible pour créer le billet. "
+                         "Renseignez l'email dans les paramètres de la caisse."),
+                code=None,
+            )
+
+        # Appel synchrone vers Lespass. En cas d'échec : vente refusée,
+        # la transaction atomique annule tout, rien n'est débité.
+        # / Synchronous call to Lespass. On failure: sale refused, full rollback.
+        try:
+            reservation = envoyer_reservation_billet(
+                article=article,
+                qty=qty,
+                email=email_client,
+                payment_method=payment_method_lespass,
+                config=config,
+            )
+        except EnvoiBilletErreur as erreur:
+            raise NotAcceptable(detail=f"{erreur}", code=None)
+
+        # Enregistrement de la vente locale, avec la référence Lespass.
+        # / Local sale record, with the Lespass reservation reference.
+        tva = 0
+        if article.categorie:
+            if article.categorie.tva:
+                tva = article.categorie.tva.taux
+
+        ArticleVendu.objects.create(
+            article=article,
+            prix=article.prix,
+            prix_achat=article.prix_achat,
+            tva=tva,
+            qty=qty,
+            pos=self.point_de_vente,
+            carte=self.carte_db,
+            membre=self.carte_db.membre if self.carte_db else None,
+            moyen_paiement=self.moyen_paiement,
+            responsable=self.responsable,
+            commande=self.uuid_commande,
+            uuid_paiement=self.uuid_paiement,
+            table=self.table,
+            ip_user=self.ip_user,
+            metadata=json.dumps({
+                "lespass_reservation": reservation.get("identifier"),
+                "email": f"{email_client}",
+            }),
+        )
+
+        self.reponse['route'] = f'transaction_{self.moyen_paiement.name.lower().replace(" ", "_")}'
 
     # RETOUR_CONSIGNE = 'CR'
     def methode_CR(self, article, qty):

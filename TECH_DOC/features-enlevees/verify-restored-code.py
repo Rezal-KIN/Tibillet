@@ -16,10 +16,10 @@ UNITS = [
     ("D", "webview/views.py", "deploy/Laboutik/views.py", None, "index"),
     ("D", "webview/views.py", "deploy/Laboutik/views.py", None, "preparation"),
     ("D", "webview/views.py", "deploy/Laboutik/views.py", None, "paiement"),
-    ("F", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py",
+    ("F", "fedow_connect/fedow_api.py", None,
      "FedowAPI", "send_assets_from_cashless"),
-    ("E", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py", None, "_get"),
-    ("E", "fedow_connect/fedow_api.py", "deploy/Laboutik/fedow_api.py", None, "_post"),
+    ("E", "fedow_connect/fedow_api.py", None, None, "_get"),
+    ("E", "fedow_connect/fedow_api.py", None, None, "_post"),
 ]
 
 
@@ -42,13 +42,23 @@ def verify(archive_path, fedow_archive_path=None):
     digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
     if digest != reference["archive_sha256"]:
         raise ValueError("Upstream archive SHA-256 mismatch")
+    laboutik_compose = (ROOT / "deploy/Laboutik/docker-compose.yml").read_text()
+    laboutik_targets = re.findall(r"^\s*-\s+[^:\s]+:([^:\s]+)", laboutik_compose, re.MULTILINE)
+    api_target = "/DjangoFiles/fedow_connect/fedow_api.py"
+    if any(target.rstrip("/") == api_target
+           or api_target.startswith(target.rstrip("/") + "/")
+           for target in laboutik_targets):
+        raise ValueError("LaBoutik Fedow API is still replaced by a mount")
+    if (ROOT / "deploy/Laboutik/fedow_api.py").exists():
+        raise ValueError("Legacy LaBoutik Fedow API still exists in the active deployment")
     results = []
+    retained_files = []
     with tarfile.open(archive_path, "r:gz") as archive:
         members = {"/".join(Path(member.name).parts[1:]): member
                    for member in archive.getmembers() if member.isfile()}
         for feature, upstream_path, local_path, class_name, function_name in UNITS:
             original = archive.extractfile(members[upstream_path]).read().decode("utf-8")
-            current = (ROOT / local_path).read_bytes().decode("utf-8")
+            current = (ROOT / local_path).read_bytes().decode("utf-8") if local_path else original
             original_unit = unit_text(original, class_name, function_name).encode("utf-8")
             current_unit = unit_text(current, class_name, function_name).encode("utf-8")
             if original_unit != current_unit:
@@ -60,7 +70,29 @@ def verify(archive_path, fedow_archive_path=None):
                 "upstream_sha256": hashlib.sha256(original_unit).hexdigest(),
                 "restored_sha256": hashlib.sha256(current_unit).hexdigest(),
                 "exact_text_match": True,
+                "source_provider": "local_overlay" if local_path else "native_image",
             })
+        recipe = json.loads((ROOT / "TECH_DOC/features-enlevees/LaBoutik-ecarts-herites/retained-E-source.json").read_bytes())
+        if recipe["reference"] != reference:
+            raise ValueError("Retained E patch uses another LaBoutik reference")
+        for file in recipe["files"]:
+            native = archive.extractfile(members[file["upstream_path"]]).read().decode("utf-8")
+            expected = native
+            for replacement in file["replacements"]:
+                if expected.count(replacement["old"]) != 1:
+                    raise ValueError("Ambiguous retained E source span")
+                expected = expected.replace(replacement["old"], replacement["new"], 1)
+            expected = (file["notice"] + expected).encode("utf-8")
+            current = (ROOT / file["local_path"]).read_bytes()
+            if current != expected:
+                raise ValueError("Unexpected difference outside retained E: " + file["local_path"])
+            retained_files.append({
+                "upstream_path": file["upstream_path"], "local_path": file["local_path"],
+                "upstream_sha256": hashlib.sha256(native.encode("utf-8")).hexdigest(),
+                "restored_sha256": hashlib.sha256(current).hexdigest(),
+                "exact_except_declared_E_and_notice": True,
+            })
+        native_api = archive.extractfile(members["fedow_connect/fedow_api.py"]).read()
     fedow = catalog["fedow"]
     fedow_archive_path = fedow_archive_path or cached_archive(fedow)
     fedow_digest = hashlib.sha256(fedow_archive_path.read_bytes()).hexdigest()
@@ -111,9 +143,15 @@ def verify(archive_path, fedow_archive_path=None):
     if restored_database != database_text(native_settings):
         raise ValueError("Fedow DATABASES differs from the exact native SQLite source")
     return {
-        "scope": "Listed LaBoutik units, native Fedow serializer/dashboard selected by Compose and exact native SQLite DATABASES; no live runtime verification.",
+        "scope": "LaBoutik native files except declared E spans/notices, native Fedow API selected by Compose, previous C/D/F/G/H/I restorations; no live runtime verification.",
         "reference_repository": reference["repository"], "reference_commit": reference["commit"],
         "reference_image": reference["image"], "archive_sha256": digest, "units": results,
+        "retained_laboutik_files": retained_files,
+        "native_laboutik_api": {
+            "upstream_path": "fedow_connect/fedow_api.py",
+            "upstream_sha256": hashlib.sha256(native_api).hexdigest(),
+            "source_override_removed": True,
+        },
         "native_image_files": [{
             "feature": "G", "upstream_path": native_path,
             "reference_repository": fedow["repository"], "reference_commit": fedow["commit"],
@@ -154,4 +192,4 @@ if __name__ == "__main__":
     if args.receipt:
         args.receipt.write_text(serialized, encoding="utf-8")
     print("TiBillet archives verified; " + str(len(result["units"])) +
-          " restored units and native Fedow SQLite DATABASES match exactly; native serializer/dashboard have no override.")
+          " restored units match exactly; LaBoutik differs only by declared E spans/notices; native APIs and Fedow dashboard have no override.")
