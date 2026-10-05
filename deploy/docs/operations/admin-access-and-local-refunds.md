@@ -48,7 +48,9 @@ existants. Le nom et l'empreinte Django du mot de passe sont lus dans la version
 marquée `GALA_ADMIN` du secret partagé `integrations-mail`, puis dans un `admin.json` privé
 en mode `0600` sur l'hôte. Aucun identifiant administrateur n'est ajouté aux
 variables des conteneurs. L'absence de cette version arrête le déploiement avant le
-démarrage des applications. Le healthcheck vérifie les trois comptes.
+démarrage des applications. Le healthcheck vérifie la disponibilité des trois comptes et un hash reconnu
+par Django. Il accepte la réécriture native du hash lors d'une connexion ;
+les connexions réelles avec le mot de passe demandé sont testées séparément.
 
 Pour une intervention manuelle, exécuter sur l'instance cible :
 

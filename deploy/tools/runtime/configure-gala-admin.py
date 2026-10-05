@@ -71,7 +71,10 @@ with context, transaction.atomic():
         user.save()
         assert U.objects.get(pk=user.pk).password == encoded
     elif encoded:
-        assert user and user.username == username and user.password == encoded
+        assert user and user.username == username and user.has_usable_password()
+        # authenticate() may rehash a valid password with this app's native
+        # iteration count. Readiness must tolerate that standard Django update.
+        identify_hasher(user.password)
         assert user.is_active and user.is_staff and user.is_superuser
     print(json.dumps({'service': service, 'username': username, 'status': 'configured' if apply else 'ready'}))
 ''' % ((service, username, password_hash, apply, admin_email),)
@@ -103,13 +106,12 @@ def main():
     if not re.fullmatch(r'[a-zA-Z0-9_.@+-]{1,150}', args.username):
         parser.error('invalid username')
     admin_email = django_shell('laboutik', "import os,json; print(json.dumps(os.environ['ADMIN_EMAIL']))")
-    # Check every database before changing any account.
+    # Check every database before changing any account. A readiness-only run
+    # can validate account flags and its usable hash in that same read.
     for service in SERVICES:
-        print(json.dumps(django_shell(service, account_code(service, args.username, '', False, admin_email))))
+        print(json.dumps(django_shell(service, account_code(service, args.username,
+            '' if args.apply else encoded, False, admin_email))))
     if not args.apply:
-        if encoded:
-            for service in SERVICES:
-                print(json.dumps(django_shell(service, account_code(service, args.username, encoded, False, admin_email))))
         return
     if encoded:
         pass

@@ -17,10 +17,12 @@ Le gala Aix conserve son instance et son IP publique pendant cet essai.
 
 ## Vérifications locales
 
-106 tests de déploiement et 5 tests de politique réussis. La vérification des
+107 tests de déploiement et 5 tests de politique réussis. La vérification des
 fichiers restaurés confirme les sept unités natives et les seuls écarts
 conservés dans LaBoutik. Une sonde Django/SQLite vérifie la configuration admin
-et son idempotence ; elle ne prouve pas encore le contexte multi-tenant réel.
+et son idempotence. Une régression utilise aussi une vraie authentification
+Django qui recalcule le hash ; la disponibilité des comptes survit à cette
+modification native, tandis qu'un mot de passe inutilisable est refusé.
 Un `collectstatic` isolé conserve les octets CSS, JS, logo et police.
 
 ## Contrôles réels à consigner
@@ -45,3 +47,28 @@ Ces limites doivent rester explicites dans le résultat final.
 Les IDs d'exécution, logs et reçus non sensibles de l'essai sont conservés dans
 `.context/first-boot/`. Toute correction d'un échec applicatif doit être
 versionnée puis rejouée par la pipeline, sans réparation du code sur l'EC2.
+
+## Première tentative et correction
+
+Foundation `fbebfaf3-1331-4244-90d5-f5eb0c193fb5` : réussie, commit
+`3d1477b419edf3d784ba889da4a6c17d36684a96`. EC2 neuve
+`i-00cb72994b875e92d`, SSM Online, cloud-init terminé et mêmes sources.
+Le groupe réseau du nouveau gala n'a aucune entrée publique. Aix et Smoke
+n'ont pas été remplacées. La pipeline Production créée cible cette EC2.
+
+Test `bbe96e32-004f-4df6-9d0c-6fcba22469c3` : image construite, puis
+déploiement SSM `149afb9f-791e-4f1f-97f0-e035003094df` annulé par l'agent
+après diagnostic d'un contrôle admin incorrect. Les connexions HTTP des
+trois administrations fonctionnaient, ainsi que les quatre assets exacts,
+mais ces connexions déclenchaient la réécriture standard du hash par Django.
+Le contrôle exigeait à tort des octets identiques au hash initial.
+La correction vérifie un compte activé, privilégié et un mot de passe
+utilisable reconnu par Django ; le déploiement applique toujours le hash
+commun. Elle ne change aucun backend d'authentification applicatif.
+
+L'ancien Smoke PostgreSQL est conservé dans S3 (backup
+`20261005T215906Z`) et sous
+`/var/lib/tibillet-gala-archives/gala-smoke-before-native-20261005`.
+Les données de cette première tentative sont archivées séparément avant
+une nouvelle exécution sur des bases vides. Aucune réparation applicative
+locale n'est utilisée pour faire réussir le test.
