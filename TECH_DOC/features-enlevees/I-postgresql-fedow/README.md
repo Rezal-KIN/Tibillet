@@ -1,12 +1,14 @@
 # Configuration PostgreSQL de Fedow et retour prévu à SQLite
 
 Le 5 octobre 2026, l'utilisateur choisit de revenir à SQLite pour Fedow et
-demande de conserver la configuration PostgreSQL et le code associé pour une
-éventuelle réutilisation. Ce dossier archive les sources exactes et prépare la
-bascule. PostgreSQL reste configuré dans le dépôt actif à ce stade ; aucun
-transfert de données, changement de serveur ou déploiement n'a été effectué.
-Lespass et LaBoutik utilisent PostgreSQL dans leurs références natives et ne
-sont pas concernés par ce retour.
+de conserver la configuration PostgreSQL pour une éventuelle réutilisation.
+Il précise qu'aucune instance n'est en production et choisit explicitement une
+**base SQLite vide, avec l'ancien PostgreSQL conservé à part**. Le transfert des
+données est donc abandonné pour simplifier ce retour.
+
+Le dépôt local utilise maintenant SQLite. Aucun push, déploiement, effacement de
+base ou changement sur une instance distante n'a été effectué. Lespass et
+LaBoutik conservent PostgreSQL, leur moteur natif dans les références retenues.
 
 ## Sources conservées à l'identique
 
@@ -31,14 +33,14 @@ SHA-256 de l'archive :
 | `deploy/systemd/tibillet-gala-backup.service` et `.timer` | Déclenchement des sauvegardes périodiques |
 | `deploy/source/image-sources.json` | Références fixes des sources Fedow et LaBoutik |
 
-La connexion Fedow actuelle utilise `django.db.backends.postgresql` et les
+La connexion Fedow archivée utilisait `django.db.backends.postgresql` et les
 variables `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`
 (défaut `postgres`) et `POSTGRES_PORT` (défaut `5432`). Le conteneur historique
 emploie `postgres:13-bookworm` et monte `deploy/Fedow/database` sur
 `/var/lib/postgresql/data`. Cette version est archivée comme preuve historique,
 pas recommandée pour une future remise en service.
 
-Le correctif de stockage Stripe interroge `information_schema.columns`, puis
+Le correctif de stockage Stripe archivé interroge `information_schema.columns`, puis
 convertit `Configuration.stripe_api_key` et `stripe_endpoint_secret_enc` en
 `text` avec `ALTER TABLE`. Le modèle natif les limite à 100 caractères, alors
 que le chiffrement peut dépasser cette longueur. Les commits associés sont
@@ -51,61 +53,95 @@ séparé et comparer sa version à l'image TiBillet alors retenue. Git permet au
 de récupérer exactement un fichier depuis le commit ci-dessus avec `git show`.
 Les sauvegardes de données demeurent un sujet distinct de cette archive de code.
 
-## Implémentation proposée pour SQLite
+## Retour local au fonctionnement natif
 
-1. Copier textuellement le bloc `DATABASES` de
-   `TiBillet/Fedow@1668d94fb2391cd1b9fef28abf857c356e13207c` :
-   `django.db.backends.sqlite3`, fichier `BASE_DIR / 'database/db.sqlite3'`.
-   Le diff préparé ne change que ce bloc ; il n'ajoute aucun moteur métier.
-2. Donner à ce fichier un stockage persistant distinct, proposé sous
-   `deploy/Fedow/sqlite-database`, monté à l'emplacement natif dans le conteneur.
-   Le répertoire PostgreSQL existant est préservé. Un déploiement ordinaire ne
-   doit jamais initialiser une base SQLite vide à la place d'une base existante.
-3. Retirer le service PostgreSQL de la stack Fedow après qualification du
-   transfert. Conserver la réconciliation des secrets Stripe, en retirant son
-   élargissement SQL propre à PostgreSQL. Les setters natifs restent utilisés.
-4. Adapter les sauvegardes et leur vérification : deux dumps PostgreSQL pour
-   Lespass/LaBoutik et une sauvegarde cohérente SQLite pour Fedow. Une copie
-   brute du seul fichier principal pendant des écritures en mode WAL ne suffit
-   pas ; utiliser l'API de sauvegarde SQLite. Garder l'upload et les checksums
-   existants, sans créer un second système de sauvegarde.
-5. Tester le transfert sur une copie isolée avant la bascule. Préserver comptes,
-   cartes, wallets, actifs, tokens, transactions, UUID, relations, clés et champs
-   chiffrés. Comparer les lignes, les soldes par wallet/actif et les liens de
-   transactions. Lors de la bascule, suspendre les écritures, refaire le transfert
-   depuis l'état final et valider avant de rouvrir les écritures.
+Le bloc `DATABASES` de `deploy/Fedow/settings.py` est copié textuellement depuis
+`TiBillet/Fedow@1668d94fb2391cd1b9fef28abf857c356e13207c` :
+`django.db.backends.sqlite3`, fichier `BASE_DIR / 'database/db.sqlite3'`.
+Le vérificateur `../verify-restored-code.py` contrôle cette égalité exacte contre
+l'archive dont le checksum est fixé dans `deploy/source/image-sources.json`.
+Aucun modèle, serializer, migration ou signal Fedow n'est réécrit.
 
-L'import demande une attention concrète : les signaux natifs
-`first_block_for_new_asset` et `transaction_webhook_new_membership` ne filtrent
-pas `raw=True`. Un `loaddata` sans précaution peut donc créer des tokens et des
-transactions FIRST supplémentaires ou déclencher des appels à Lespass. La
-méthode de transfert n'est pas encore qualifiée ; il faut reproduire l'import
-sur une copie et éviter ces effets durant l'import, sans modifier les signaux
-dans le code Fedow en service.
+Compose retire le service `fedow_postgres` et son lien, et monte uniquement les
+**données SQLite** de `deploy/Fedow/sqlite-database` à l'emplacement natif
+`/home/fedow/Fedow/database`. Cette persistance est nécessaire pour conserver les
+soldes lors d'un remplacement de conteneur. `deploy/Fedow/database`, l'ancien
+répertoire PostgreSQL, n'est ni effacé, ni réutilisé, ni changé de propriétaire.
+L'entrée native `start.sh` continue d'appliquer les migrations, l'installation et
+le mode WAL. Les autres personnalisations conservées ne changent pas ici.
 
-Une restauration PostgreSQL après de nouvelles écritures SQLite demande aussi
-de transférer ces écritures : repointer simplement vers l'ancienne base ferait
-perdre l'état récent. Aucune bascule automatique entre moteurs n'est proposée.
+La réconciliation Stripe conserve les setters et accesseurs natifs et retire
+l'agrandissement SQL des champs propre à PostgreSQL. SQLite accepte les textes
+chiffrés de 140 et 164 caractères dans les champs natifs. Le schéma des secrets
+runtime reste compatible : `fedow_postgres_password` et ses variables sont
+encore générés et matérialisés, mais ignorés par SQLite. Cela évite de modifier
+ou renouveler les secrets partagés au cours de ce retour.
 
-## Vérification locale de la cible native
+Les sauvegardes existantes couvrent maintenant deux dumps PostgreSQL et une
+copie cohérente SQLite via `sqlite3.Connection.backup()`. Leur nom historique
+`backup-postgres.sh` et leur préfixe S3 sont conservés pour les timers et les
+anciens backups. Le type de sauvegarde Fedow dépend du montage du conteneur
+existant ; une ancienne configuration listant trois conteneurs reste utilisable.
+La vérification restaure aussi les anciennes sauvegardes Fedow PostgreSQL quand
+le conteneur source a disparu. Voir le [runbook](../../../deploy/docs/operations/backup-restore.md).
 
-Les 85 fichiers Python extraits ont été comparés octet par octet à l'archive
-Fedow dont le checksum correspond au catalogue. Le code applicatif natif n'a
-pas été modifié. Le probe PostgreSQL conservé dans l'audit initial a été adapté
-uniquement dans son harness pour employer une base SQLite locale en mode WAL,
-la variante native et des secrets fictifs. Les connexions réseau externes sont
-interdites dans ce probe.
+## Démarrage sur une base vide
 
-Les [résultats SQLite](sqlite-verification-results.json) contiennent dix
-scénarios dont les résultats attendus ont été contrôlés : recharge locale,
-annulation et reprise après échec local/Stripe, doublon simultané d'un checkout,
-entrelacement de recharges, validation d'actif archivé, retrait de liaison à un
-lieu, checkout historique nul, factures sans identifiant de session et stockage
-des deux secrets chiffrés. Un seul crédit est créé lors du doublon simultané.
-Les secrets fictifs de 140 et 164 caractères sont stockés et déchiffrés correctement.
+La voie la plus simple est une **instance dédiée entièrement neuve**, avec les
+trois services initialisés par les commandes TiBillet. Lespass et LaBoutik
+conservent des identifiants et clés liés à Fedow : vider seulement Fedow sur une
+instance déjà appairée ne suffit pas. Le changement de configuration ne
+réinitialise pas automatiquement ces deux bases.
 
-Ces essais valident des chemins natifs sur une base créée pour le test. Ils ne
-valident pas le transfert PostgreSQL vers SQLite, la charge du gala, un paiement
-externe ou le parcours complet avec Lespass et LaBoutik. La configuration
-SQLite est préparée dans `.context/sqlite-return-preview/settings.patch` et
-reste distincte de la configuration active jusqu'à qualification de la bascule.
+Sur un hôte déjà initialisé, les scripts de déploiement et de démarrage refusent
+une base SQLite manquante sans préparation explicite. Pour une réinitialisation
+cohérente décidée séparément, après sauvegarde de l'ancien état et préparation
+des trois services, un opérateur peut autoriser le démarrage natif vide :
+
+```bash
+sudo python3 /usr/local/lib/tibillet-gala/fedow-sqlite.py prepare-empty \
+  /home/ubuntu/TiBillet /var/lib/tibillet-gala/<slug>
+```
+
+Cette commande écrit uniquement un marqueur dans le répertoire runtime. Elle
+n'efface aucune donnée et refuse si un fichier SQLite ou un marqueur existe
+déjà. Après le démarrage sain, le déploiement vérifie la base, prend une première
+sauvegarde SQLite puis scelle ce marqueur, même si un ancien backup PostgreSQL
+existe. Les redémarrages suivants refusent un fichier absent, vide, incohérent
+ou sans configuration Fedow initialisée. Une première installation interrompue
+avec une SQLite déjà créée et sans marqueur peut être achevée par
+`initialize-storage` après vérification de sa provenance ; `prepare-empty` ne
+sert jamais à écraser ce fichier.
+
+Aucun outil de transfert de lignes, aucun `dumpdata/loaddata` et aucun nouveau
+module métier n'est introduit. Le risque des signaux natifs pendant un import
+reste documenté : `first_block_for_new_asset` et
+`transaction_webhook_new_membership` ne filtrent pas `raw=True`. Si un transfert
+redevient nécessaire, il devra être qualifié séparément. Un retour à l'ancien
+PostgreSQL après de nouvelles écritures SQLite ferait également perdre cet état
+récent sans transfert ; aucun changement automatique de moteur n'est prévu.
+
+## Vérifications locales et limites
+
+Les 85 fichiers Python extraits de la référence sont identiques à l'archive.
+Les [résultats préparatoires](sqlite-verification-results.json) restent conservés.
+Les [résultats de cette implémentation](implementation-verification-results.json)
+consignent la comparaison exacte des sources, la suite de tests et les contrôles
+de sauvegarde/restauration. Ils utilisent des données fictives et un transport
+S3 local ; aucune ressource AWS ni instance distante n'est appelée.
+
+Les dix scénarios du probe natif SQLite WAL ont été rejoués sur une base neuve :
+recharge locale, annulation/reprise après erreur locale et Stripe, doublon
+simultané de checkout, entrelacement, validation de champ pour actif archivé,
+VOID sur plusieurs lieux, checkout historique nul, deux factures avec session
+vide, secrets chiffrés. Le doublon ne crédite qu'une fois ; l'autre appel produit
+l'`IntegrityError` natif. Le test d'actif archivé caractérise la référence : la
+validation du champ l'accepte ; il ne teste pas une fusion complète.
+
+La sauvegarde d'une SQLite dont le WAL reste ouvert conserve les données
+commitées. Le contrôle de restauration a réellement démarré un PostgreSQL 13
+jetable sans réseau et vérifié la SQLite native isolée. Un ancien backup Fedow
+PostgreSQL a aussi été restauré sans conteneur source. Ces essais ne valident
+pas la charge du gala, les images déployées, un paiement externe, l'appairage ou
+le parcours complet QR/recharge/caisse des trois services. Ce contrôle complet
+sur une instance neuve reste à réaliser avant le gala.

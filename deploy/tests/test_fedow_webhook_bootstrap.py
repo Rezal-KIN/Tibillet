@@ -44,46 +44,12 @@ class FakeConfiguration:
         self.api_writes += 1
 
 
-class FakeConnection:
-    def __init__(self, column_types=None):
-        self.types = column_types or {
-            "stripe_endpoint_secret_enc": "character varying",
-            "stripe_api_key": "character varying",
-        }
-        self.alterations = []
-        self.ops = types.SimpleNamespace(quote_name=lambda name: f'"{name}"')
-
-    def cursor(self):
-        return self
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_args):
-        return False
-
-    def execute(self, sql, params=None):
-        if sql.startswith("SELECT"):
-            self.selected = list(self.types.items())
-            self.params = params
-        elif sql.startswith("ALTER TABLE"):
-            column = next(name for name in self.types if f'"{name}"' in sql)
-            self.types[column] = "text"
-            self.alterations.append(column)
-        else:
-            raise AssertionError(sql)
-
-    def fetchall(self):
-        return self.selected
-
-
-def reconcile_function(config, test_mode=False, storage=None):
+def reconcile_function(config, test_mode=False):
     tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     methods = [
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name in {"ensure_secret_storage", "reconcile"}
+        if isinstance(node, ast.FunctionDef) and node.name == "reconcile"
     ]
-    storage = storage or FakeConnection()
     scope = {
         "os": os,
         "hmac": hmac,
@@ -92,11 +58,9 @@ def reconcile_function(config, test_mode=False, storage=None):
             get_solo=lambda: config,
             _meta=types.SimpleNamespace(db_table="fedow_core_configuration"),
         ),
-        "connection": storage,
     }
     exec(compile(ast.Module(body=methods, type_ignores=[]), str(SCRIPT), "exec"), scope)
     reconcile = scope["reconcile"]
-    reconcile.storage = storage
     return reconcile
 
 
@@ -109,8 +73,6 @@ class FedowWebhookBootstrapTests(unittest.TestCase):
             reconcile()
         self.assertEqual(config.writes, 1)
         self.assertEqual(config.api_writes, 1)
-        self.assertEqual(set(reconcile.storage.alterations), {"stripe_endpoint_secret_enc", "stripe_api_key"})
-        self.assertEqual(len(reconcile.storage.alterations), 2)
         with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET": "whsec_rotated", "STRIPE_KEY": "sk_live_rotated"}):
             reconcile()
         self.assertEqual(config.writes, 2)
@@ -137,14 +99,12 @@ class FedowWebhookBootstrapTests(unittest.TestCase):
             reconcile()
         self.assertEqual(config.writes, 0)
         self.assertEqual(config.api_writes, 0)
-        self.assertEqual(len(reconcile.storage.alterations), 2)
 
-    def test_missing_storage_column_fails_closed(self):
-        storage = FakeConnection({"stripe_endpoint_secret_enc": "character varying"})
-        reconcile = reconcile_function(FakeConfiguration(test_mode=True), test_mode=True, storage=storage)
-        with patch.dict(os.environ, {"STRIPE_ENDPOINT_SECRET_TEST": "whsec_smoke", "STRIPE_KEY_TEST": "sk_test_smoke"}):
-            with self.assertRaisesRegex(RuntimeError, "columns are missing"):
-                reconcile()
+    def test_reconciliation_uses_no_schema_override(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("ALTER TABLE", source)
+        self.assertNotIn("information_schema", source)
+        self.assertNotIn("from django.db", source)
 
     def test_release_runs_reconciliation_before_healthcheck(self):
         release = (RUNTIME / "deploy-release.sh").read_text(encoding="utf-8")

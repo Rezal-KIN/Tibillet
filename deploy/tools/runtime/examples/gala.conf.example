@@ -31,8 +31,9 @@ REPO_ROOT="/home/ubuntu/TiBillet"
 COMPOSE_FILES="${REPO_ROOT}/traefik/docker-compose.yml;${REPO_ROOT}/traefik/docker-compose.release.yml:${REPO_ROOT}/Fedow/docker-compose.yml;${REPO_ROOT}/Fedow/docker-compose.release.yml:${REPO_ROOT}/Laboutik/docker-compose.yml;${REPO_ROOT}/Laboutik/docker-compose.release.yml:${REPO_ROOT}/Lespass/docker-compose.yml;${REPO_ROOT}/Lespass/docker-compose.release.yml"
 
 # Comma-separated container names, matched against docker-compose.yml
-# container_name for each stack's PostgreSQL service.
-POSTGRES_CONTAINERS="fedow_postgres,lespass_postgres,laboutik_postgres"
+# container_name for each stack's PostgreSQL service. Fedow uses native SQLite.
+# Backups detect its running mount, including hosts with an old three-PG list.
+POSTGRES_CONTAINERS="lespass_postgres,laboutik_postgres"
 
 # Comma-separated URLs checked after boot/deploy. 200/301/302 only.
 HEALTHCHECK_URLS="https://fedow.example.org/,https://cashless.example.org/,https://lespass.example.org/"

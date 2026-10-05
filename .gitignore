@@ -245,3 +245,9 @@ crash.*.log
 /deploy/.envrc
 /deploy/**/.env.bak*
 /deploy/**/*secret*
+
+# Fedow SQLite data and sidecars (never version or publish)
+**/sqlite-database/
+**/*.sqlite3
+**/*.sqlite3-wal
+**/*.sqlite3-shm

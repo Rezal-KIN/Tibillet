@@ -77,8 +77,18 @@ def verify(archive_path, fedow_archive_path=None):
         member = next(member for member in archive.getmembers()
                       if member.isfile() and "/".join(Path(member.name).parts[1:]) == native_path)
         native = archive.extractfile(member).read()
+        settings_member = next(member for member in archive.getmembers()
+                               if member.isfile() and "/".join(Path(member.name).parts[1:]) == "fedowallet_django/settings.py")
+        native_settings = archive.extractfile(settings_member).read().decode("utf-8")
+    def database_text(source):
+        node = next(node for node in ast.parse(source).body if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == "DATABASES" for target in node.targets))
+        return "".join(source.splitlines(keepends=True)[node.lineno - 1:node.end_lineno])
+    restored_database = database_text((ROOT / "deploy/Fedow/settings.py").read_text())
+    if restored_database != database_text(native_settings):
+        raise ValueError("Fedow DATABASES differs from the exact native SQLite source")
     return {
-        "scope": "Listed LaBoutik units and native Fedow serializer selected by Compose; no live runtime verification.",
+        "scope": "Listed LaBoutik units, native Fedow serializer selected by Compose and exact native SQLite DATABASES; no live runtime verification.",
         "reference_repository": reference["repository"], "reference_commit": reference["commit"],
         "reference_image": reference["image"], "archive_sha256": digest, "units": results,
         "native_image_files": [{
@@ -88,6 +98,11 @@ def verify(archive_path, fedow_archive_path=None):
             "upstream_sha256": hashlib.sha256(native).hexdigest(),
             "byte_length": len(native), "source_override_removed": True,
         }],
+        "native_database_settings": {
+            "feature": "I", "upstream_path": "fedowallet_django/settings.py",
+            "native_commit": fedow["commit"], "exact_text_match": True,
+            "sha256": hashlib.sha256(restored_database.encode("utf-8")).hexdigest(),
+        },
     }
 
 
@@ -110,4 +125,4 @@ if __name__ == "__main__":
     if args.receipt:
         args.receipt.write_text(serialized, encoding="utf-8")
     print("TiBillet archives verified; " + str(len(result["units"])) +
-          " restored units match exactly; native Fedow serializer has no override.")
+          " restored units and native Fedow SQLite DATABASES match exactly; native serializer has no override.")

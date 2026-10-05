@@ -54,3 +54,9 @@ Docker
 .playwright-mcp/
 **/__pycache__/
 *.pyc
+
+# Fedow SQLite data and sidecars (never version or publish)
+**/sqlite-database/
+**/*.sqlite3
+**/*.sqlite3-wal
+**/*.sqlite3-shm

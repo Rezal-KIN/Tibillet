@@ -38,6 +38,11 @@ runtime_dir() {
   printf '%s\n' "${RUNTIME_ROOT:-/var/lib/tibillet-gala}/${GALA_SLUG}"
 }
 
+check_fedow_storage() {
+  require_command python3
+  python3 "$(dirname "${BASH_SOURCE[0]}")/fedow-sqlite.py" check-storage "$REPO_ROOT" "$(runtime_dir)"
+}
+
 # COMPOSE_FILES is a ':'-separated list of groups; each group is a ';'-separated
 # list of compose files merged into ONE `docker compose` invocation (multiple
 # `-f` flags). This is what lets a per-service docker-compose.release.yml

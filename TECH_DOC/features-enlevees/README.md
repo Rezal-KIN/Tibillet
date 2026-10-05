@@ -15,6 +15,7 @@ pas le comportement à partir d'une description.
 | D | Limite de deux terminaux, éviction FIFO et exemption admin | `e27aa554` | [D-limite-terminaux.md](D-limite-terminaux.md) |
 | F | Option de désactivation de la synchronisation de monnaie cadeau | `50a6906f` | [F-option-monnaie-cadeau.md](F-option-monnaie-cadeau.md) |
 | G | Réparations automatiques et ancienne copie du serializer Fedow | `35cc9918` | [G-reparations-fedow.md](G-reparations-fedow.md) |
+| I | Backend PostgreSQL de Fedow et élargissement SQL des secrets Stripe | Ce lot local | [I-postgresql-fedow](I-postgresql-fedow/README.md) |
 
 Ces modifications sont locales, sans push ni déploiement. Aucun fichier runtime,
 article, solde, transaction ou réglage de base de production n'a été modifié.
@@ -28,7 +29,7 @@ article, solde, transaction ou réglage de base de production n'a été modifié
 | E | Conservé et corrigé : enregistrement uniquement sur carte introuvable, délais réseau TiBillet restaurés |
 | G | Retiré : serializer natif de l'image Fedow, sans montage ni copie de remplacement |
 | H | Garder le suivi financier en lecture ; il n'est pas une simple documentation |
-| I | Retour SQLite décidé pour Fedow ; [configuration PostgreSQL archivée et préparation](I-postgresql-fedow/README.md), transfert et bascule encore à qualifier |
+| I | Retour SQLite implémenté localement pour Fedow ; base vide choisie, PostgreSQL archivé, démarrage des trois services à vérifier sur une instance neuve : [dossier](I-postgresql-fedow/README.md) |
 | J | Garder pour l'instant l'installateur reprenable |
 | K | Conserver l'offre de sources ; risque de blocage d'un nouveau déploiement documenté séparément |
 | L | Décision reportée : ne pas retirer pour le moment |
@@ -106,16 +107,19 @@ La présence éventuelle de données anciennes incomplètes reste à contrôler 
 lecture seule avant une promotion de production.
 
 I : nous avons ajouté les copies montées de `settings.py`, pas inventé la
-configuration Django. Fedow remplace SQLite par PostgreSQL, ajuste les hôtes/debug
+configuration Django. La personnalisation Fedow remplaçait SQLite par
+PostgreSQL, ajustait les hôtes/debug
 et ajoute un répertoire de templates. LaBoutik utilise déjà PostgreSQL dans sa
 référence ; ses différences concernent principalement le répertoire de templates
 et les réglages email. Le retrait des montages doit préserver le branchement à la
 base existante, sans migration implicite vers une autre base. Le 5 octobre,
 l'utilisateur choisit de revenir à SQLite pour Fedow. La configuration PostgreSQL
 et ses dépendances sont archivées à l'identique dans
-[I-postgresql-fedow](I-postgresql-fedow/README.md). La configuration active reste
-inchangée tant que le transfert des données et les sauvegardes SQLite ne sont
-pas qualifiés. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
+[I-postgresql-fedow](I-postgresql-fedow/README.md). Le dépôt utilise maintenant
+le bloc SQLite natif. L’utilisateur choisit ensuite
+une base vide, l’ancien PostgreSQL restant conservé ; aucun transfert ni
+effacement distant n’a été effectué. Les sauvegardes mixtes sont vérifiées
+localement. Lespass et LaBoutik conservent leur moteur natif PostgreSQL.
 
 L reste inchangé et sa décision est reportée. La configuration Nginx contient les
 routes applicatives et les alias admin ; elle n'est pas une fonctionnalité de

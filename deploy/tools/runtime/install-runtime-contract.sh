@@ -32,7 +32,7 @@ bash "$REPO_ROOT/deploy/tools/runtime/ensure-host-swap.sh"
 for script in \
   backup-postgres.sh deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
-  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py \
+  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py fedow-sqlite.py \
   reclaim-deployment-space.sh restore-postgres.sh \
   verify-backup-restore.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do
