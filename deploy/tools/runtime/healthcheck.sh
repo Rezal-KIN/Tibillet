@@ -40,6 +40,9 @@ timeout 30s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_apex --check \
   >/dev/null || fail "Lespass apex is not mapped to the Gala tenant"
 
+python3 "$SCRIPT_DIR/configure-gala-refill-domain.py" --domain "$LESPASS_PUBLIC_DOMAIN" --check \
+  >/dev/null || fail "Fedow refill return domain is not the Lespass apex"
+
 timeout 30s docker exec -w /DjangoFiles lespass_django \
   /home/tibillet/.local/bin/poetry run python manage.py configure_gala_refill --check \
   >/dev/null || fail "Gala QR-card refill action is not visible"

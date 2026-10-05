@@ -4,6 +4,39 @@ Objectif : créer une EC2 vide par Foundation, puis livrer exactement les images
 validées par la pipeline Test. Les remboursements locaux restent hors périmètre.
 Le gala Aix conserve son instance et son IP publique pendant cet essai.
 
+## Défaut de retour Stripe découvert après les paiements test
+
+Le 6 octobre, la carte QR `83f91f5a-5a33-434a-8664-3ba42b3f5926`
+a reçu deux paiements Stripe **test** de 1 €. Une lecture de Stripe confirme
+pour chaque Checkout `livemode=false`, `status=complete`,
+`payment_status=paid`, `amount_total=100` et `currency=eur`. Fedow contient
+une seule transaction `REF` de 100 centimes par Checkout, vers le portefeuille
+actuel de cette carte ; le token fédéré vaut 200 centimes. Aucun paiement réel
+n'est effectué par ces contrôles.
+
+Le retour navigateur était en revanche cassé : les deux `success_url` et
+`cancel_url` utilisent `festival.galas-am-aix.rezal.fr`, qui n'a pas de
+résolution DNS. Le callback existe sur `galas-am-aix.rezal.fr`. Le lieu Fedow
+est créé par l'installateur natif avant la réaffectation du domaine principal
+Lespass par `configure_gala_apex` ; son champ `Place.lespass_domain` conservait
+donc le sous-domaine initial.
+
+Correction versionnée : après `configure_gala_apex`, le déploiement aligne
+uniquement `Place.lespass_domain` du lieu apparié sur le domaine principal
+approuvé. Les UUID du lieu et de son portefeuille sont lus dans le tenant
+Lespass puis vérifiés dans Fedow ; un appariement incohérent ou un domaine
+étranger bloque la correction. Le healthcheck contrôle ce réglage sans écrire.
+Aucun modèle, migration, API, callback ou calcul de recharge n'est remplacé.
+Les anciens Checkout payés conservent leur URL initiale chez Stripe ; les
+nouveaux doivent utiliser l'apex. Les preuves non sensibles des lectures
+SSM sont conservées dans `.context/first-boot/recharge-*-result.json`.
+
+La régression locale sur un vrai ORM Django/SQLite vérifie l'ancien domaine,
+sa correction idempotente, l'absence d'écriture du contrôle, la conservation
+des autres champs et lieux, ainsi que le refus d'un portefeuille ou domaine
+inattendu. Les cinq tests ciblés réussissent ; les sept unités TiBillet
+restaurées restent identiques aux sources natives archivées.
+
 **Résultat : Foundation, Test et Production réussies sur AWS.** Une nouvelle
 instance a été créée, initialisée sans données préexistantes et redémarrée
 sans réparation manuelle. Les accès admin, le site, les cartes, la lecture QR,

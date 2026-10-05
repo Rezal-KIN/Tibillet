@@ -128,6 +128,10 @@ timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
 timeout 120s docker exec lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py configure_gala_apex'
 
+# Fedow retains the hostname recorded before the apex was reassigned. Its
+# native Stripe return URL and webhooks must use the same canonical domain.
+python3 "$SCRIPT_DIR/configure-gala-refill-domain.py" --domain "$LESPASS_PUBLIC_DOMAIN"
+
 # The upstream Laboutik entrypoint attempts install before Lespass is ready
 # and keeps serving HTTP even if that command fails. Re-run it after Lespass
 # initialization against this Gala's local Traefik. DEBUG=1 applies only to
