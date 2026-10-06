@@ -4,47 +4,6 @@ Objectif : créer une EC2 vide par Foundation, puis livrer exactement les images
 validées par la pipeline Test. Les remboursements locaux restent hors périmètre.
 Le gala Aix conserve son instance et son IP publique pendant cet essai.
 
-## Défaut de retour Stripe découvert après les paiements test
-
-Le 6 octobre, la carte QR `83f91f5a-5a33-434a-8664-3ba42b3f5926`
-a reçu deux paiements Stripe **test** de 1 €. Une lecture de Stripe confirme
-pour chaque Checkout `livemode=false`, `status=complete`,
-`payment_status=paid`, `amount_total=100` et `currency=eur`. Fedow contient
-une seule transaction `REF` de 100 centimes par Checkout, vers le portefeuille
-actuel de cette carte ; le token fédéré vaut 200 centimes. Aucun paiement réel
-n'est effectué par ces contrôles.
-
-Le retour navigateur était en revanche cassé : les deux `success_url` et
-`cancel_url` utilisent `festival.galas-am-aix.rezal.fr`, qui n'a pas de
-résolution DNS. Le callback existe sur `galas-am-aix.rezal.fr`. Le lieu Fedow
-est créé par l'installateur natif avant la réaffectation du domaine principal
-Lespass par `configure_gala_apex` ; son champ `Place.lespass_domain` conservait
-donc le sous-domaine initial.
-
-Correction versionnée : après `configure_gala_apex`, le déploiement aligne
-uniquement `Place.lespass_domain` du lieu apparié sur le domaine principal
-approuvé. Les UUID du lieu et de son portefeuille sont lus dans le tenant
-Lespass puis vérifiés dans Fedow ; un appariement incohérent ou un domaine
-étranger bloque la correction. Le healthcheck contrôle ce réglage sans écrire.
-Aucun modèle, migration, API, callback ou calcul de recharge n'est remplacé.
-Les anciens Checkout payés conservent leur URL initiale chez Stripe ; les
-nouveaux doivent utiliser l'apex. Les preuves non sensibles des lectures
-SSM sont conservées dans `.context/first-boot/recharge-*-result.json`.
-
-La régression locale sur un vrai ORM Django/SQLite vérifie l'ancien domaine,
-sa correction idempotente, l'absence d'écriture du contrôle, la conservation
-des autres champs et lieux, ainsi que le refus d'un portefeuille ou domaine
-inattendu. Les cinq tests ciblés réussissent ; les sept unités TiBillet
-restaurées restent identiques aux sources natives archivées.
-
-Première livraison du correctif : Test `834db2c0-cea5-445d-aa9a-b1a58f77fc8b`,
-commit `94a9bcdf9343f3d2ccb4a56306a12ffa46c994e3`. Image construite, puis
-SSM `a5a26edb-7c50-42b3-9811-cd361cb00c97` arrêté en échec après 3 min 14 s :
-le nouvel outil avait été omis de la liste d'installation runtime. La correction
-ajoute cet outil à `install-runtime-contract.sh` et vérifie sa présence dans
-la régression. Aucun marqueur de validation n'est créé pour cette tentative ;
-aucune réparation du code n'est faite sur l'EC2. Les bases ne sont pas réinitialisées.
-
 **Résultat : Foundation, Test et Production réussies sur AWS.** Une nouvelle
 instance a été créée, initialisée sans données préexistantes et redémarrée
 sans réparation manuelle. Les accès admin, le site, les cartes, la lecture QR,
@@ -364,3 +323,76 @@ Fedow, avant de rétablir Aix par la pipeline. Aucun paiement réel n'est requis
 pour cette étape. L'EC2 de démonstration, désormais sans IP partagée ni groupe
 public, est mise à l'arrêt ; son disque et ses sauvegardes restent conservés.
 Aix est aussi conservée et aucune nouvelle release n'y est déployée.
+
+## Défaut de retour Stripe découvert après les paiements test
+
+Le 6 octobre, la carte QR `83f91f5a-5a33-434a-8664-3ba42b3f5926`
+a reçu deux paiements Stripe **test** de 1 €. Une lecture de Stripe confirme
+pour chaque Checkout `livemode=false`, `status=complete`,
+`payment_status=paid`, `amount_total=100` et `currency=eur`. Fedow contient
+une seule transaction `REF` de 100 centimes par Checkout, vers le portefeuille
+actuel de cette carte ; le token fédéré vaut 200 centimes. Aucun paiement réel
+n'est effectué par ces contrôles.
+
+Le retour navigateur était en revanche cassé : les deux `success_url` et
+`cancel_url` utilisent `festival.galas-am-aix.rezal.fr`, qui n'a pas de
+résolution DNS. Le callback existe sur `galas-am-aix.rezal.fr`. Le lieu Fedow
+est créé par l'installateur natif avant la réaffectation du domaine principal
+Lespass par `configure_gala_apex` ; son champ `Place.lespass_domain` conservait
+donc le sous-domaine initial.
+
+Correction versionnée : après `configure_gala_apex`, le déploiement aligne
+uniquement `Place.lespass_domain` du lieu apparié sur le domaine principal
+approuvé. Les UUID du lieu et de son portefeuille sont lus dans le tenant
+Lespass puis vérifiés dans Fedow ; un appariement incohérent ou un domaine
+étranger bloque la correction. Le healthcheck contrôle ce réglage sans écrire.
+Aucun modèle, migration, API, callback ou calcul de recharge n'est remplacé.
+Les anciens Checkout payés conservent leur URL initiale chez Stripe ; les
+nouveaux doivent utiliser l'apex. Les preuves non sensibles des lectures
+SSM sont conservées dans `.context/first-boot/recharge-*-result.json`.
+
+La régression locale sur un vrai ORM Django/SQLite vérifie l'ancien domaine,
+sa correction idempotente, l'absence d'écriture du contrôle, la conservation
+des autres champs et lieux, ainsi que le refus d'un portefeuille ou domaine
+inattendu. Les cinq tests ciblés réussissent ; les sept unités TiBillet
+restaurées restent identiques aux sources natives archivées.
+
+Première livraison du correctif : Test `834db2c0-cea5-445d-aa9a-b1a58f77fc8b`,
+commit `94a9bcdf9343f3d2ccb4a56306a12ffa46c994e3`. Image construite, puis
+SSM `a5a26edb-7c50-42b3-9811-cd361cb00c97` arrêté en échec après 3 min 14 s :
+le nouvel outil avait été omis de la liste d'installation runtime. La correction
+ajoute cet outil à `install-runtime-contract.sh` et vérifie sa présence dans
+la régression. Aucun marqueur de validation n'est créé pour cette tentative ;
+aucune réparation du code n'est faite sur l'EC2. Les bases ne sont pas réinitialisées.
+
+Deuxième livraison : Test `25fc9bd2-722e-4843-88cb-d9dc5b7516fd`,
+commit applicatif `990fa7a6a6bd9cf6112c810735248ef194c38f98`, **Succeeded**.
+SSM `1c2f4db2-2383-4d9a-90ad-cfa469e290bd` : **Success**, 5 min 24 s.
+Le marqueur immuable `test-validated/smoke-990fa7a6a6bd9cf6112c810735248ef194c38f98.json`
+contient l'image Lespass
+`sha256:258be42bde6596de04c7421aab6c426c7fc2a668086db45399d648050600f8fd`.
+Les images Fedow, LaBoutik et Traefik restent celles épinglées avant le correctif.
+Le lieu Fedow et le tenant Lespass utilisent tous deux `galas-am-aix.rezal.fr` ;
+le healthcheck complet réussit. Aucun code applicatif n'est réparé sur le serveur.
+
+Sonde HTTPS `ced510b9-608b-456b-bc2d-5f505d97a73e` : **Success**.
+Une session Django temporaire du propriétaire de la carte est utilisée,
+sans émission de mail, puis supprimée. Les quatre GET de retour (deux par
+Checkout déjà payé) redirigent 302 vers `/my_account/`, dont le contenu
+répond 200 et contient « Tirelire rechargée ». Le QR et le portefeuille
+`/my_account/balance/` répondent aussi 200. La vraie action de recharge
+crée un nouveau Checkout Stripe test sans le payer.
+
+Lecture Stripe/Fedow `2e2b35bf-866f-4cd5-a8b6-a63b7bc2fde5` : **Success**.
+Le nouveau Checkout `678a07c8-dc2e-41f5-9439-a7a6f079e466` possède
+`success_url` et `cancel_url` sur l'apex avec le callback natif ; il reste
+`unpaid`, sans transaction de crédit. Les deux Checkout payés conservent
+chacun une seule transaction `REF` de 100 centimes après les retours répétés,
+et le portefeuille conserve 200 centimes. Cela valide les paiements test
+réels effectués par l'utilisateur, leur crédit et le callback natif via HTTPS.
+Le clic navigateur de redirection d'un **nouveau** paiement reste à retester
+manuellement ; aucune nouvelle carte bancaire n'est soumise par la sonde.
+
+Le correctif est livré uniquement sur Smoke par un lancement Test au commit
+explicite de la branche. La PR #104 vise `main` ; aucun déploiement sur Aix,
+aucune bascule d'IP et aucune fusion de cette PR ne sont effectués ici.
