@@ -6,9 +6,12 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
+from card_stock import EMPTY_STOCK, validate_catalogue
 
 IMAGES = ("lespass_image", "fedow_image", "laboutik_image", "traefik_image")
 
@@ -23,6 +26,9 @@ def compare(manifest: dict[str, object], tested: dict[str, object], slug: str) -
     for field in IMAGES:
         if manifest.get(field) != tested.get(field):
             raise ValueError(f"{field} differs from the successful Smoke deployment")
+    stock = validate_catalogue(manifest.get('card_stock', EMPTY_STOCK))
+    if stock != validate_catalogue(tested.get('card_stock', EMPTY_STOCK)):
+        raise ValueError('card_stock differs from the successful Smoke deployment')
 
 
 def main() -> None:
@@ -56,6 +62,7 @@ def main() -> None:
         f"manifest_git={source_commit} release={manifest['release_id']} "
         f"gala={args.gala} app_git={commit} "
         + " ".join(f"{name}={manifest[name]}" for name in IMAGES)
+        + f" card_lots={len(manifest.get('card_stock', EMPTY_STOCK)['lots'])}"
         + f" sha256={checksum}"
     )
     if len(summary) > 1000:

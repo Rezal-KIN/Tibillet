@@ -31,6 +31,7 @@ install -d -m 0755 "$runtime_library" /etc/tibillet-gala /var/lib/tibillet-gala
 bash "$REPO_ROOT/deploy/tools/runtime/ensure-host-swap.sh"
 for script in \
   backup-postgres.sh configure-gala-admin.py configure-gala-refill-domain.py \
+  card_stock.py import_card_stock_fedow.py import-gala-card-stock.py \
   deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
   materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py fedow-sqlite.py \

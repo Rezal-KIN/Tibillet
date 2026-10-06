@@ -158,6 +158,12 @@ timeout 120s docker exec -w /DjangoFiles lespass_django \
 python3 "$SCRIPT_DIR/configure-gala-admin.py" --gala "$GALA_SLUG" \
   --credentials-file "$(runtime_dir)/admin.json" --apply
 
+# Import physical identities with the unchanged native Fedow command after
+# pairing. CSVs and wrapper input are temporary; no new application bind mount.
+python3 "$SCRIPT_DIR/import-gala-card-stock.py" "$MANIFEST_PATH" \
+  --bucket "${RELEASE_BUCKET:-${BACKUP_BUCKET}}" --region "$AWS_REGION" \
+  --domain "$LESPASS_PUBLIC_DOMAIN"
+
 healthy=false
 for attempt in {1..60}; do
   if "$SCRIPT_DIR/healthcheck.sh" "$CONFIG_PATH"; then

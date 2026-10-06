@@ -28,3 +28,4 @@ artifacts:
   files:
     - validated-manifest.json
     - deploy/tools/runtime/validate-release.py
+    - deploy/tools/runtime/card_stock.py

@@ -9,9 +9,10 @@ phases:
       - test -n "${CODEBUILD_SRC_DIR_BuildOutput:-}"
       - test -f "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json"
       - test -f deploy/test-images.json
+      - test -f deploy/card-stock.json
   build:
     commands:
       - set -euo pipefail
-      - python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json
+      - python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json --card-stock deploy/card-stock.json
       - python3 deploy/tools/runtime/validate-release.py /tmp/smoke-manifest.json
       - python3 deploy/tools/deploy-smoke-candidate.py /tmp/smoke-manifest.json

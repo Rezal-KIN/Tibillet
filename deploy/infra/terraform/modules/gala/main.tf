@@ -94,6 +94,16 @@ data "aws_iam_policy_document" "runtime" {
     for_each = var.release_bucket_arn == null ? [] : [var.release_bucket_arn]
 
     content {
+      sid       = "ReadOnlySharedCardStock"
+      actions   = ["s3:GetObject"]
+      resources = ["${statement.value}/card-stock/*"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.release_bucket_arn == null ? [] : [var.release_bucket_arn]
+
+    content {
       sid       = "ListReleaseBucketOnly"
       actions   = ["s3:ListBucket"]
       resources = [statement.value]

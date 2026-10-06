@@ -150,6 +150,13 @@ Smoke pour les essais publics de fin de préparation.
 
 ### 6. Produire une release immuable
 
+Le [stock de cartes](card-stock-import.md) sélectionné dans
+`deploy/card-stock.json` est figé dans le manifeste Smoke et importé avec la
+commande native Fedow. Une nouvelle base reçoit les associations physiques,
+sans soldes ni comptes d'un ancien gala. Aucun nouveau montage de code ou de CSV
+n'est nécessaire. Le catalogue initial reste vide jusqu'à confirmation physique
+de l'ordre NFC des lots usine.
+
 Une release Production est un manifeste revu qui fixe les digests exacts de :
 
 - Lespass depuis l'ECR Gala ;
@@ -191,7 +198,8 @@ doit être en écriture unique et correspondre octet pour octet à l'artefact
 validé ; aucun `latest` ni remplacement silencieux après l'approbation.
 
 La pipeline vérifiée place `ValidatePromotion` avant `ApprovePromotion`.
-La validation compare le commit applicatif et les quatre images au marqueur
+La validation compare le commit applicatif, les quatre images et le catalogue
+`card_stock` complet au marqueur
 immuable du déploiement Smoke réussi. Le déploiement reçoit ensuite cet
 artefact, vérifie son SHA256 approuvé et refuse de remplacer un objet S3
 de release par des octets différents. L'audit conserve l'artefact téléchargé

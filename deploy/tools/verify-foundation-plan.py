@@ -289,7 +289,7 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
     allowed_updates = re.compile(
         r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
     )
-    production_project = re.compile(r'^aws_codebuild_project\.production\["[a-z0-9-]+"\]$')
+    production_project = re.compile(r'^aws_codebuild_project\.(?:production|production_validate)\["[a-z0-9-]+"\]$')
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
@@ -314,6 +314,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if actions == ["update"] and safe_gala_list_prefix_update(item["change"], address):
             changed.append(f"allow-own-backup-restore {address}")
             continue
+        if actions == ["update"] and safe_card_stock_read_addition(item["change"], address):
+            changed.append(f"allow-shared-card-stock-read {address}")
+            continue
         if actions == ["update"] and (
             allowed_updates.fullmatch(address) or address == 'aws_iam_role_policy.foundation_pipeline[0]'
         ):
@@ -333,7 +336,8 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                 changed.append(f"add-managed-gala-group-permission {address}")
                 continue
         if actions == ["update"] and (
-            production_project.fullmatch(address) or address == 'aws_codebuild_project.foundation_finalize[0]'
+            production_project.fullmatch(address)
+            or address in {'aws_codebuild_project.foundation_finalize[0]', 'aws_codebuild_project.test_deploy[0]'}
         ):
             change = item["change"]
             before = change.get("before")
@@ -352,11 +356,14 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                     and {k: v for k, v in old_source[0].items() if k != "buildspec"}
                     == {k: v for k, v in new_source[0].items() if k != "buildspec"}
                 ):
-                    kind = (
-                        "update-foundation-finalize-buildspec"
-                        if address == 'aws_codebuild_project.foundation_finalize[0]'
-                        else "update-production-buildspec"
-                    )
+                    if address == 'aws_codebuild_project.foundation_finalize[0]':
+                        kind = 'update-foundation-finalize-buildspec'
+                    elif address == 'aws_codebuild_project.test_deploy[0]':
+                        kind = 'update-test-deploy-buildspec'
+                    elif address.startswith('aws_codebuild_project.production_validate['):
+                        kind = 'update-production-validate-buildspec'
+                    else:
+                        kind = 'update-production-buildspec'
                     changed.append(f"{kind} {address}")
                     continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
@@ -423,6 +430,43 @@ def safe_gala_list_prefix_update(change: dict[str, object], address: str) -> boo
             return False
         changed_sids.add(sid)
     return changed_sids == set(expected_prefixes)
+
+
+def safe_card_stock_read_addition(change: dict[str, object], address: str) -> bool:
+    match = re.fullmatch(r'module\.gala\["([a-z0-9][a-z0-9-]{1,62})"\]\.aws_iam_role_policy\.runtime', address)
+    if not match or has_unknown(change.get('after_unknown', {})):
+        return False
+    before, after = change.get('before'), change.get('after')
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return False
+    if {k: v for k, v in before.items() if k != 'policy'} != {k: v for k, v in after.items() if k != 'policy'}:
+        return False
+    try:
+        old, new = json.loads(before['policy']), json.loads(after['policy'])
+        prior, later = old['Statement'], new['Statement']
+        if not isinstance(prior, list) or not isinstance(later, list):
+            return False
+        if {k: v for k, v in old.items() if k != 'Statement'} != {k: v for k, v in new.items() if k != 'Statement'}:
+            return False
+        releases = [item for item in prior if item.get('Sid') == 'ReadOnlyOwnReleaseManifests']
+        if len(releases) != 1:
+            return False
+        resource = releases[0]['Resource']
+        if isinstance(resource, list) and len(resource) == 1:
+            resource = resource[0]
+        suffix = f'/releases/{match.group(1)}/*'
+        if not isinstance(resource, str) or not resource.startswith('arn:aws:s3:::') or not resource.endswith(suffix):
+            return False
+        addition = {'Sid': 'ReadOnlySharedCardStock', 'Effect': 'Allow',
+                    'Action': 's3:GetObject', 'Resource': resource[:-len(suffix)] + '/card-stock/*'}
+        if any(item.get('Sid') == addition['Sid'] for item in prior):
+            return False
+        # Terraform may reorder statements when adding a SID. Preserve every
+        # existing statement verbatim, and authorize exactly one read-only one.
+        canonical = lambda items: sorted(json.dumps(item, sort_keys=True) for item in items)
+        return canonical(later) == canonical(prior + [addition])
+    except (KeyError, TypeError, AttributeError, json.JSONDecodeError):
+        return False
 
 
 def safe_group_permission_addition(change: dict[str, object]) -> bool:
