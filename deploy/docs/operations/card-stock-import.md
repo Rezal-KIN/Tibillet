@@ -11,9 +11,17 @@ Le CSV `gala-am-G1.csv` contient **3 510 cartes**, au format natif sans en-tête
 Il est publié dans le bucket privé et sélectionné comme génération 1 dans
 `deploy/card-stock.json`, avec les UID NFC fournis, sans transformation. Son
 SHA-256 est `de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567`.
-Il sera importé par les releases utilisant ce catalogue, après livraison du
-contrat runtime/CodeBuild décrit ci-dessous. Sa sélection n'exécute pas un import
-sur une instance déjà lancée.
+**G1 a été importé sur Smoke le 6 octobre 2026 : ses 3 510 associations sont
+vérifiées**, avec sauvegardes avant/après et conservation des données existantes.
+L'opération a créé 3 509 cartes et aligné le QR/numéro d'une carte précédemment
+enregistrée avec une identité aléatoire, après inspection de ses liens.
+Les contrôles HTTPS et API NFC native réussissent sur deux cartes.
+Les détails sont dans [l'audit](../../../TECH_DOC/audits/2026-10-06-import-cartes-usine.md).
+Aix n'a pas été modifié.
+
+L'import automatique reste à livrer par les releases utilisant ce catalogue,
+après livraison du contrat runtime/CodeBuild décrit ci-dessous. Sa sélection
+n'exécute pas un import sur une instance déjà lancée.
 
 Les deux classeurs blancs/noirs contiennent **3 510 autres cartes**, sans
 recoupement QR/numéro/NFC avec G1 dans aucun des deux ordres D/E. Total connu :
@@ -29,8 +37,9 @@ quatre octets. Choisir la variante correspondant à l'UID effectivement reçu pa
 LaBoutik. Conserver le résultat et le type de lecteur dans l'audit.
 
 La carte QR `87b51016-91a9-4f2a-8c6b-c759ca5c6af6`, absente des classeurs, a été
-retrouvée dans **G1**. Son association est désormais disponible pour l'import ;
-la 404 sur une instance existante ne disparaît qu'après import et contrôle QR.
+retrouvée dans **G1**. Son QR ouvre maintenant la page de liaison sur Smoke
+(HTTPS 200), après import. La présence du lot sur d'autres instances doit être
+vérifiée séparément.
 
 ## Ajouter ou activer des lots
 

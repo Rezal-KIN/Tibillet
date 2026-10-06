@@ -158,6 +158,10 @@ n'est nécessaire. Le catalogue sélectionne actuellement le CSV natif G1
 (3 510 cartes). Les deux lots Excel restent en attente de confirmation physique
 de leur ordre NFC avant sélection.
 
+G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026.
+La livraison Foundation du contrat d'import puis son exécution automatique au
+premier démarrage par la pipeline restent à vérifier ; voir le mode opératoire.
+
 Une release Production est un manifeste revu qui fixe les digests exacts de :
 
 - Lespass depuis l'ECR Gala ;

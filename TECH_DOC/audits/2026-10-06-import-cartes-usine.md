@@ -2,6 +2,18 @@
 
 ## Résultat vérifié le 6 octobre 2026
 
+**Le lot G1 est maintenant importé sur Smoke : ses 3 510 associations sont
+vérifiées en base.** Les deux QR contrôlés ouvrent la page de liaison, dont celui
+qui renvoyait une 404. La lecture NFC native LaBoutik retrouve les mêmes
+associations. L'opération, ses sauvegardes et ses limites sont décrites dans
+« Import effectif de G1 sur Smoke » ci-dessous. Aix n'a pas été modifié.
+
+Les deux lots Excel restent non importés, en attente de confirmation de leur
+ordre NFC D/E. L'import automatique par la pipeline reste à livrer via
+Foundation puis à vérifier sur une nouvelle instance.
+
+## Audit initial en lecture seule
+
 L'image Fedow actuellement déployée sur **Smoke** contient la commande native
 `python manage.py import_cards`. Elle sait importer l'association entre l'URL du
 QR, le numéro imprimé et l'identifiant NFC. Aucun nouvel importeur ni montage de
@@ -11,11 +23,11 @@ LaBoutik contient aussi `python manage.py import_csv_card`, mais cette commande
 crée uniquement des `CarteCashless` locales. À elle seule, elle n'enregistre pas
 les cartes dans Fedow et ne suffit donc pas à ouvrir les QR côté Lespass.
 
-Cet audit n'a exécuté aucun import, créé aucune carte et modifié aucune base
-sur les instances déployées.
+La phase initiale d'audit n'a exécuté aucun import, créé aucune carte et modifié
+aucune base sur les instances déployées.
 Les deux fichiers Excel originaux n'ont pas été modifiés.
 L'implémentation ajoutée ensuite a été testée sur des bases SQLite isolées ; elle
-n'a pas encore importé ces lots sur AWS (voir le statut en fin de document).
+n'avait pas encore importé ces lots sur AWS à ce stade.
 
 ## Fichiers fournis et vérification de toutes les lignes
 
@@ -250,7 +262,7 @@ est transmise au shell Django ; les CSV temporaires sont supprimés après usage
 
 Les variantes D et E des deux lots sont préparées, validées et conservées
 localement sous `.context/qr-card-investigation/draft-stock/`. Chacune représente
-les mêmes 3 510 cartes. Le catalogue versionné est volontairement vide :
+les mêmes 3 510 cartes. Le catalogue versionné était alors volontairement vide :
 l'utilisateur n'a pas de carte/lecteur disponible pour confirmer D/E à ce stade.
 Ces variantes ne sont ni publiées dans S3 ni activées dans une release.
 
@@ -273,10 +285,11 @@ la publication, le déploiement, les conflits et le retour arrière.
 - Syntaxe Python/shell, `terraform fmt -check`, `terraform validate` et contrôle
   des sept unités TiBillet restaurées réussis.
 
-Ces résultats sont **locaux**, sans modification AWS. Il reste à confirmer D/E,
-publier les CSV privés et versionner leurs métadonnées, mettre à jour le contrat
-Terraform/CodeBuild via Foundation, puis exécuter la pipeline et tester QR/NFC
-sur le matériel. Aucun import sur Smoke/Aix ni bascule publique n'est revendiqué.
+Ces résultats de l'implémentation sont **locaux**, sans modification AWS à ce
+stade. G1 a été publié puis importé sur Smoke dans les étapes suivantes. Il reste
+à confirmer D/E pour les classeurs, mettre à jour le contrat Terraform/CodeBuild
+via Foundation, puis vérifier l'import au premier démarrage par la pipeline et
+le parcours sur le matériel. Aucune bascule publique n'est incluse dans cet audit.
 
 ## Ajout du CSV Gala G1 le 6 octobre 2026
 
@@ -329,9 +342,84 @@ Ce tag et son inverse `4062099C` n'apparaissent dans aucun des deux classeurs
 blancs/noirs. Ce relevé **ne tranche donc pas leur choix D/E**. Il faut encore
 une association physique appartenant à l'un de ces classeurs. Aucun fichier de
 cartes, catalogue, code TiBillet ou base d'instance n'est changé à partir de ce
-relevé ; la vérification complète QR/NFC sur l'instance reste à effectuer après
-livraison. Le reçu détaillé est conservé hors Git dans
+relevé. Le contrôle QR et API NFC réalisé ensuite sur Smoke est décrit ci-dessous ;
+un essai complet sur lecteur physique après import reste à effectuer. Le reçu
+détaillé est conservé hors Git dans
 `.context/qr-card-investigation/100j-physical-reader-report.json`.
+
+## Import effectif de G1 sur Smoke le 6 octobre 2026
+
+À la demande explicite de l'utilisateur, l'opération a ciblé uniquement
+`gala-smoke`, instance `i-0037b98572fccdff2`, compte AWS `318629836660`, région
+`eu-west-3`. Le compte a été vérifié par STS. Le gala actif et l'IP publique
+`51.44.90.200` désignaient déjà Smoke ; l'opération n'a pas changé ce routage.
+
+Le CSV privé a été relu avec son SHA-256 et importé avec la commande native
+Fedow inchangée, dont l'empreinte runtime a été revérifiée. L'enveloppe de
+contrôle provient du commit `93ac219a6c4f12f545dc9cb64764081dcb2a70b6`.
+Elle a été transmise temporairement au shell Django par SSM, sans installation
+applicative, nouveau montage ou modification IAM. Les CSV temporaires ont été
+supprimés après usage. La release applicative Smoke reste celle du commit
+`990fa7a6a6bd9cf6112c810735248ef194c38f98` ; aucune pipeline n'a été relancée.
+
+### Conflit examiné et correction limitée aux identifiants imprimés
+
+La première comparaison s'est arrêtée avant import : un tag G1 était déjà
+enregistré avec un QR et un numéro aléatoires issus de l'enregistrement
+automatique d'une carte inconnue. Les 3 509 autres associations étaient absentes.
+La carte conflictuelle n'avait aucun token, aucune transaction sur sa carte ou
+son wallet et aucun utilisateur Fedow ; elle conservait un lien de membre local
+LaBoutik. Après inspection, seuls son QR et son numéro imprimé ont été alignés
+sur le fichier G1 dans Fedow puis LaBoutik. Son UUID de carte, son tag NFC, son
+wallet, son origine, son membre et ses liens de responsable ont été préservés,
+ainsi que les assets et ventes locaux. Cette correction ponctuelle ne change
+pas le wrapper : les futurs conflits restent bloquants et ne sont pas corrigés
+automatiquement.
+
+### Résultats et preuves
+
+- **3 509 créations natives et une carte existante alignée : 3 510 cartes G1
+  présentes**, génération 1. Fedow contient 3 513 cartes au total, avec les trois
+  autres cartes préexistantes conservées. Toutes les associations du lot et leur
+  origine ont été vérifiées ; une nouvelle comparaison crée zéro carte.
+- Les comptes, liens de cartes et données financières préexistants sont
+  conservés. Le contrôle final retrouve cinq tokens et sept transactions.
+  Deux consultations QR ont créé les wallets anonymes vides attendus par le
+  comportement natif : 11 wallets après consultation, contre neuf après import.
+  Aucun paiement, crédit ou transfert de solde n'a été exécuté.
+- Les QR `87b51016-91a9-4f2a-8c6b-c759ca5c6af6` et
+  `75cc77af-0917-4922-a2a2-39830d0c148f` retournent **HTTPS 200**, avec le
+  formulaire de liaison et l'UUID de carte attendu. Le premier ne renvoie plus
+  la 404 signalée. Aucun formulaire de liaison n'a été envoyé.
+- L'API NFC native LaBoutik retrouve les mêmes associations pour ces deux
+  cartes. Elle les matérialise à la demande, portant le total local à cinq ;
+  elle n'exige pas de dupliquer le lot par un second importeur.
+- Le healthcheck installé réussit sur les trois domaines, la configuration
+  apex/recharge et Celery. Cela ne remplace pas un scan sur lecteur physique.
+
+| Étape SSM | Commande | Résultat |
+|---|---|---|
+| Import Fedow puis alignement local | `e57e2f0c-240f-4cac-a879-bd1c1aec454e` | Import Fedow validé et sauvegarde préalable réussie ; commande globale `Failed` ensuite sur un `NameError: hashlib` dans le shell LaBoutik. Aucun rejeu de l'import. |
+| Réparation de l'alignement local | `a0a1428e-a18e-487a-b629-775a022a0824` | `Success`, liens locaux préservés. Le script ponctuel a été isolé dans un espace Python cohérent, sans modifier LaBoutik. |
+| Contrôle complet et relance | `1c423736-3f81-4192-8ef6-aa18a4820b94` | `Success`, 3 510 associations, zéro création supplémentaire. |
+| Santé runtime | `685516f1-b238-43b7-9d37-081ff525f7b5` | `Success`. |
+| Recherche NFC native | `eb34f1fb-6a1d-442f-a485-5947b4322d2f` | `Success`, deux associations conformes. |
+| Sauvegarde et comptage final | `004398f1-2f7c-4d63-bf78-7999f956e597` | `Success`. |
+
+Les sauvegardes **avant** (`20261006T162348Z`) et **après**
+(`20261006T163036Z`) sont présentes dans le bucket privé sous
+`galas/gala-smoke/postgres/<backup_id>/`. Chacune contient Fedow SQLite et les
+deux bases PostgreSQL Lespass/LaBoutik, avec métadonnées et `SHA256SUMS` relus.
+Le préfixe historique `postgres/` ne signifie pas que Fedow utilise PostgreSQL.
+
+Le reçu consolidé `g1-smoke-import-receipt.json` et les sorties SSM/HTTP restent
+sous `.context/qr-card-investigation/`, hors Git. Le CSV complet et les URLs
+temporaires de téléchargement ne sont pas ajoutés au dépôt public.
+
+**Reste à vérifier séparément :** le parcours avec le lecteur physique,
+l'ordre D/E des lots Excel, puis la livraison Foundation/pipeline pour prouver
+l'import automatique au premier démarrage d'une nouvelle instance. Cet import
+ponctuel ne prouve pas cette dernière livraison. Aix reste inchangé.
 
 ## Éléments d'audit locaux
 
