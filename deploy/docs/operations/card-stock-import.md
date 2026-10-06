@@ -5,22 +5,32 @@ commande **native Fedow `import_cards`**. Le code de cette commande reste celui
 de l'image de référence. Aucun fichier applicatif ni CSV n'est monté en volume
 pour cet import ; l'enveloppe de déploiement est exécutée via `manage.py shell`.
 
-## État des lots usine fournis
+## État du stock fourni
 
-Les deux classeurs blancs/noirs contiennent 3 510 associations valides. Les deux
-variantes CSV D/E sont préparées sous
-`.context/qr-card-investigation/draft-stock/`, hors Git. Elles ont passé le
-validateur et un import natif sur SQLite isolé. **L'ordre NFC reste à confirmer
-sur le lecteur physique.** Le catalogue versionné `deploy/card-stock.json`
-contient donc pour l'instant `lots: []` : aucun lot usine n'est activé par défaut.
+Le CSV `gala-am-G1.csv` contient **3 510 cartes**, au format natif sans en-tête.
+Il est publié dans le bucket privé et sélectionné comme génération 1 dans
+`deploy/card-stock.json`, avec les UID NFC fournis, sans transformation. Son
+SHA-256 est `de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567`.
+Il sera importé par les releases utilisant ce catalogue, après livraison du
+contrat runtime/CodeBuild décrit ci-dessous. Sa sélection n'exécute pas un import
+sur une instance déjà lancée.
+
+Les deux classeurs blancs/noirs contiennent **3 510 autres cartes**, sans
+recoupement QR/numéro/NFC avec G1 dans aucun des deux ordres D/E. Total connu :
+**7 020 cartes distinctes**. Les variantes CSV D/E des classeurs sont préparées
+sous `.context/qr-card-investigation/draft-stock/`, hors Git. Elles ont passé le
+validateur et un import natif sur SQLite isolé. **L'ordre NFC de ces classeurs
+reste à confirmer sur le lecteur physique** ; ils ne sont pas encore sélectionnés
+dans le catalogue. Le CSV G1 contient déjà une seule colonne NFC désignée.
 
 Une seule carte suffit à cette confirmation : comparer son numéro imprimé et
 l'UID lu au relevé usine. Le fichier donne D et E, qui inversent l'ordre des
 quatre octets. Choisir la variante correspondant à l'UID effectivement reçu par
 LaBoutik. Conserver le résultat et le type de lecteur dans l'audit.
 
-La carte QR `87b51016-91a9-4f2a-8c6b-c759ca5c6af6` n'est pas dans ces deux lots.
-Son association doit être retrouvée séparément.
+La carte QR `87b51016-91a9-4f2a-8c6b-c759ca5c6af6`, absente des classeurs, a été
+retrouvée dans **G1**. Son association est désormais disponible pour l'import ;
+la 404 sur une instance existante ne disparaît qu'après import et contrôle QR.
 
 ## Ajouter ou activer des lots
 
@@ -36,6 +46,7 @@ Son association doit être retrouvée séparément.
    python3 deploy/tools/publish-card-stock.py \
      --profile gala-elevated --region eu-west-3 \
      --bucket <bucket-de-releases> --domain galas-am-aix.rezal.fr \
+     --lot 1 .context/attachments/vvroK1/gala-am-G1.csv \
      --lot 1 .context/qr-card-investigation/draft-stock/D-direct/white.csv \
      --lot 2 .context/qr-card-investigation/draft-stock/D-direct/black.csv \
      --output deploy/card-stock.json

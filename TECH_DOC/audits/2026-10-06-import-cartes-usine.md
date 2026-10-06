@@ -278,6 +278,44 @@ publier les CSV privés et versionner leurs métadonnées, mettre à jour le con
 Terraform/CodeBuild via Foundation, puis exécuter la pipeline et tester QR/NFC
 sur le matériel. Aucun import sur Smoke/Aix ni bascule publique n'est revendiqué.
 
+## Ajout du CSV Gala G1 le 6 octobre 2026
+
+L'utilisateur a fourni `gala-am-G1.csv`, 308 880 octets, **3 510 lignes**, trois
+colonnes sans en-tête au format natif `URL_QR,NUMERO_IMPRIME,UID_NFC`.
+SHA-256 : `de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567`.
+Toutes les lignes passent le validateur. Aucun doublon interne, ni intersection
+avec les classeurs blancs/noirs sur les QR, numéros imprimés ou UID NFC D/E.
+Le stock connu totalise donc **7 020 cartes distinctes**.
+
+La carte QR précédemment absente des deux classeurs,
+`87b51016-91a9-4f2a-8c6b-c759ca5c6af6`, est présente dans G1. L'association
+usine est retrouvée ; aucun nouvel UUID ou UID n'est généré. Cela ne prouve pas
+encore que cette carte est enregistrée dans une base déployée.
+
+G1 est repris **octet pour octet**, avec sa colonne NFC unique. Il est publié
+sous `card-stock/<sha256>.csv` dans le bucket privé
+`tibillet-gala-paris-production-318629836660-backups`, région `eu-west-3`.
+Le compte `318629836660` a été vérifié par STS avec le profil `gala-elevated` ;
+les quatre protections d'accès public S3 sont activées. La relecture S3 a
+confirmé les mêmes octets, le SHA-256 et les 3 510 lignes.
+
+`deploy/card-stock.json` sélectionne désormais **G1, génération 1**. Les deux
+lots issus des classeurs restent en attente de lecture physique D/E ; ils ne
+sont pas retirés des brouillons ni incorporés avec un ordre supposé. La future
+release fige G1 dans son manifeste et le mécanisme natif importe ce lot sur
+chaque base cible, sans montage supplémentaire ni modification TiBillet.
+
+L'essai G1 avec la commande native vérifiée sur une base SQLite isolée a créé
+3 510 cartes en génération 1, puis zéro à la relance ; le compte et le solde
+de test sont préservés. Aucune base Smoke/Aix n'a été modifiée pendant cet ajout.
+La mise à jour Foundation des droits/buildspecs puis la livraison par la pipeline
+restent nécessaires avant le contrôle de cette carte QR et de son NFC sur une
+instance déployée. La publication S3 seule ne supprime pas la 404 actuelle.
+
+Reçus locaux : `gala-am-G1-audit.json`, `gala-am-G1-native-probe-result.json`,
+`gala-am-G1-publication-receipt.json`, sous `.context/qr-card-investigation/`.
+Le CSV complet reste hors Git et hors archives publiques de sources.
+
 ## Éléments d'audit locaux
 
 Sous `.context/qr-card-investigation/` (gitignoré) :

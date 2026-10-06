@@ -154,8 +154,9 @@ Le [stock de cartes](card-stock-import.md) sélectionné dans
 `deploy/card-stock.json` est figé dans le manifeste Smoke et importé avec la
 commande native Fedow. Une nouvelle base reçoit les associations physiques,
 sans soldes ni comptes d'un ancien gala. Aucun nouveau montage de code ou de CSV
-n'est nécessaire. Le catalogue initial reste vide jusqu'à confirmation physique
-de l'ordre NFC des lots usine.
+n'est nécessaire. Le catalogue sélectionne actuellement le CSV natif G1
+(3 510 cartes). Les deux lots Excel restent en attente de confirmation physique
+de leur ordre NFC avant sélection.
 
 Une release Production est un manifeste revu qui fixe les digests exacts de :
 

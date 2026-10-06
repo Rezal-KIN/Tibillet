@@ -1,4 +1,11 @@
 {
-  "schema_version": 1,
-  "lots": []
+  "lots": [
+    {
+      "generation": 1,
+      "key": "card-stock/de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567.csv",
+      "rows": 3510,
+      "sha256": "de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567"
+    }
+  ],
+  "schema_version": 1
 }
