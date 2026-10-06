@@ -316,6 +316,23 @@ Reçus locaux : `gala-am-G1-audit.json`, `gala-am-G1-native-probe-result.json`,
 `gala-am-G1-publication-receipt.json`, sous `.context/qr-card-investigation/`.
 Le CSV complet reste hors Git et hors archives publiques de sources.
 
+## Relevé physique d'une carte des 100J
+
+L'utilisateur a lu le tag **`9C096240`** sur une carte des 100J et retranscrit le
+numéro imprimé `75CC774AF` (neuf caractères). Le CSV G1 contient exactement ce
+tag et l'associe au numéro **`75CC77AF`** (huit caractères). La correspondance
+NFC est exacte, sans inversion d'octets. Elle confirme la cohérence de cette
+lecture avec la colonne NFC fournie pour G1. Le numéro imprimé reste à confirmer
+sur la carte : la retranscription ajoute un `4` par rapport au CSV.
+
+Ce tag et son inverse `4062099C` n'apparaissent dans aucun des deux classeurs
+blancs/noirs. Ce relevé **ne tranche donc pas leur choix D/E**. Il faut encore
+une association physique appartenant à l'un de ces classeurs. Aucun fichier de
+cartes, catalogue, code TiBillet ou base d'instance n'est changé à partir de ce
+relevé ; la vérification complète QR/NFC sur l'instance reste à effectuer après
+livraison. Le reçu détaillé est conservé hors Git dans
+`.context/qr-card-investigation/100j-physical-reader-report.json`.
+
 ## Éléments d'audit locaux
 
 Sous `.context/qr-card-investigation/` (gitignoré) :
