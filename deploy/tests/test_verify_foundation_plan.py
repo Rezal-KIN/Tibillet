@@ -21,6 +21,38 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_test_pipeline_refresh_cannot_change_permissions_or_identity(self) -> None:
+        address = 'aws_iam_role_policy.test_pipeline[0]'
+        before = {
+            "id": "test-pipeline:test-pipeline", "name": "test-pipeline",
+            "role": "test-pipeline", "policy": json.dumps({
+                "Version": "2012-10-17", "Statement": [{
+                    "Effect": "Allow", "Action": "codebuild:StartBuild",
+                    "Resource": "arn:aws:codebuild:eu-west-3:318629836660:project/test",
+                }],
+            }),
+        }
+        refresh = {"address": address, "change": {
+            "actions": ["update"], "before": before,
+            "after": {**before, "policy": None}, "after_unknown": {"policy": True},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [refresh]}, "gala-new"),
+                         [f"refresh-policy {address}"])
+        for mutation in (
+            lambda item: item["change"]["after"].update(policy='{"Statement": []}'),
+            lambda item: item["change"]["after"].update(role="different-role"),
+            lambda item: item["change"]["after"].update(name="different-policy"),
+            lambda item: item["change"].update(after_unknown={"policy": True, "role": True}),
+            lambda item: item["change"].update(after_unknown={}),
+            lambda item: item["change"].update(actions=["delete"]),
+            lambda item: item.update(address='aws_iam_role_policy.test_pipeline[1]'),
+            lambda item: item.update(address='aws_iam_role_policy.test_build[0]'),
+        ):
+            bad = copy.deepcopy(refresh)
+            mutation(bad)
+            with self.subTest(change=bad), self.assertRaises(ValueError):
+                module.verify({"resource_changes": [bad]}, "gala-new")
+
     def test_first_run_retirement_requires_exact_instance_and_volume(self) -> None:
         slug = module.FIRST_RUN_SLUG
         address = f'module.gala["{slug}"].aws_instance.retirable[0]'

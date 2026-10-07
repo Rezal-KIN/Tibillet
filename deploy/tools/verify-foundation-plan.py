@@ -317,6 +317,13 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if actions == ["update"] and safe_card_stock_read_addition(item["change"], address):
             changed.append(f"allow-shared-card-stock-read {address}")
             continue
+        # Updating the Test deploy buildspec defers this unchanged policy
+        # document until apply. Permit only that computed value, with the
+        # existing role and policy identity intact.
+        if (actions == ["update"] and address == 'aws_iam_role_policy.test_pipeline[0]'
+                and safe_computed_policy_refresh(item["change"])):
+            changed.append(f"refresh-policy {address}")
+            continue
         if actions == ["update"] and (
             allowed_updates.fullmatch(address) or address == 'aws_iam_role_policy.foundation_pipeline[0]'
         ):
