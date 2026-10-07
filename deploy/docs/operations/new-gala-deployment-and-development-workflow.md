@@ -161,8 +161,14 @@ L'ordre NFC D des deux lots Excel est confirmé par les relevés physiques du
 
 G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026 ;
 les lots blanc/noir ont été ajoutés et vérifiés le 7 octobre.
-La livraison Foundation du contrat d'import puis son exécution automatique au
-premier démarrage par la pipeline restent à vérifier ; voir le mode opératoire.
+Le 7 octobre, Foundation a livré le contrat d'import et créé
+`gala-import-cartes-2026-10-07`. La pipeline Test a reconnu les 7 020 cartes
+existantes sur Smoke sans doublon ; la pipeline Production dédiée a ensuite
+créé automatiquement les 7 020 cartes sur une base neuve, sans import manuel.
+Cet essai porte sur les commits explicites de la
+[PR #104](https://github.com/Rezal-KIN/Tibillet/pull/104), encore non fusionnée :
+les prochains lancements standard depuis `main` exigent cette fusion.
+Voir [l'audit cartes](../../../TECH_DOC/audits/2026-10-06-import-cartes-usine.md).
 
 Une release Production est un manifeste revu qui fixe les digests exacts de :
 

@@ -9,9 +9,13 @@ après confirmation de la colonne NFC D pour chacun des deux classeurs.
 Les données existantes sont préservées. Les opérations, sauvegardes et preuves
 sont décrites ci-dessous. Aix n'a pas été modifié.
 
-L'import automatique par la pipeline reste à livrer via Foundation puis à
-vérifier au premier démarrage d'une nouvelle instance. Les imports ponctuels
-réussis sur Smoke ne constituent pas cette preuve.
+**L'import automatique au premier démarrage est maintenant vérifié sur AWS** :
+Foundation a créé un gala neuf, puis sa pipeline Production a créé les
+7 020 cartes automatiquement sur une base initialement absente. La pipeline
+Test préalable sur Smoke a reconnu les 7 020 cartes existantes et créé zéro
+doublon. L'utilisateur confirme aussi le parcours physique sur Smoke.
+L'essai utilise des commits explicites de la PR #104 : sa fusion dans `main`
+reste une étape distincte avant les prochains lancements standard.
 
 ## Audit initial en lecture seule
 
@@ -508,9 +512,157 @@ L'opération utilise les helpers inchangés du commit
 Elle ne modifie aucun code applicatif, Compose, montage, droit IAM ou routage,
 et ne relance aucune pipeline. L'instance et l'IP publiques désignent déjà Smoke.
 L'utilisateur confirme ensuite que le parcours physique fonctionne sur Smoke.
-Il demande maintenant la vérification de l'import automatique au premier
-démarrage d'un nouveau gala par la pipeline ; cette étape est en cours.
+La vérification de l'import automatique au premier démarrage d'un nouveau gala
+par la pipeline a ensuite réussi ; elle est décrite ci-dessous.
 Aix reste inchangé.
+
+## Import automatique sur un gala neuf par la pipeline, 7 octobre 2026
+
+L'essai crée **Gala Import Cartes 2026 10 07**
+(`gala-import-cartes-2026-10-07`) via Foundation, puis utilise Test et sa
+pipeline Production dédiée. Les commandes opérateur ne réalisent aucun import
+sur cette nouvelle instance : l'import est exclusivement celui de
+`deploy-release.sh`, après l'appairage et avant les contrôles et la sauvegarde.
+
+### Périmètre et état initial
+
+- Compte AWS `318629836660`, Paris `eu-west-3`, identité STS vérifiée.
+- Nouvelle EC2 `i-06c4a26b49ac45afa`, volume racine
+  `vol-049d0497923a9595f`, créés par Foundation.
+- Avant la release : aucun conteneur, aucune base Fedow SQLite et aucun manifeste
+  déployé. Lecture SSM `3fbd0fa7-e27f-4fcd-82f7-da32580d868f`, `Success`.
+- Les EC2 et volumes racine Aix, Smoke et du précédent essai sont conservés.
+  Le groupe réseau du nouveau gala n'a aucune règle entrante. Le gala actif
+  reste `gala-smoke` et l'EIP `51.44.90.200` reste sur Smoke ; aucune bascule
+  de trafic ni modification DNS n'est réalisée.
+
+### Corrections nécessaires pour rendre le flux reproductible
+
+La première Foundation (`f6234414-e2f7-4b68-ab22-77895902896f`) refuse le plan
+**avant apply** : Terraform diffère le recalcul de la politique du rôle Test
+lors de la création du nouveau gala. Le contrôleur ne reconnaissait pas cette
+mise à jour calculée. Le commit
+`ac90db5095c77b047e411b2b88d2c6302e5dd0cd` applique le contrôle strict existant
+au seul objet `aws_iam_role_policy.test_pipeline[0]` : identité et autres champs
+inchangés, seul le contenu de politique calculé étant inconnu dans le plan.
+Les tests refusent les modifications d'identité ou de politique explicite
+inattendues. La politique IAM Test réelle est identique avant/après apply.
+Un autre essai (`07568bf7-b427-4c45-be49-3ed0d6b20a68`) échoue au téléchargement
+Source lors d'une erreur GitHub temporaire, avant tout changement AWS.
+
+Le buildspec Test enregistré dans AWS doit également accepter une ancienne
+révision du dépôt sans catalogue ni option CLI `--card-stock`, tant que la PR
+n'est pas fusionnée. Le commit
+`a2434de279aa92df30dd430116bb227cae0d7073` conserve l'appel historique sans cette
+option uniquement lorsque le catalogue est absent. Les nouvelles révisions
+avec catalogue le passent obligatoirement au manifeste. Le test exerce une
+ancienne CLI réelle et la CLI actuelle ; il ne masque pas un catalogue invalide.
+Foundation a livré cette compatibilité avant l'essai Test.
+
+Ces corrections portent sur l'outillage de déploiement. Elles ne réécrivent
+aucune commande native, modèle ou migration TiBillet et n'ajoutent aucun
+montage applicatif ni CSV. **123 tests de déploiement réussissent**, sans test
+ignoré, ainsi que `terraform fmt -check`.
+
+### Exécutions et artefact exact
+
+| Étape | Exécution | Résultat |
+|---|---|---|
+| Foundation, création du gala | `ea868be1-4c25-4731-a41f-521b6df8409f` | `Succeeded` au commit `ac90db5…`. |
+| Foundation, livraison de la compatibilité | `2e79a7e5-4c57-4f42-a3ec-45019d9433e0` | `Succeeded` au commit `d162e26…`, aucune nouvelle EC2 remplacée. |
+| Test, déploiement sur Smoke | `d23e1ad9-d9de-470d-9e7d-8f82eba60c06` | `Succeeded`, 7 020 associations existantes, zéro création. |
+| Production du nouveau gala | `e4e79da6-d562-4692-bda6-ce7123027c52` | `Succeeded`, import automatique de 7 020 cartes. |
+| SSM Production | `014d3fc1-1b90-411b-9ae2-d689563100b3` | `Success`, santé et sauvegarde initiale incluses. |
+| Contrôle indépendant complet | `96446bd6-01e0-437a-a638-cb66dab8edf7` | `Success`, associations, images, importeur, SQLite, trois QR et santé. |
+| Santé finale Smoke | `a656fb9e-6cb3-431e-889b-9a6f609adabf` | `Success`. |
+
+Le commit applicatif testé est
+`d162e2647d7e36458a6c9be75fa1bc3248cb6e03`.
+Le commit contenant le manifeste Production est
+`735976c600280e434fa48f02275b9eb45fd8a28b` ; il n'est pas confondu avec le
+commit applicatif. La release est
+`gala-import-cartes-2026-10-07-v1.0.0`, conservée sous
+`releases/gala-import-cartes-2026-10-07/`.
+
+Avant approbation, l'artefact CodeBuild validé a été téléchargé et comparé octet
+pour octet au manifeste revu. Son SHA-256 est
+`7dc4f14b48107b4f26c9ad456fe579fbaa7b9f9f7515b5427b9beec80ec075b1`.
+La validation lie le commit applicatif, les quatre images et le catalogue
+complet au marqueur Smoke immuable. La cible Production vérifiée est la seule
+nouvelle EC2. Les quatre images effectivement exécutées correspondent à ce
+manifeste. Les huit assets de sources ont été publiés et vérifiés sur GitHub ;
+les CSV privés, classeurs et fichiers `.context` sont exclus des archives.
+
+### Résultats du premier démarrage
+
+Reçu de l'import exécuté par la pipeline :
+
+```json
+{"status":"ready","expected":7020,"created":7020,"existing":0,"lots":3}
+```
+
+La comparaison indépendante en mode `--check` retrouve ensuite les
+**7 020 associations exactes**, sans carte manquante ni conflit, et ne crée
+aucune carte. Les générations sont G1 : 3 510 ; blanc : 1 755 ; noir : 1 755.
+Les 7 020 cartes sont sans utilisateur et la base ne contient aucun solde
+positif. Les seuls wallets/tokens/transactions présents avant les consultations
+sont les trois objets de chaque type créés par l'installation native.
+Aucun compte, solde ou historique d'un autre gala n'a été copié.
+
+Fedow utilise `django.db.backends.sqlite3`. Le fichier de commande native
+`import_cards.py` conserve son SHA-256 de référence
+`cf1217b46eacd7f8e85ef71c6c5e6df79ec6e03baeb422030e38dabc001c30a6`.
+Aucun volume de stock/CSV n'est présent et le timer de sauvegarde est actif.
+
+Les QR noir, blanc et G1 testés répondent localement en HTTPS 200 avec le bon
+formulaire de liaison. Les vérifications imposent la résolution vers
+`127.0.0.1`, afin de contrôler la nouvelle EC2 malgré les noms publics communs.
+Le certificat temporaire est accepté pour cet essai local ; il ne prouve pas
+l'émission d'un certificat public pour ce gala inactif. Les trois services,
+le tenant apex, le retour de recharge et Celery passent le healthcheck.
+Les consultations QR natives créent les wallets anonymes vides attendus.
+Aucun formulaire de liaison ni paiement n'a été soumis.
+
+L'API NFC native LaBoutik retrouve les cartes noire et blanche et matérialise
+leurs deux fiches locales. Leurs UUID de carte correspondent exactement à
+ceux du **nouveau** Fedow, ce qui exclut un contrôle involontaire de Smoke.
+SSM `7081d8c7-5141-4c6a-8bc2-ade49164d8a0`, `Success`.
+Le premier contrôle supplémentaire, puis son diagnostic, avaient échoué sur
+`CERTIFICATE_VERIFY_FAILED` : ce gala isolé ne possède pas encore de certificat
+public. Le rejeu utilise `DEBUG=1` uniquement dans les processus shell de test,
+comme l'installation locale ; les services web restent `DEBUG=0`. Aucun code,
+fichier de configuration persistant ou routage n'a été modifié pour ce contrôle.
+
+La sauvegarde **automatique initiale** `20261007T173945Z`, au préfixe privé
+`galas/gala-import-cartes-2026-10-07/postgres/`, contient les trois bases et les
+métadonnées. Les checksums sont relus, puis Fedow SQLite est décompressé et
+ouvert seul en lecture : intégrité `ok`, 7 020 cartes non réclamées et répartition
+3 510 / 1 755 / 1 755. Le WAL annexe publié est vide ; le snapshot compressé se
+vérifie sans les fichiers techniques annexes. Ce contrôle ne remplace pas une
+restauration complète de PostgreSQL.
+
+### Conservation et portée de la preuve
+
+L'import automatique est prouvé sur une EC2 neuve créée par Foundation et sur
+la release réellement exécutée. La relance automatique sur Smoke et le contrôle
+sans écriture sur le gala neuf confirment aussi l'absence de doublons.
+Le parcours physique est confirmé par l'utilisateur sur Smoke ; aucun lecteur
+physique n'a été utilisé sur la nouvelle EC2 pendant cet essai isolé.
+
+Après ces contrôles et vérification du gala actif/de l'EIP, seule la nouvelle
+EC2 est arrêtée, avec état AWS `stopped` confirmé. Son volume, ses ressources
+Foundation et ses sauvegardes sont conservés. Smoke reste actif et son contrôle
+de santé final réussit ; aucun autre gala n'est arrêté ou remplacé.
+
+La branche de la PR #104 a été poussée et testée par révision explicite.
+**La PR n'est pas fusionnée dans `main`** : les futurs lancements standard ne
+récupéreront cet import qu'après cette fusion. Aix n'a pas été redéployé. Aucune
+bascule publique, suppression de base ou validation de paiement n'est incluse.
+
+Les reçus, requêtes, artefacts exacts, contrôles et scripts opérateur de cet
+espace de travail sont conservés dans
+`.context/card-stock-first-boot-20261007/`, hors Git. Les fichiers privés de stock
+et les snapshots des bases restent hors dépôt public.
 
 ## Éléments d'audit locaux
 

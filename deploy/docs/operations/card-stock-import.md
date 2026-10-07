@@ -19,9 +19,15 @@ Les contrôles HTTPS et API NFC native réussissent sur deux cartes.
 Les détails sont dans [l'audit](../../../TECH_DOC/audits/2026-10-06-import-cartes-usine.md).
 Aix n'a pas été modifié.
 
-L'import automatique reste à livrer par les releases utilisant ce catalogue,
-après livraison du contrat runtime/CodeBuild décrit ci-dessous. Sa sélection
-n'exécute pas un import sur une instance déjà lancée.
+**L'import automatique est vérifié par la pipeline le 7 octobre 2026** :
+Foundation a créé `gala-import-cartes-2026-10-07`, puis sa pipeline Production
+a initialisé une base neuve et créé les 7 020 cartes sans import manuel.
+La pipeline Test sur Smoke avait auparavant reconnu les 7 020 associations
+existantes et créé zéro doublon. Ces essais utilisent les commits explicites
+de la branche de la [PR #104](https://github.com/Rezal-KIN/Tibillet/pull/104) ;
+sa fusion reste nécessaire pour les futurs lancements standard depuis `main`.
+La sélection du catalogue seule n'exécute pas un import : une release doit être
+déployée.
 
 Les deux classeurs blancs/noirs contiennent **3 510 autres cartes**, sans
 recoupement QR/numéro/NFC avec G1 dans aucun des deux ordres D/E. Total connu :
@@ -38,7 +44,9 @@ conservation des cartes et données financières existantes, et contrôle comple
 des associations/origines. Les deux QR signalés ouvrent la page de liaison et
 les recherches NFC natives retrouvent les mêmes cartes. La sauvegarde après
 import et le contrôle de santé réussissent.
-La livraison automatique par la pipeline reste à vérifier séparément.
+Le parcours physique sur Smoke est confirmé par l'utilisateur. La livraison
+Foundation/Test/Production puis l'import automatique au premier démarrage
+d'un gala neuf ont ensuite réussi ; les IDs et preuves figurent dans l'audit.
 
 Pour un prochain lot, comparer le numéro imprimé et l'UID lu d'une même carte
 au relevé usine. Le fichier donne D et E, qui inversent l'ordre des
@@ -92,6 +100,10 @@ vérifiée séparément.
    `card_stock.py`, nécessaire au validateur Production. Cet apply est à faire
    avant la première promotion utilisant ce nouvel outillage. Les nouvelles instances reçoivent ce droit dans
    leur configuration Terraform normale.
+   Cette livraison Foundation a réussi le 7 octobre 2026. Le buildspec Test
+   conserve la compatibilité avec les anciennes révisions : sans catalogue,
+   il appelle l'ancienne CLI sans l'option `--card-stock`. Une révision qui
+   possède le catalogue le fige dans son manifeste ; elle ne l'ignore pas.
 5. Déployer la release par la pipeline, puis vérifier un QR imprimé et le NFC
    de cette même carte. La mise en place du code et les tests locaux ne prouvent
    pas ce contrôle matériel ni un déploiement AWS réussi.
