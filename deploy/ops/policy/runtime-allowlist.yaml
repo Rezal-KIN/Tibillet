@@ -7,3 +7,5 @@ instances:
     name: tibillet-gala-paris-gala-smoke
   - id: i-00cb72994b875e92d
     name: tibillet-gala-paris-gala-premier-lancement-2026-10-05
+  - id: i-06c4a26b49ac45afa
+    name: tibillet-gala-paris-gala-import-cartes-2026-10-07
