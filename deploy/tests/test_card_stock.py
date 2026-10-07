@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -40,6 +41,42 @@ CATALOGUE = {'schema_version': 1, 'lots': [LOT]}
 
 
 class CardStockContractTests(unittest.TestCase):
+    def test_embedded_deploy_buildspec_supports_old_and_stock_source_revisions(self):
+        buildspec = (ROOT / 'buildspec/tibillet-test-deploy.yml').read_text()
+        command = buildspec.split('      - |\n', 1)[1].split('      - python3', 1)[0]
+        command = '\n'.join(line[8:] for line in command.splitlines())
+        candidate = {'application_repository': 'Rezal-KIN/Tibillet', 'fork_commit': 'a' * 40,
+                     'platform': 'v1', 'lespass_image': 'image@sha256:' + 'a' * 64}
+        images = {'schema_version': 1, **{key: 'image@sha256:' + 'b' * 64
+            for key in ('fedow_image', 'laboutik_image', 'traefik_image')}}
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            (repo / 'deploy/tools').mkdir(parents=True)
+            (repo / 'build').mkdir()
+            (repo / 'build/release-candidate.json').write_text(json.dumps(candidate))
+            (repo / 'deploy/test-images.json').write_text(json.dumps(images))
+            output = repo / 'manifest.json'
+            script = command.replace('/tmp/smoke-manifest.json', str(output))
+            env = {**os.environ, 'CODEBUILD_SRC_DIR_BuildOutput': str(repo / 'build')}
+            # The legacy contract has exactly three positional arguments and
+            # rejects the new flag, just like the previous manifest CLI.
+            (repo / 'deploy/tools/create-smoke-manifest.py').write_text(
+                'import argparse,json\np=argparse.ArgumentParser()\n'
+                "p.add_argument('candidate');p.add_argument('images');p.add_argument('output')\n"
+                "a=p.parse_args();open(a.output,'w').write(json.dumps({'legacy':True}))\n")
+            old = subprocess.run(['bash', '-euc', script], cwd=repo, env=env,
+                                 text=True, capture_output=True)
+            self.assertEqual(old.returncode, 0, old.stderr)
+            self.assertEqual(json.loads(output.read_text()), {'legacy': True})
+            shutil.copyfile(ROOT / 'tools/create-smoke-manifest.py', repo / 'deploy/tools/create-smoke-manifest.py')
+            (repo / 'deploy/tools/runtime').mkdir()
+            shutil.copyfile(RUNTIME / 'card_stock.py', repo / 'deploy/tools/runtime/card_stock.py')
+            (repo / 'deploy/card-stock.json').write_text(json.dumps(CATALOGUE))
+            current = subprocess.run(['bash', '-euc', script], cwd=repo, env=env,
+                                     text=True, capture_output=True)
+            self.assertEqual(current.returncode, 0, current.stderr)
+            self.assertEqual(json.loads(output.read_text())['card_stock'], CATALOGUE)
+
     def test_validates_real_csv_bytes_and_rejects_corruption(self):
         cards = stock.verified_cards(CSV, LOT, DOMAIN)
         self.assertEqual(len(cards), 1)
