@@ -154,11 +154,13 @@ Le [stock de cartes](card-stock-import.md) sélectionné dans
 `deploy/card-stock.json` est figé dans le manifeste Smoke et importé avec la
 commande native Fedow. Une nouvelle base reçoit les associations physiques,
 sans soldes ni comptes d'un ancien gala. Aucun nouveau montage de code ou de CSV
-n'est nécessaire. Le catalogue sélectionne actuellement le CSV natif G1
-(3 510 cartes). Les deux lots Excel restent en attente de confirmation physique
-de leur ordre NFC avant sélection.
+n'est nécessaire. Le catalogue sélectionne actuellement **7 020 cartes** :
+G1 (3 510, génération 1), blanc (1 755, génération 2) et noir (1 755, génération 3).
+L'ordre NFC D des deux lots Excel est confirmé par les relevés physiques du
+7 octobre 2026 ; les trois CSV privés sont publiés et vérifiés par SHA-256.
 
-G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026.
+G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026 ;
+les lots blanc/noir ont été ajoutés et vérifiés le 7 octobre.
 La livraison Foundation du contrat d'import puis son exécution automatique au
 premier démarrage par la pipeline restent à vérifier ; voir le mode opératoire.
 

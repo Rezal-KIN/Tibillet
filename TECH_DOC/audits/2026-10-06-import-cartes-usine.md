@@ -1,16 +1,17 @@
 # Cartes physiques Gala : fichiers usine et import natif
 
-## Résultat vérifié le 6 octobre 2026
+## État au 7 octobre 2026
 
-**Le lot G1 est maintenant importé sur Smoke : ses 3 510 associations sont
-vérifiées en base.** Les deux QR contrôlés ouvrent la page de liaison, dont celui
-qui renvoyait une 404. La lecture NFC native LaBoutik retrouve les mêmes
-associations. L'opération, ses sauvegardes et ses limites sont décrites dans
-« Import effectif de G1 sur Smoke » ci-dessous. Aix n'a pas été modifié.
+**Les trois lots sont publiés, sélectionnés et importés sur Smoke : leurs
+7 020 associations sont vérifiées en base.** G1 a été importé le 6 octobre ;
+les 1 755 cartes blanches et les 1 755 noires ont été ajoutées le 7 octobre,
+après confirmation de la colonne NFC D pour chacun des deux classeurs.
+Les données existantes sont préservées. Les opérations, sauvegardes et preuves
+sont décrites ci-dessous. Aix n'a pas été modifié.
 
-Les deux lots Excel restent non importés, en attente de confirmation de leur
-ordre NFC D/E. L'import automatique par la pipeline reste à livrer via
-Foundation puis à vérifier sur une nouvelle instance.
+L'import automatique par la pipeline reste à livrer via Foundation puis à
+vérifier au premier démarrage d'une nouvelle instance. Les imports ponctuels
+réussis sur Smoke ne constituent pas cette preuve.
 
 ## Audit initial en lecture seule
 
@@ -416,10 +417,98 @@ Le reçu consolidé `g1-smoke-import-receipt.json` et les sorties SSM/HTTP reste
 sous `.context/qr-card-investigation/`, hors Git. Le CSV complet et les URLs
 temporaires de téléchargement ne sont pas ajoutés au dépôt public.
 
-**Reste à vérifier séparément :** le parcours avec le lecteur physique,
-l'ordre D/E des lots Excel, puis la livraison Foundation/pipeline pour prouver
-l'import automatique au premier démarrage d'une nouvelle instance. Cet import
-ponctuel ne prouve pas cette dernière livraison. Aix reste inchangé.
+À l'issue de cette opération du 6 octobre, le parcours avec le lecteur physique,
+l'ordre D/E des lots Excel et la livraison Foundation/pipeline restaient à
+vérifier. La confirmation D/E reçue ensuite est documentée ci-dessous. L'import
+ponctuel de G1 ne prouve pas la livraison de l'automatisation. Aix reste inchangé.
+
+## Confirmation NFC des lots Excel le 7 octobre 2026
+
+L'utilisateur a fourni une association lue sur une carte de chacun des deux
+lots. Les originaux Excel ont été relus intégralement et leurs empreintes
+restent celles de l'audit initial.
+
+| Lot | Numéro imprimé | UID NFC lu | Ligne usine | Colonne conforme |
+|---|---|---|---:|---|
+| Noir | `CBA0F037` | `7218CC13` | 1 001 | D, `8H正` |
+| Blanc | `9EED1197` | `5DA23D10` | 1 752 | D, `8H正` |
+
+Chaque numéro apparaît exactement une fois dans son classeur et son UID lu
+correspond exactement à D, sans inversion. Les CSV natifs retenus sont donc
+**B/C/D** pour les deux lots ; leurs 1 755 lignes respectives ont été comparées
+à toutes les lignes des originaux. Les QR et numéros imprimés sont conservés.
+Le type de lecteur n'a pas été précisé ; l'ordre retenu correspond aux UID
+effectivement communiqués par l'utilisateur.
+
+| Lot sélectionné | Génération | Cartes | SHA-256 CSV |
+|---|---:|---:|---|
+| Blanc B/C/D | 2 | 1 755 | `bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab` |
+| Noir B/C/D | 3 | 1 755 | `7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461` |
+
+Le catalogue conserve G1 en génération 1 et ajoute ces deux lots :
+**7 020 associations distinctes**, sans doublon QR, numéro ou NFC. Un essai
+SQLite isolé utilisant l'importeur natif vérifié crée G1, puis les 3 510 cartes
+supplémentaires en conservant les cartes G1. Une relance ne crée aucune carte ;
+un compte et son solde de test sont préservés. Les 11 tests du contrat d'import
+réussissent, y compris la régression native SQLite.
+
+Reçus locaux, hors Git : `excel-physical-reader-report-20261007.json`,
+`confirmed-stock-catalogue-20261007.json`,
+`confirmed-stock-native-result-20261007.json` et
+`confirmed-stock-tests-20261007.log`, sous `.context/qr-card-investigation/`.
+
+Après reconnexion officielle AWS et vérification du compte Gala, les deux CSV
+ont été publiés dans le même bucket privé, sans remplacement d'objet, puis
+relus et validés par SHA-256. Les quatre protections d'accès public S3 sont
+actives. `deploy/card-stock.json` sélectionne les trois lots, uniquement par
+métadonnées ; les associations complètes et les classeurs restent hors Git.
+
+### Import et contrôle sur Smoke le 7 octobre
+
+La comparaison avant import ne trouve aucun conflit : G1 est complet et les
+deux lots Excel sont entièrement absents. La commande native Fedow, dont le
+SHA-256 a été revérifié, ajoute **3 510 cartes** après sauvegarde. Toutes les
+7 020 associations et leurs origines/générations sont contrôlées. La relance et
+le contrôle indépendant créent zéro carte. Fedow contient 7 023 cartes au total,
+avec les trois autres cartes préexistantes conservées.
+
+Les instantanés complets des cartes existantes, wallets, utilisateurs, tokens
+et transactions sont identiques avant/après la transaction. Aucune correction
+d'identité n'est nécessaire sur ces deux lots. Le contrôle immédiatement après
+import retrouve 12 wallets, cinq tokens et sept transactions ; aucun crédit,
+paiement, formulaire de liaison ou transfert de solde n'a été exécuté.
+
+Les QR des deux cartes signalées par l'utilisateur ouvrent la page de liaison
+en **HTTPS 200**, avec le bon UUID dans le formulaire :
+`cba0f037-a79e-4e5f-9d8c-b3939f738afb` (noir) et
+`9eed1197-c5b8-4cc4-a2da-b0eb628f8d10` (blanc).
+L'API NFC native LaBoutik retrouve les mêmes associations et matérialise ces
+deux cartes à la demande, portant son total local à sept. Le contrôle de santé
+réussit sur les trois domaines, le mapping apex/recharge et Celery.
+
+| Étape SSM | Commande | Résultat |
+|---|---|---|
+| Comparaison préalable | `6f1061de-e3bd-4c37-a473-7bd39d19c46d` | `Success`, aucun conflit, 3 510 cartes absentes. |
+| Import natif et sauvegarde préalable | `febb3227-cf5b-4b1b-9d39-34bececc8cfa` | `Success`, 3 510 créations, données préexistantes conservées. |
+| Contrôle complet indépendant | `f7dd41fa-7f87-4645-b64c-63ac123f3c6d` | `Success`, 7 020 associations/origines conformes, zéro création. |
+| Santé et recherches NFC natives | `01267b83-734b-45e1-a03b-35c9e8151aa5` | `Success`, deux associations NFC/QR conformes. |
+| Sauvegarde et comptage final | `772244df-9029-4d43-95b1-02b492d1f09f` | `Success`. |
+
+Les sauvegardes privées avant/après portent les identifiants
+`20261007T163403Z` et `20261007T163730Z`, sous le même préfixe historique
+`galas/gala-smoke/postgres/` décrit plus haut. Chacune contient les trois bases,
+les métadonnées et les checksums. Les consultations natives des deux nouvelles
+cartes créent leurs wallets anonymes vides : le comptage final retrouve
+14 wallets, cinq tokens et sept transactions. Les montants agrégés par asset
+restent ceux du contrôle précédent. Les reçus SSM, HTTP et de sauvegarde sont
+consolidés dans `confirmed-stock-smoke-import-receipt-20261007.json`, hors Git.
+
+L'opération utilise les helpers inchangés du commit
+`4c9cc65328750bfa5ca24545f8f2892d66ca3070`, transmis temporairement par SSM.
+Elle ne modifie aucun code applicatif, Compose, montage, droit IAM ou routage,
+et ne relance aucune pipeline. L'instance et l'IP publiques désignent déjà Smoke.
+La livraison automatique Foundation/pipeline et le parcours complet sur lecteur
+physique restent à vérifier séparément. Aix reste inchangé.
 
 ## Éléments d'audit locaux
 

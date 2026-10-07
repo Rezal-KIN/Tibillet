@@ -26,13 +26,22 @@ n'exécute pas un import sur une instance déjà lancée.
 Les deux classeurs blancs/noirs contiennent **3 510 autres cartes**, sans
 recoupement QR/numéro/NFC avec G1 dans aucun des deux ordres D/E. Total connu :
 **7 020 cartes distinctes**. Les variantes CSV D/E des classeurs sont préparées
-sous `.context/qr-card-investigation/draft-stock/`, hors Git. Elles ont passé le
-validateur et un import natif sur SQLite isolé. **L'ordre NFC de ces classeurs
-reste à confirmer sur le lecteur physique** ; ils ne sont pas encore sélectionnés
-dans le catalogue. Le CSV G1 contient déjà une seule colonne NFC désignée.
+sous `.context/qr-card-investigation/draft-stock/`, hors Git. **Les relevés
+physiques du 7 octobre 2026 confirment D pour les deux lots** : noir
+`CBA0F037 / 7218CC13`, blanc `9EED1197 / 5DA23D10`. Le catalogue conserve
+G1 en génération 1, ajoute le blanc en génération 2 et le noir en génération 3.
+Les 7 020 associations passent le validateur et l'essai natif SQLite avec relance
+sans doublon et solde préservé. **Les trois lots sont publiés et sélectionnés dans
+le catalogue versionné ; les 7 020 cartes sont présentes et vérifiées sur Smoke.**
+Les deux nouveaux lots ont été importés le 7 octobre, avec sauvegarde préalable,
+conservation des cartes et données financières existantes, et contrôle complet
+des associations/origines. Les deux QR signalés ouvrent la page de liaison et
+les recherches NFC natives retrouvent les mêmes cartes. La sauvegarde après
+import et le contrôle de santé réussissent.
+La livraison automatique par la pipeline reste à vérifier séparément.
 
-Une seule carte suffit à cette confirmation : comparer son numéro imprimé et
-l'UID lu au relevé usine. Le fichier donne D et E, qui inversent l'ordre des
+Pour un prochain lot, comparer le numéro imprimé et l'UID lu d'une même carte
+au relevé usine. Le fichier donne D et E, qui inversent l'ordre des
 quatre octets. Choisir la variante correspondant à l'UID effectivement reçu par
 LaBoutik. Conserver le résultat et le type de lecteur dans l'audit.
 
@@ -56,8 +65,8 @@ vérifiée séparément.
      --profile gala-elevated --region eu-west-3 \
      --bucket <bucket-de-releases> --domain galas-am-aix.rezal.fr \
      --lot 1 .context/attachments/vvroK1/gala-am-G1.csv \
-     --lot 1 .context/qr-card-investigation/draft-stock/D-direct/white.csv \
-     --lot 2 .context/qr-card-investigation/draft-stock/D-direct/black.csv \
+     --lot 2 .context/qr-card-investigation/draft-stock/D-direct/white.csv \
+     --lot 3 .context/qr-card-investigation/draft-stock/D-direct/black.csv \
      --output deploy/card-stock.json
    ```
 
