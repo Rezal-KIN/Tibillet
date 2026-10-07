@@ -507,8 +507,10 @@ L'opération utilise les helpers inchangés du commit
 `4c9cc65328750bfa5ca24545f8f2892d66ca3070`, transmis temporairement par SSM.
 Elle ne modifie aucun code applicatif, Compose, montage, droit IAM ou routage,
 et ne relance aucune pipeline. L'instance et l'IP publiques désignent déjà Smoke.
-La livraison automatique Foundation/pipeline et le parcours complet sur lecteur
-physique restent à vérifier séparément. Aix reste inchangé.
+L'utilisateur confirme ensuite que le parcours physique fonctionne sur Smoke.
+Il demande maintenant la vérification de l'import automatique au premier
+démarrage d'un nouveau gala par la pipeline ; cette étape est en cours.
+Aix reste inchangé.
 
 ## Éléments d'audit locaux
 
