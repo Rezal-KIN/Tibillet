@@ -50,6 +50,10 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
   idempotente `configure_gala_apex`, exécutée après `install` dans chaque déploiement,
   corrige le mapping initial de l'installateur TiBillet ; le healthcheck refuse le site
   générique `public` même s'il répond HTTP 200.
+  `configure-gala-refill-domain.py` synchronise ensuite le seul champ
+  `Place.lespass_domain` du lieu Fedow apparié, contrôlé par ses UUID de lieu et
+  de portefeuille. Le retour Stripe et les webhooks natifs utilisent ainsi
+  l'apex ; le healthcheck vérifie aussi ce réglage sans le modifier.
   Lespass contacte Fedow sur le réseau Docker local, en conservant l'en-tête
   `Host` public et les signatures d'API ; cela permet de tester Smoke sans
   déplacer l'IP fixe ni accepter le certificat temporaire auto-signé.

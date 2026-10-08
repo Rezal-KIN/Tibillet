@@ -20,7 +20,17 @@ Internet
 
 Chaque service tourne dans son propre stack Docker Compose avec un réseau interne dédié (`lespass_backend`, `fedow_backend`, `laboutik_backend`), et se connecte au réseau externe `frontend` pour être exposé via Traefik.
 
-Fedow et Laboutik utilisent des images Docker publiées par TiBillet sur Docker Hub, épinglées à une version testée via la variable `*_VERSION` dans chaque `.env`. Lespass est construit depuis le code source (mono-repo `TiBillet/TiBillet`, vendoré en submodule git dans `Lespass/app`, épinglé à un commit précis — voir `.claude/NOTES.md`).
+La pipeline construit Lespass depuis ce dépôt. Fedow et LaBoutik sont construits
+à partir des images TiBillet exactes épinglées dans leurs Dockerfiles, avec
+seulement les petits écarts audités : cartes NFC inconnues, installation
+reprenable, emails et liens vers les sources. Aucun fichier Python ou template
+HTML n'est monté par-dessus ces applications. Les montages de données, Nginx,
+logs, sauvegardes et Redis restent conservés.
+
+Le build produit trois digests ECR et les références de leurs sources. Il
+demande les dépôts Fedow/LaBoutik et permissions préparés dans Terraform ;
+Foundation doit les appliquer avant le nouveau Test. Les releases historiques
+restent associées à leurs anciens commits et ne sont pas réécrites.
 
 ---
 
@@ -29,7 +39,7 @@ Fedow et Laboutik utilisent des images Docker publiées par TiBillet sur Docker 
 ### Fedow (`Fedow/`)
 Portefeuille fédéré — gère les actifs monétaires (tokens cashless, fiat), les transactions entre lieux et l'intégration Stripe.
 
-- Image : `tibillet/fedow`
+- Image : build [`Fedow/Dockerfile`](Fedow/Dockerfile), depuis `tibillet/fedow` épinglée
 - Compose : memcached + django (SQLite) + nginx
 - Configuration conservée : [`Fedow/settings.py`](Fedow/settings.py)
 
@@ -40,14 +50,14 @@ ancienne copie et son montage ont été retirés. Voir le
 ### Lespass (`Lespass/`)
 Billetterie, gestion des membres et agenda fédéré. Supporte le multi-tenant (plusieurs lieux sous un même domaine racine).
 
-- Build : depuis le code source du mono-repo `TiBillet/TiBillet` (submodule git `Lespass/app`, voir `.claude/NOTES.md`)
+- Build pipeline : depuis le code de ce dépôt, au commit choisi par CodePipeline
 - Compose : postgres + redis + django + celery + nginx
-- Aucun patch custom — installation V2 propre (2026-06-14)
+- Personnalisations Gala : parcours QR, présentation, accès admin et adaptations de domaine/email documentées dans les audits
 
 ### Laboutik (`Laboutik/`, `Laboutik_*/`)
 Caisse cashless pour les points de vente. Plusieurs instances peuvent tourner en parallèle (une par gala/événement).
 
-- Image : `tibillet/laboutik`
+- Image : build [`Laboutik/Dockerfile`](Laboutik/Dockerfile), depuis `tibillet/laboutik` épinglée
 - Compose : postgres + redis + memcached + django + nginx
 - Sources personnalisées : [`Laboutik/settings.py`](Laboutik/settings.py), [`Laboutik/install.py`](Laboutik/install.py), [`Laboutik/views.py`](Laboutik/views.py), [`Laboutik/validators.py`](Laboutik/validators.py)
 
@@ -60,6 +70,26 @@ carte primaire et erreurs sont retirées : voir le
 ---
 
 ## Fonctionnalités additionnelles
+
+### Dépôt CSV des cartes pour les prochains galas
+
+Déposer les lots dans le [dossier S3 privé des cartes](https://s3.console.aws.amazon.com/s3/buckets/tibillet-gala-paris-production-318629836660-backups?region=eu-west-3&prefix=card-stock/uploads/),
+puis lancer **Test** dans CodePipeline. La console S3 permet le glisser-déposer.
+Utiliser un sous-dossier par génération : `1/gala-am-G1.csv`, `2/white.csv`,
+`3/black.csv`, puis `4/nouveau-lot.csv`, etc. Les fichiers restent privés.
+
+Format natif Fedow : UTF-8, séparateur virgule, trois colonnes sans en-tête :
+URL QR complète, numéro imprimé, UID NFC. Les anciens classeurs blanc/noir ont
+déjà été convertis et vérifiés avec les cartes physiques ; déposer ces CSV
+convertis, sans inverser les colonnes. Les identifiants restent ceux imprimés
+sur les cartes réutilisées ; les URL utilisent le domaine Gala commun.
+
+Test valide les formats et l'absence de doublons, puis fige les octets dans
+des objets nommés par leur SHA-256. Production utilise ce même catalogue,
+sans relire le dossier modifiable. Un changement de lots avec le même code
+produit une preuve Test distincte. Ajouter un fichier ne lance aucun import
+sur un gala existant : il faut exécuter la pipeline puis promouvoir sa release.
+Retirer un fichier de ce dossier ne supprime aucune carte déjà importée.
 
 ### Prix des articles (Laboutik)
 Les prix affichés et contrôlés sont ceux des articles enregistrés en base. La personnalisation happy hour a été retirée ; son ancien fichier de prix et ses variables d’environnement ne sont plus utilisés.
@@ -111,9 +141,9 @@ Ce script :
 Dans l'ordre (Fedow d'abord, il est la dépendance des autres) :
 
 ```bash
-cd Fedow    && docker compose pull && docker compose up -d && cd ..
+cd Fedow    && docker compose build && docker compose up -d && cd ..
 cd Lespass  && docker compose build && docker compose up -d && cd ..
-cd Laboutik && docker compose pull && docker compose up -d && cd ..
+cd Laboutik && docker compose build && docker compose up -d && cd ..
 ```
 
 ### 4. Ajouter une instance Laboutik additionnelle

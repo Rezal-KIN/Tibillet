@@ -57,6 +57,13 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("fedow_image", result.stderr)
 
+    def test_accepts_empty_stock_but_refuses_unfrozen_catalogue(self) -> None:
+        self.assertEqual(validate({**VALID_RELEASE, 'card_stock': {'schema_version': 1, 'lots': []}}).returncode, 0)
+        result = validate({**VALID_RELEASE, 'card_stock': {'schema_version': 1, 'lots': [{
+            'key': 'card-stock/latest.csv', 'sha256': DIGEST, 'rows': 1, 'generation': 1}]}})
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('card_stock key', result.stderr)
+
     def test_rejects_secret_or_deployment_scope(self) -> None:
         for field in ("secret_arn", "instance_id", "region", "backup", "dns", "preview", "action", "account_id"):
             with self.subTest(field=field):

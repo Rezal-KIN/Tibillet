@@ -21,6 +21,63 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_image_build_keeps_role_and_only_adds_two_repository_names(self):
+        env = [{'name': 'LESPASS_ECR_REPOSITORY', 'type': 'PLAINTEXT', 'value': 'tibillet-gala-paris/lespass'}]
+        before = {'name': 'test', 'service_role': 'same', 'source': [{'type': 'CODEPIPELINE', 'buildspec': 'old'}],
+                  'environment': [{'privileged_mode': True, 'environment_variable': env}]}
+        after = copy.deepcopy(before)
+        after['source'][0]['buildspec'] = 'new'
+        after['environment'][0]['environment_variable'].extend([
+            {'name': c.upper()+'_ECR_REPOSITORY', 'type': 'PLAINTEXT', 'value': 'tibillet-gala-paris/'+c}
+            for c in ('fedow', 'laboutik')])
+        change = {'before': before, 'after': after, 'after_unknown': {}}
+        self.assertTrue(module.safe_application_build_project(change))
+        for mutation in (lambda v: v['after'].update(service_role='admin'),
+                         lambda v: v['after']['environment'][0].update(privileged_mode=False),
+                         lambda v: v['after']['environment'][0]['environment_variable'][-1].update(value='other/laboutik')):
+            bad = copy.deepcopy(change); mutation(bad)
+            self.assertFalse(module.safe_application_build_project(bad))
+
+    def test_image_policy_refresh_requires_actual_gala_identity(self):
+        before = {'name': 'tibillet-gala-paris-gala-smoke-runtime', 'role': 'tibillet-gala-paris-gala-smoke-ec2', 'policy': '{}'}
+        change = {'before': before, 'after': {**before, 'policy': None}, 'after_unknown': {'policy': True}}
+        address = 'module.gala["gala-smoke"].aws_iam_role_policy.runtime'
+        self.assertTrue(module.safe_image_policy_refresh(change, address))
+        self.assertFalse(module.safe_image_policy_refresh(change, 'module.gala["gala-other"].aws_iam_role_policy.runtime'))
+        self.assertFalse(module.safe_image_policy_refresh({**change, 'after': {**before, 'policy': '{}'}}, address))
+
+    def test_test_pipeline_refresh_cannot_change_permissions_or_identity(self) -> None:
+        address = 'aws_iam_role_policy.test_pipeline[0]'
+        before = {
+            "id": "test-pipeline:test-pipeline", "name": "test-pipeline",
+            "role": "test-pipeline", "policy": json.dumps({
+                "Version": "2012-10-17", "Statement": [{
+                    "Effect": "Allow", "Action": "codebuild:StartBuild",
+                    "Resource": "arn:aws:codebuild:eu-west-3:318629836660:project/test",
+                }],
+            }),
+        }
+        refresh = {"address": address, "change": {
+            "actions": ["update"], "before": before,
+            "after": {**before, "policy": None}, "after_unknown": {"policy": True},
+        }}
+        self.assertEqual(module.verify({"resource_changes": [refresh]}, "gala-new"),
+                         [f"refresh-policy {address}"])
+        for mutation in (
+            lambda item: item["change"]["after"].update(policy='{"Statement": []}'),
+            lambda item: item["change"]["after"].update(role="different-role"),
+            lambda item: item["change"]["after"].update(name="different-policy"),
+            lambda item: item["change"].update(after_unknown={"policy": True, "role": True}),
+            lambda item: item["change"].update(after_unknown={}),
+            lambda item: item["change"].update(actions=["delete"]),
+            lambda item: item.update(address='aws_iam_role_policy.test_pipeline[1]'),
+            lambda item: item.update(address='aws_iam_role_policy.test_build[0]'),
+        ):
+            bad = copy.deepcopy(refresh)
+            mutation(bad)
+            with self.subTest(change=bad), self.assertRaises(ValueError):
+                module.verify({"resource_changes": [bad]}, "gala-new")
+
     def test_first_run_retirement_requires_exact_instance_and_volume(self) -> None:
         slug = module.FIRST_RUN_SLUG
         address = f'module.gala["{slug}"].aws_instance.retirable[0]'

@@ -14,6 +14,22 @@ resource "aws_ecr_repository" "lespass" {
   }
 }
 
+resource "aws_ecr_repository" "applications" {
+  for_each             = local.delivery_resources_enabled ? toset(["fedow", "laboutik"]) : toset([])
+  name                 = "${var.project_name}/${each.key}"
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "applications" {
+  for_each   = aws_ecr_repository.applications
+  repository = each.value.name
+  policy     = aws_ecr_lifecycle_policy.lespass[0].policy
+}
+
 resource "aws_ecr_lifecycle_policy" "lespass" {
   count      = local.delivery_resources_enabled ? 1 : 0
   repository = aws_ecr_repository.lespass[0].name
@@ -94,9 +110,10 @@ data "aws_iam_policy_document" "test_build" {
   }
 
   statement {
-    sid = "PublishOnlyLespassImages"
+    sid = "PublishOnlyGalaApplicationImages"
     actions = [
       "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
       "ecr:CompleteLayerUpload",
       "ecr:DescribeImages",
       "ecr:GetDownloadUrlForLayer",
@@ -104,7 +121,7 @@ data "aws_iam_policy_document" "test_build" {
       "ecr:PutImage",
       "ecr:UploadLayerPart",
     ]
-    resources = [aws_ecr_repository.lespass[0].arn]
+    resources = concat([aws_ecr_repository.lespass[0].arn], [for repo in aws_ecr_repository.applications : repo.arn])
   }
 
   statement {
@@ -135,7 +152,7 @@ resource "aws_iam_role_policy" "test_build" {
 resource "aws_codebuild_project" "test" {
   count          = local.delivery_resources_enabled ? 1 : 0
   name           = "${local.name_prefix}-test"
-  description    = "Builds one fixed Lespass fork commit and publishes an immutable ECR digest."
+  description    = "Builds the three applications from one fixed fork commit and publishes immutable ECR digests."
   service_role   = aws_iam_role.test_build[0].arn
   build_timeout  = 45
   queued_timeout = 60
@@ -156,6 +173,13 @@ resource "aws_codebuild_project" "test" {
     environment_variable {
       name  = "LESPASS_ECR_REPOSITORY"
       value = aws_ecr_repository.lespass[0].name
+    }
+    dynamic "environment_variable" {
+      for_each = aws_ecr_repository.applications
+      content {
+        name  = "${upper(environment_variable.key)}_ECR_REPOSITORY"
+        value = environment_variable.value.name
+      }
     }
     environment_variable {
       name  = "RELEASE_PLATFORM"

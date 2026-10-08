@@ -77,6 +77,7 @@ for group in "${compose_groups[@]}"; do
   # SSM truncates noisy stderr at 24 KB; keep the actual deployment error visible.
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" pull --quiet
 done
+python3 "$SCRIPT_DIR/validate-application-images.py" "$MANIFEST_PATH"
 
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
   "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs" \
@@ -99,10 +100,9 @@ for group in "${compose_groups[@]}"; do
   if [[ -n "$app_service" ]]; then
     previous_id="$(docker inspect --format '{{.Id}}' "$app_service" 2>/dev/null || true)"
   fi
-  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --remove-orphans
-  # Fedow and Laboutik images can remain pinned while their versioned bind-
-  # mounted code changes. Restart only an existing, reused app container; on a
-  # fresh host Compose starts it once. Never restart its database for this.
+  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --no-build --remove-orphans
+  # Reload configuration only for an existing reused application container;
+  # on a fresh host Compose starts it once. Never restart its database here.
   if [[ -n "$previous_id" ]]; then
     current_id="$(docker inspect --format '{{.Id}}' "$app_service")"
     if [[ "$previous_id" == "$current_id" ]]; then
@@ -127,6 +127,10 @@ timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
 timeout 120s docker exec lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py configure_gala_apex'
+
+# Fedow retains the hostname recorded before the apex was reassigned. Its
+# native Stripe return URL and webhooks must use the same canonical domain.
+python3 "$SCRIPT_DIR/configure-gala-refill-domain.py" --domain "$LESPASS_PUBLIC_DOMAIN"
 
 # The upstream Laboutik entrypoint attempts install before Lespass is ready
 # and keeps serving HTTP even if that command fails. Re-run it after Lespass
@@ -153,6 +157,12 @@ timeout 120s docker exec -w /DjangoFiles lespass_django \
 # come from Secrets Manager; only a Django hash reaches the configuration tool.
 python3 "$SCRIPT_DIR/configure-gala-admin.py" --gala "$GALA_SLUG" \
   --credentials-file "$(runtime_dir)/admin.json" --apply
+
+# Import physical identities with the unchanged native Fedow command after
+# pairing. CSVs and wrapper input are temporary; no new application bind mount.
+python3 "$SCRIPT_DIR/import-gala-card-stock.py" "$MANIFEST_PATH" \
+  --bucket "${RELEASE_BUCKET:-${BACKUP_BUCKET}}" --region "$AWS_REGION" \
+  --domain "$LESPASS_PUBLIC_DOMAIN"
 
 healthy=false
 for attempt in {1..60}; do

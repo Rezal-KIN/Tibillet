@@ -36,6 +36,7 @@ class HealthcheckContractTests(unittest.TestCase):
             python.write_text(
                 '#!/bin/sh\ncase "$1" in\n'
                 '  */configure-gala-admin.py) [ "$MOCK_ADMIN_READY" = true ]; exit $? ;;\n'
+                '  */configure-gala-refill-domain.py) [ "$MOCK_REFILL_DOMAIN_READY" = true ]; exit $? ;;\n'
                 'esac\nexit 2\n', encoding="utf-8",
             )
             python.chmod(0o755)
@@ -50,17 +51,18 @@ class HealthcheckContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
             env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
-            for running, ping, admin, expected_success in (
-                ("false", "false", "true", False),
-                ("true", "false", "true", False),
-                ("true", "true", "false", False),
-                ("true", "true", "true", True),
+            for running, ping, admin, domain, expected_success in (
+                ("false", "false", "true", "true", False),
+                ("true", "false", "true", "true", False),
+                ("true", "true", "false", "true", False),
+                ("true", "true", "true", "false", False),
+                ("true", "true", "true", "true", True),
             ):
-                with self.subTest(running=running, ping=ping):
+                with self.subTest(running=running, ping=ping, admin=admin, domain=domain):
                     result = subprocess.run(
                         ["bash", str(HEALTHCHECK), str(config)],
                         env={**env, "MOCK_CELERY_RUNNING": running, "MOCK_CELERY_PING": ping,
-                             "MOCK_ADMIN_READY": admin},
+                             "MOCK_ADMIN_READY": admin, "MOCK_REFILL_DOMAIN_READY": domain},
                         text=True,
                         capture_output=True,
                         check=False,

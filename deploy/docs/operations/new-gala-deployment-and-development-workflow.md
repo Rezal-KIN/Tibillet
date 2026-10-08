@@ -150,6 +150,26 @@ Smoke pour les essais publics de fin de préparation.
 
 ### 6. Produire une release immuable
 
+Le [stock de cartes](card-stock-import.md) sélectionné dans
+`deploy/card-stock.json` est figé dans le manifeste Smoke et importé avec la
+commande native Fedow. Une nouvelle base reçoit les associations physiques,
+sans soldes ni comptes d'un ancien gala. Aucun nouveau montage de code ou de CSV
+n'est nécessaire. Le catalogue sélectionne actuellement **7 020 cartes** :
+G1 (3 510, génération 1), blanc (1 755, génération 2) et noir (1 755, génération 3).
+L'ordre NFC D des deux lots Excel est confirmé par les relevés physiques du
+7 octobre 2026 ; les trois CSV privés sont publiés et vérifiés par SHA-256.
+
+G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026 ;
+les lots blanc/noir ont été ajoutés et vérifiés le 7 octobre.
+Le 7 octobre, Foundation a livré le contrat d'import et créé
+`gala-import-cartes-2026-10-07`. La pipeline Test a reconnu les 7 020 cartes
+existantes sur Smoke sans doublon ; la pipeline Production dédiée a ensuite
+créé automatiquement les 7 020 cartes sur une base neuve, sans import manuel.
+Cet essai porte sur les commits explicites de la
+[PR #104](https://github.com/Rezal-KIN/Tibillet/pull/104), encore non fusionnée :
+les prochains lancements standard depuis `main` exigent cette fusion.
+Voir [l'audit cartes](../../../TECH_DOC/audits/2026-10-06-import-cartes-usine.md).
+
 Une release Production est un manifeste revu qui fixe les digests exacts de :
 
 - Lespass depuis l'ECR Gala ;
@@ -191,7 +211,8 @@ doit être en écriture unique et correspondre octet pour octet à l'artefact
 validé ; aucun `latest` ni remplacement silencieux après l'approbation.
 
 La pipeline vérifiée place `ValidatePromotion` avant `ApprovePromotion`.
-La validation compare le commit applicatif et les quatre images au marqueur
+La validation compare le commit applicatif, les quatre images et le catalogue
+`card_stock` complet au marqueur
 immuable du déploiement Smoke réussi. Le déploiement reçoit ensuite cet
 artefact, vérifie son SHA256 approuvé et refuse de remplacer un objet S3
 de release par des octets différents. L'audit conserve l'artefact téléchargé

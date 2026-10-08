@@ -258,6 +258,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         f'aws_iam_role_policy.production_validate["{slug}"]',
         f'aws_codebuild_project.production_validate["{slug}"]',
     }
+    for component in ('fedow', 'laboutik'):
+        allowed_new.update({f'aws_ecr_repository.applications["{component}"]',
+                            f'aws_ecr_lifecycle_policy.applications["{component}"]'})
     # A reviewed, one-time Foundation run may retire only the two obsolete
     # validation delivery chains. EC2s, secrets, backups and logs are excluded.
     retired_slugs = {"gala-validation", "gala-validation-2"}
@@ -289,7 +292,7 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
     allowed_updates = re.compile(
         r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
     )
-    production_project = re.compile(r'^aws_codebuild_project\.production\["[a-z0-9-]+"\]$')
+    production_project = re.compile(r'^aws_codebuild_project\.(?:production|production_validate)\["[a-z0-9-]+"\]$')
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
@@ -314,6 +317,23 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if actions == ["update"] and safe_gala_list_prefix_update(item["change"], address):
             changed.append(f"allow-own-backup-restore {address}")
             continue
+        if actions == ["update"] and safe_card_stock_read_addition(item["change"], address):
+            changed.append(f"allow-shared-card-stock-read {address}")
+            continue
+        if actions == ['update'] and safe_image_policy_refresh(item['change'], address):
+            changed.append(f'refresh-image-permissions {address}')
+            continue
+        if (actions == ['update'] and address == 'aws_codebuild_project.test[0]'
+                and safe_application_build_project(item['change'])):
+            changed.append(f'configure-three-application-build {address}')
+            continue
+        # Updating the Test deploy buildspec defers this unchanged policy
+        # document until apply. Permit only that computed value, with the
+        # existing role and policy identity intact.
+        if (actions == ["update"] and address == 'aws_iam_role_policy.test_pipeline[0]'
+                and safe_computed_policy_refresh(item["change"])):
+            changed.append(f"refresh-policy {address}")
+            continue
         if actions == ["update"] and (
             allowed_updates.fullmatch(address) or address == 'aws_iam_role_policy.foundation_pipeline[0]'
         ):
@@ -333,7 +353,8 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                 changed.append(f"add-managed-gala-group-permission {address}")
                 continue
         if actions == ["update"] and (
-            production_project.fullmatch(address) or address == 'aws_codebuild_project.foundation_finalize[0]'
+            production_project.fullmatch(address)
+            or address in {'aws_codebuild_project.foundation_finalize[0]', 'aws_codebuild_project.test_deploy[0]'}
         ):
             change = item["change"]
             before = change.get("before")
@@ -352,15 +373,61 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                     and {k: v for k, v in old_source[0].items() if k != "buildspec"}
                     == {k: v for k, v in new_source[0].items() if k != "buildspec"}
                 ):
-                    kind = (
-                        "update-foundation-finalize-buildspec"
-                        if address == 'aws_codebuild_project.foundation_finalize[0]'
-                        else "update-production-buildspec"
-                    )
+                    if address == 'aws_codebuild_project.foundation_finalize[0]':
+                        kind = 'update-foundation-finalize-buildspec'
+                    elif address == 'aws_codebuild_project.test_deploy[0]':
+                        kind = 'update-test-deploy-buildspec'
+                    elif address.startswith('aws_codebuild_project.production_validate['):
+                        kind = 'update-production-validate-buildspec'
+                    else:
+                        kind = 'update-production-buildspec'
                     changed.append(f"{kind} {address}")
                     continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
+
+
+def safe_image_policy_refresh(change, address):
+    if address == 'aws_iam_role_policy.test_build[0]':
+        role = name = 'tibillet-gala-paris-production-test-build'
+    else:
+        match = re.fullmatch(r'module\.gala\["([a-z0-9-]+)"\]\.aws_iam_role_policy\.runtime', address)
+        if not match:
+            return False
+        role = 'tibillet-gala-paris-' + match[1] + '-ec2'
+        name = 'tibillet-gala-paris-' + match[1] + '-runtime'
+    before = change.get('before', {})
+    return (before.get('role') == role and before.get('name') == name
+            and safe_computed_policy_refresh(change))
+
+
+def safe_application_build_project(change):
+    """Only add the two sibling ECR names; preserve build role and resources."""
+    before, after = change.get('before'), change.get('after')
+    if not isinstance(before, dict) or not isinstance(after, dict) or has_unknown(change.get('after_unknown', {})):
+        return False
+    if {k: v for k, v in before.items() if k not in {'source', 'description', 'environment'}} != {
+            k: v for k, v in after.items() if k not in {'source', 'description', 'environment'}}:
+        return False
+    old_source, new_source = before.get('source'), after.get('source')
+    old_env, new_env = before.get('environment'), after.get('environment')
+    if not all(isinstance(value, list) and len(value) == 1 for value in (old_source, new_source, old_env, new_env)):
+        return False
+    if {k: v for k, v in old_source[0].items() if k != 'buildspec'} != {
+            k: v for k, v in new_source[0].items() if k != 'buildspec'}:
+        return False
+    if {k: v for k, v in old_env[0].items() if k != 'environment_variable'} != {
+            k: v for k, v in new_env[0].items() if k != 'environment_variable'}:
+        return False
+    prior = old_env[0].get('environment_variable', [])
+    later = new_env[0].get('environment_variable', [])
+    refs = [v for v in prior if v.get('name') == 'LESPASS_ECR_REPOSITORY']
+    if len(refs) != 1 or refs[0].get('value') != 'tibillet-gala-paris/lespass':
+        return False
+    additions = [{'name': component.upper()+'_ECR_REPOSITORY', 'type': 'PLAINTEXT',
+                  'value': 'tibillet-gala-paris/'+component} for component in ('fedow', 'laboutik')]
+    canonical = lambda values: sorted(json.dumps(value, sort_keys=True) for value in values)
+    return canonical(later) == canonical(prior + additions)
 
 
 def has_unknown(value: object) -> bool:
@@ -423,6 +490,43 @@ def safe_gala_list_prefix_update(change: dict[str, object], address: str) -> boo
             return False
         changed_sids.add(sid)
     return changed_sids == set(expected_prefixes)
+
+
+def safe_card_stock_read_addition(change: dict[str, object], address: str) -> bool:
+    match = re.fullmatch(r'module\.gala\["([a-z0-9][a-z0-9-]{1,62})"\]\.aws_iam_role_policy\.runtime', address)
+    if not match or has_unknown(change.get('after_unknown', {})):
+        return False
+    before, after = change.get('before'), change.get('after')
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return False
+    if {k: v for k, v in before.items() if k != 'policy'} != {k: v for k, v in after.items() if k != 'policy'}:
+        return False
+    try:
+        old, new = json.loads(before['policy']), json.loads(after['policy'])
+        prior, later = old['Statement'], new['Statement']
+        if not isinstance(prior, list) or not isinstance(later, list):
+            return False
+        if {k: v for k, v in old.items() if k != 'Statement'} != {k: v for k, v in new.items() if k != 'Statement'}:
+            return False
+        releases = [item for item in prior if item.get('Sid') == 'ReadOnlyOwnReleaseManifests']
+        if len(releases) != 1:
+            return False
+        resource = releases[0]['Resource']
+        if isinstance(resource, list) and len(resource) == 1:
+            resource = resource[0]
+        suffix = f'/releases/{match.group(1)}/*'
+        if not isinstance(resource, str) or not resource.startswith('arn:aws:s3:::') or not resource.endswith(suffix):
+            return False
+        addition = {'Sid': 'ReadOnlySharedCardStock', 'Effect': 'Allow',
+                    'Action': 's3:GetObject', 'Resource': resource[:-len(suffix)] + '/card-stock/*'}
+        if any(item.get('Sid') == addition['Sid'] for item in prior):
+            return False
+        # Terraform may reorder statements when adding a SID. Preserve every
+        # existing statement verbatim, and authorize exactly one read-only one.
+        canonical = lambda items: sorted(json.dumps(item, sort_keys=True) for item in items)
+        return canonical(later) == canonical(prior + [addition])
+    except (KeyError, TypeError, AttributeError, json.JSONDecodeError):
+        return False
 
 
 def safe_group_permission_addition(change: dict[str, object]) -> bool:

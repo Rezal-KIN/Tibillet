@@ -7,6 +7,8 @@ import re
 import sys
 from pathlib import Path
 
+from card_stock import validate_catalogue
+from application_images import validate_image_builds
 PLATFORMS = {"v1", "v2-preview", "v2"}
 SHA256_IMAGE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
 SHA = re.compile(r"^[0-9a-f]{7,64}$")
@@ -62,6 +64,10 @@ def main() -> None:
     for field in IMMUTABLE_IMAGES:
         if not SHA256_IMAGE.fullmatch(str(document[field])):
             reject(f"{field} must be an immutable image digest reference")
+    try:
+        validate_image_builds(document)
+    except ValueError as exc:
+        reject(str(exc))
     forbidden_fields = {
         "account_id",
         "action",
@@ -75,6 +81,11 @@ def main() -> None:
     present_forbidden_fields = forbidden_fields.intersection(document)
     if present_forbidden_fields:
         reject("release manifests must not contain deployment scope or secret fields: " + ", ".join(sorted(present_forbidden_fields)))
+    if 'card_stock' in document:
+        try:
+            validate_catalogue(document['card_stock'])
+        except ValueError as exc:
+            reject(str(exc))
     print(f"Release manifest valid: {document['release_id']}")
 
 

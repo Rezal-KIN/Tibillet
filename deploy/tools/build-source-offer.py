@@ -18,7 +18,11 @@ import subprocess
 import tarfile
 import tempfile
 import urllib.request
+import sys
 from pathlib import Path, PurePosixPath
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
+from application_images import image_files, validate_image_builds
 
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -184,6 +188,7 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
     deploy_commit = revision(repo, deployment_commit)
     deployment = snapshot(repo, deploy_commit)
     application = snapshot(repo, app_commit)
+    builds = validate_image_builds(manifest)
     release_name = f"{manifest['release_id']}-{deploy_commit[:12]}"
     release_root = output / "releases" / release_name
     release_root.parent.mkdir(parents=True, exist_ok=True)
@@ -204,7 +209,12 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
                 base_repository, base_commit = "Rezal-KIN/Tibillet", app_commit
             else:
                 spec = catalog[component]
-                if spec["image"] != manifest[f"{component}_image"]:
+                built_copies = {}
+                if component in builds:
+                    base, built_copies = image_files(component, application)
+                    if base != spec['image'] or builds[component]['base_image'] != base:
+                        raise ValueError('application base image differs from audited sources')
+                elif spec["image"] != manifest[f"{component}_image"]:
                     raise ValueError(f"source revision not audited for {component} image digest")
                 files = upstream_source(spec, cache)
                 base_repository, base_commit = spec["repository"], spec["commit"]
@@ -220,6 +230,12 @@ def build(repo: Path, manifest: dict, catalog: dict, output: Path, cache: Path,
                         content = content.replace(old.encode(), new.encode())
                     files[target] = content, mode
                     overlays[target] = {"source": "audited image build change", "sha256": hashlib.sha256(content).hexdigest()}
+                for origin, target in built_copies.items():
+                    if not safe_source(origin) or not safe_source(target):
+                        raise ValueError('private file cannot be an application image source')
+                    files[target] = application[origin]
+                    overlays[target] = {'source': origin, 'delivery': 'image',
+                                        'sha256': hashlib.sha256(files[target][0]).hexdigest()}
                 for origin, target in deployment_overlays(component, deployment).items():
                     if not safe_source(origin) or not safe_source(target):
                         raise ValueError("private file cannot be a source overlay")

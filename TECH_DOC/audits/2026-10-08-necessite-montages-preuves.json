@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-10-08",
+  "scope": "analysis only; no application/configuration/database/deployment modification",
+  "local_commit": "cc652f3f46bc6496ce9db9154405c59f1a3cdb4e",
+  "runtime": {
+    "gala": "gala-smoke",
+    "instance_id": "i-0037b98572fccdff2",
+    "aws_account": "318629836660",
+    "aws_region": "eu-west-3",
+    "deployed_commit": "d162e2647d7e36458a6c9be75fa1bc3248cb6e03",
+    "containers": 15
+  },
+  "mount_inventory": {
+    "total": 41,
+    "categories": {
+      "logs": 7,
+      "nginx_configuration": 3,
+      "source_publication": 3,
+      "static_media": 7,
+      "ssh": 2,
+      "native_backup": 2,
+      "database_storage": 3,
+      "redis_data": 2,
+      "html": 5,
+      "python": 5,
+      "tls_certificates": 1,
+      "docker_socket": 1
+    },
+    "comparison": {
+      "declared_binds": 39,
+      "observed_binds": 39,
+      "exact_match": true,
+      "versioned_python_hashes_match": true
+    }
+  },
+  "native_sources": {
+    "schema_version": 1,
+    "fedow": {
+      "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "repository": "TiBillet/Fedow",
+      "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+    },
+    "laboutik": {
+      "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "repository": "TiBillet/LaBoutik",
+      "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+      "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+      "image_overlays": {
+        "docker_push_update.sh": {
+          "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+          "replacements": [
+            [
+              "VERSION=\"1.4\"",
+              "VERSION=\"1.7\""
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "complete_file_comparisons": [
+    {
+      "component": "fedow",
+      "native": "fedowallet_django/settings.py",
+      "local": "deploy/Fedow/settings.py",
+      "native_sha256": "f3fb4086132f30c03a6fc81d117b2ce3197d76c10062dd4ec7ac5c9549222e2b",
+      "local_sha256": "0ed341d42e3d13a7f790a6c388ed112d8fff0fe4581eb072cfbbe2ef2b8f170a",
+      "diff_file": ".context/mount-necessity-20261008/fedow-fedowallet_django__settings.py.diff",
+      "diff_lines": 44
+    },
+    {
+      "component": "laboutik",
+      "native": "Cashless/settings.py",
+      "local": "deploy/Laboutik/settings.py",
+      "native_sha256": "368ff8960bb8cd83f1272fa7f9c0ad599f84a2d66bee228627017ed9de767361",
+      "local_sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-Cashless__settings.py.diff",
+      "diff_lines": 35
+    },
+    {
+      "component": "laboutik",
+      "native": "administration/management/commands/install.py",
+      "local": "deploy/Laboutik/install.py",
+      "native_sha256": "6fd3cbfd0bd6fddf2d7430709cfc5836a63827c52f7dac277a28bd5aa66e3cc8",
+      "local_sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-administration__management__commands__install.py.diff",
+      "diff_lines": 92
+    },
+    {
+      "component": "laboutik",
+      "native": "webview/views.py",
+      "local": "deploy/Laboutik/views.py",
+      "native_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+      "local_sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-webview__views.py.diff",
+      "diff_lines": 53
+    },
+    {
+      "component": "laboutik",
+      "native": "webview/validators.py",
+      "local": "deploy/Laboutik/validators.py",
+      "native_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+      "local_sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-webview__validators.py.diff",
+      "diff_lines": 41
+    },
+    {
+      "component": "laboutik",
+      "native": "webview/templates/login.html",
+      "local": "deploy/Laboutik/source_templates/login.html",
+      "native_sha256": "01cc77702df119cca39bcd7791887b7faff1b7c8b0f9a2238c03422933920b2d",
+      "local_sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-webview__templates__login.html.diff",
+      "diff_lines": 19
+    },
+    {
+      "component": "laboutik",
+      "native": "htmxview/templates/kiosk/base.html",
+      "local": "deploy/Laboutik/source_templates/kiosk_base.html",
+      "native_sha256": "c2d41d10dcdf9cd5b033042fbd7d9cefdd70bc56c6089711aa132652d36ee81e",
+      "local_sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-htmxview__templates__kiosk__base.html.diff",
+      "diff_lines": 10
+    },
+    {
+      "component": "laboutik",
+      "native": "htmxview/templates/appsettings/infos.html",
+      "local": "deploy/Laboutik/source_templates/infos.html",
+      "native_sha256": "e49aede8100f9cd429fa7a2f75238155108c72294a7f9ca0759af4f31e20eac3",
+      "local_sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+      "diff_file": ".context/mount-necessity-20261008/laboutik-htmxview__templates__appsettings__infos.html.diff",
+      "diff_lines": 11
+    }
+  ],
+  "counterfactual_behavior": {
+    "scope": "local exact source methods with HTTP/ORM mocked; no database, mail or network operation",
+    "cards": [
+      {
+        "source": "current",
+        "entry": "scan",
+        "known_card": true,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": null
+      },
+      {
+        "source": "current",
+        "entry": "scan",
+        "known_card": false,
+        "lookup_calls": 2,
+        "creation_calls": 1,
+        "error": null
+      },
+      {
+        "source": "current",
+        "entry": "validator",
+        "known_card": true,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": null
+      },
+      {
+        "source": "current",
+        "entry": "validator",
+        "known_card": false,
+        "lookup_calls": 2,
+        "creation_calls": 1,
+        "error": null
+      },
+      {
+        "source": "native",
+        "entry": "scan",
+        "known_card": true,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": null
+      },
+      {
+        "source": "native",
+        "entry": "scan",
+        "known_card": false,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": null
+      },
+      {
+        "source": "native",
+        "entry": "validator",
+        "known_card": true,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": null
+      },
+      {
+        "source": "native",
+        "entry": "validator",
+        "known_card": false,
+        "lookup_calls": 1,
+        "creation_calls": 0,
+        "error": "FileNotFoundError"
+      }
+    ],
+    "installer_retry": [
+      {
+        "source": "current",
+        "method": "_lespass_handshake",
+        "existing_pairing": true,
+        "http_calls": 0,
+        "synthetic_loop_cutoff": false
+      },
+      {
+        "source": "current",
+        "method": "_fedow_handshake",
+        "existing_pairing": true,
+        "http_calls": 0,
+        "synthetic_loop_cutoff": false
+      },
+      {
+        "source": "native",
+        "method": "_lespass_handshake",
+        "existing_pairing": true,
+        "http_calls": 3,
+        "synthetic_loop_cutoff": true
+      },
+      {
+        "source": "native",
+        "method": "_fedow_handshake",
+        "existing_pairing": true,
+        "http_calls": 3,
+        "synthetic_loop_cutoff": true
+      }
+    ]
+  },
+  "live_application_probe": {
+    "native_smtp_constructor_with_current_flags": "ValueError: TLS and SSL both truthy",
+    "configured_tls": true,
+    "configured_ssl": false,
+    "tls_type": "bool",
+    "ssl_type": "bool",
+    "email_backend": "django.core.mail.backends.dummy.EmailBackend",
+    "django_debug": false,
+    "pos_count": 3,
+    "lespass_paired": true,
+    "fedow_paired": true,
+    "borg_repo_configured": false,
+    "borg_password_configured": false,
+    "native_backup_configuration": [
+      {
+        "container": "laboutik_django",
+        "borg_repo_configured": false,
+        "borg_password_configured": false
+      },
+      {
+        "container": "lespass_django",
+        "borg_repo_configured": false,
+        "borg_password_configured": false
+      }
+    ],
+    "host_backup_timer": "active"
+  },
+  "live_infrastructure_probe": {
+    "scope": "read-only container metadata; no backup run, network mail, queue mutation or database operation",
+    "applications": [
+      {
+        "container": "laboutik_django",
+        "cron_running": true,
+        "crontabs": [
+          {
+            "user": "root",
+            "crontab_available": false,
+            "native_backup_jobs": 0
+          },
+          {
+            "user": "tibillet",
+            "crontab_available": true,
+            "native_backup_jobs": 3
+          }
+        ],
+        "backup_directory_exists": true,
+        "dump_file_count": 1,
+        "ssh_directory_exists": true,
+        "ssh_entry_count": 0
+      },
+      {
+        "container": "lespass_django",
+        "cron_running": false,
+        "crontabs": [
+          {
+            "user": "root",
+            "crontab_available": false,
+            "native_backup_jobs": 0
+          },
+          {
+            "user": "tibillet",
+            "crontab_available": false,
+            "native_backup_jobs": 0
+          }
+        ],
+        "backup_directory_exists": true,
+        "dump_file_count": 0,
+        "ssh_directory_exists": true,
+        "ssh_entry_count": 0
+      }
+    ],
+    "redis": [
+      {
+        "container": "laboutik_redis",
+        "periodic_snapshot_configured": true,
+        "appendonly_enabled": false
+      },
+      {
+        "container": "lespass_redis",
+        "periodic_snapshot_configured": true,
+        "appendonly_enabled": false
+      }
+    ]
+  },
+  "smtp_configuration_alternative_probe": {
+    "scope": "SMTP constructor only, no connection, no send, no settings modification",
+    "native_tls_env_nonempty": true,
+    "ssl_empty_string_accepted": true,
+    "smoke_dummy_backend_still_requires_configurable_settings": true
+  },
+  "read_only_ssm_commands": [
+    {
+      "purpose": "mount inventory",
+      "command_id": "efd0725e-dacd-4407-bc0b-3f38db369a9e",
+      "status": "Success"
+    },
+    {
+      "purpose": "SMTP constructor and current configuration metadata",
+      "command_id": "d3a9b47e-e6d0-4b61-8615-36ef5e13ee25",
+      "status": "Success"
+    },
+    {
+      "purpose": "backup/SSH usage and Redis persistence configuration",
+      "command_id": "86337acc-8660-461e-b2f6-a03890cb11b4",
+      "status": "Success"
+    },
+    {
+      "purpose": "native SMTP flags with empty SSL, no connection or send",
+      "command_id": "896c3166-b2c5-4f52-ac99-c9bbf18ced3a",
+      "status": "Success"
+    }
+  ],
+  "limitations": [
+    "live inventory covers Smoke only",
+    "counterfactual card and installer methods use mocked HTTP and ORM",
+    "SMTP tests call constructors only, never connect or send",
+    "Redis snapshots enabled do not prove complete task durability across releases",
+    "no native rollback or replacement image has been deployed by this analysis"
+  ]
+}

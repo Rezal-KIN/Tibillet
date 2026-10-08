@@ -28,7 +28,10 @@ services:
       - laboutik_backend
 
   laboutik_django:
-    image: tibillet/laboutik:${LABOUTIK_VERSION:-latest}
+    image: ${LABOUTIK_IMAGE:-gala-laboutik:local}
+    build:
+      context: ../..
+      dockerfile: deploy/Laboutik/Dockerfile
     restart: "no"
     env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     # Every Gala uses the same public hostnames. During bootstrap an inactive
@@ -43,14 +46,6 @@ services:
       - ./logs:/DjangoFiles/logs
       - ./backup:/Backup
       - ./ssh:/home/tibillet/.ssh # if you want to use borgbackup with ssh
-      - ./settings.py:/DjangoFiles/Cashless/settings.py
-      - ./install.py:/DjangoFiles/administration/management/commands/install.py:ro
-      - ./source_templates/login.html:/DjangoFiles/webview/templates/login.html:ro
-      - ./source_templates/kiosk_base.html:/DjangoFiles/htmxview/templates/kiosk/base.html:ro
-      - ./source_templates/infos.html:/DjangoFiles/htmxview/templates/appsettings/infos.html:ro
-      - ../source/admin-templates:/DjangoFiles/source_templates:ro
-      - ./views.py:/DjangoFiles/webview/views.py
-      - ./validators.py:/DjangoFiles/webview/validators.py
     links:
       - laboutik_postgres:postgres
       - laboutik_redis:redis

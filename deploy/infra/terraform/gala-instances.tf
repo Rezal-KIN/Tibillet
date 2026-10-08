@@ -20,18 +20,19 @@ module "gala" {
   # Release manifests must outlive the seven-day CodePipeline artifact bucket.
   # The backup bucket has versioning and no current-version expiry; each EC2
   # can still read only its own releases/<slug>/ prefix.
-  release_bucket_arn          = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].arn : null
-  release_bucket_name         = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].bucket : null
-  ecr_lespass_repository_arn  = local.delivery_resources_enabled ? aws_ecr_repository.lespass[0].arn : null
-  shared_stripe_secret_arn    = each.key == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn
-  shared_mail_secret_arn      = aws_secretsmanager_secret.shared_mail[0].arn
-  repository_url              = "https://github.com/${var.github_owner}/${var.github_repository}.git"
-  repository_ref              = var.runtime_repository_ref
-  ssh_emergency_cidrs         = each.value.ssh_emergency_cidrs
-  associate_public_ip_address = each.value.associate_public_ip_address
-  create_instance             = each.value.create_instance
-  protect_from_destruction    = each.value.protect_from_destruction
-  extra_tags                  = var.extra_tags
+  release_bucket_arn              = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].arn : null
+  release_bucket_name             = local.delivery_resources_enabled ? aws_s3_bucket.backups[0].bucket : null
+  ecr_lespass_repository_arn      = local.delivery_resources_enabled ? aws_ecr_repository.lespass[0].arn : null
+  ecr_application_repository_arns = [for repo in aws_ecr_repository.applications : repo.arn]
+  shared_stripe_secret_arn        = each.key == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn
+  shared_mail_secret_arn          = aws_secretsmanager_secret.shared_mail[0].arn
+  repository_url                  = "https://github.com/${var.github_owner}/${var.github_repository}.git"
+  repository_ref                  = var.runtime_repository_ref
+  ssh_emergency_cidrs             = each.value.ssh_emergency_cidrs
+  associate_public_ip_address     = each.value.associate_public_ip_address
+  create_instance                 = each.value.create_instance
+  protect_from_destruction        = each.value.protect_from_destruction
+  extra_tags                      = var.extra_tags
 }
 
 # Move only the two disposable trial hosts to a resource without the

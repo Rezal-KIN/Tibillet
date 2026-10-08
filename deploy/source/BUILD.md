@@ -17,9 +17,10 @@ tar -xzf deployment.tar.gz -C deployment --strip-components=1
 
 - **Lespass** : le code du commit qui a construit l'image applicative.
 - **Fedow et Laboutik** : les sources originales au commit vérifié dans l'image,
-  avec les fichiers modifiés remplacés par les bind mounts versionnés du gala.
+  avec les quelques fichiers intégrés par leurs Dockerfiles Gala. Les anciennes
+  releases utilisant des bind mounts publient toujours les sources de leurs montages.
   Les éventuels écarts du script de construction de l'image sont inclus aussi.
-- **Déploiement** : Dockerfile Lespass, fichiers Compose/Nginx, patches, exemples
+- **Déploiement** : Dockerfiles des trois applications, fichiers Compose/Nginx, patches, exemples
   d'environnement, scripts de construction, de migration et d'installation.
 - Chaque application conserve son `pyproject.toml`, son `poetry.lock`, ses
   migrations, templates, fichiers statiques source et licences tierces.
@@ -44,6 +45,19 @@ La construction nécessite le téléchargement des images Python, paquets APT et
 dépendances Python publiques. Elle ne nécessite ni accès au compte AWS AM-Rezal ni
 identifiant de production. Les archives correspondent aux sources applicatives ;
 elles ne promettent pas un binaire identique octet pour octet aux images publiées.
+
+Les nouvelles images Gala réutilisent les images TiBillet épinglées et copient
+seulement les sources auditées, sans réinstaller leurs dépendances :
+
+```sh
+docker build -f deployment/deploy/Fedow/Dockerfile -t gala-fedow deployment
+docker build -f deployment/deploy/Laboutik/Dockerfile -t gala-laboutik deployment
+```
+
+La pipeline inscrit le commit public et l'image TiBillet de base dans les labels
+des images et dans `image_builds` du manifeste. Le déploiement vérifie ces labels
+avant de démarrer les applications. Les CSV privés restent des données d'import ;
+ils ne sont pas intégrés aux images ou aux archives de sources.
 
 ## Exécution sur une installation indépendante
 
@@ -74,8 +88,9 @@ le répertoire applicatif, via `poetry run python manage.py ...`.
 ## Accès aux sources après chaque release
 
 `deploy/tools/build-source-offer.py` construit les archives depuis des snapshots
-Git fixes. Il applique les fichiers source montés par le Compose de cette même
-version du déploiement, vérifie les archives originales par SHA-256 et refuse une
+Git fixes. Il applique les copies intégrées aux images depuis le commit de
+construction et les anciens montages éventuels depuis le snapshot de
+déploiement, vérifie les archives originales par SHA-256 et refuse une
 image dont le commit source n'a pas été vérifié. Il n'archive jamais le répertoire
 en service ni son historique Git. Les archives d'anciennes releases sont conservées.
 

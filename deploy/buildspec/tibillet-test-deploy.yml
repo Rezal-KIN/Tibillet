@@ -12,6 +12,16 @@ phases:
   build:
     commands:
       - set -euo pipefail
-      - python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json
+      - |
+        # Foundation installs this buildspec before older source revisions
+        # necessarily contain the stock catalogue or its new CLI argument.
+        if [[ -f deploy/tools/freeze-uploaded-card-stock.py ]]; then
+          python3 deploy/tools/freeze-uploaded-card-stock.py --bucket "$RELEASE_BUCKET" --output /tmp/card-stock.json
+          python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json --card-stock /tmp/card-stock.json
+        elif [[ -f deploy/card-stock.json ]]; then
+          python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json --card-stock deploy/card-stock.json
+        else
+          python3 deploy/tools/create-smoke-manifest.py "$CODEBUILD_SRC_DIR_BuildOutput/release-candidate.json" deploy/test-images.json /tmp/smoke-manifest.json
+        fi
       - python3 deploy/tools/runtime/validate-release.py /tmp/smoke-manifest.json
       - python3 deploy/tools/deploy-smoke-candidate.py /tmp/smoke-manifest.json
