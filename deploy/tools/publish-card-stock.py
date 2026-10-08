@@ -2,8 +2,10 @@
 """Validate native CSV lots, publish private immutable objects, write metadata.
 
 Use only after confirming the NFC byte order with the event's physical reader.
-Publishing does not import cards or switch traffic. Commit the output catalogue
-to deploy/card-stock.json to select these exact lots in the Test pipeline.
+Publishing does not import cards or switch traffic. This manual helper retains
+the fixed-catalogue workflow for historical releases. The current Test pipeline
+uses freeze-uploaded-card-stock.py to select and freeze the S3 upload folder;
+deploy/card-stock.json is its historical fallback for older source revisions.
 """
 
 import argparse

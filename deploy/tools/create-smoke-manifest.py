@@ -55,8 +55,8 @@ def main() -> None:
     parser.add_argument("image_lock", type=Path)
     parser.add_argument("output", type=Path)
     # Existing CodeBuild projects embed their buildspec in Terraform. Keep
-    # their previous CLI invocation working, while still reading this commit's
-    # versioned catalogue (never a mutable S3 selector).
+    # their previous CLI invocation working. The modern buildspec passes the
+    # frozen S3 catalogue explicitly; this default is for the historical CLI.
     parser.add_argument("--card-stock", type=Path,
                         default=Path(__file__).resolve().parents[1] / 'card-stock.json')
     args = parser.parse_args()

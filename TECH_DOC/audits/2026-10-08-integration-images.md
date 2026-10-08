@@ -1,5 +1,7 @@
 # Intégration aux images, cartes NFC sans QR et dépôt CSV
 
+> Ce document conserve l’état de la préparation locale. La livraison dans main, Foundation et les vérifications AWS sont décrites dans [l’audit de livraison sur un gala neuf](2026-10-08-pipeline-images-csv-gala-neuf.md).
+
 ## Décision et périmètre
 
 L'utilisateur privilégie le fonctionnement TiBillet natif et une petite quantité
