@@ -120,13 +120,13 @@ data "aws_iam_policy_document" "runtime" {
     for_each = var.ecr_lespass_repository_arn == null ? [] : [var.ecr_lespass_repository_arn]
 
     content {
-      sid = "PullLespassReleaseImages"
+      sid = "PullGalaApplicationReleaseImages"
       actions = [
         "ecr:BatchCheckLayerAvailability",
         "ecr:BatchGetImage",
         "ecr:GetDownloadUrlForLayer",
       ]
-      resources = [statement.value]
+      resources = concat([statement.value], var.ecr_application_repository_arns)
     }
   }
 

@@ -32,6 +32,40 @@ def upstream_archive(files):
 
 
 class SourceOfferTests(unittest.TestCase):
+    def built_application_fixture(self):
+        for component, folder, root in [('fedow', 'Fedow', '/home/fedow/Fedow/'), ('laboutik', 'Laboutik', '/DjangoFiles/')]:
+            path = self.repo / ('deploy/' + folder + '/Dockerfile')
+            source = 'deploy/' + folder + '/image_only.py'
+            (self.repo / source).write_text("print('built-in change')\n")
+            path.write_text('FROM ' + self.catalog[component]['image'] + '\n'
+                            'COPY --chown=user:user ' + source + ' ' + root + 'core.py\n')
+            # No code bind mount: publication must recover the image sources.
+            (self.repo / ('deploy/' + folder + '/docker-compose.yml')).write_text('services: {}\n')
+        self.git('add', '.')
+        self.git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'built application sources')
+        self.commit = self.git('rev-parse', 'HEAD').strip()
+        self.manifest['fork_commit'] = self.commit
+        self.manifest['image_builds'] = {component: {'base_image': self.catalog[component]['image'],
+                                                    'source_commit': self.commit} for component in ('fedow', 'laboutik')}
+        for component in ('fedow', 'laboutik'):
+            self.manifest[component + '_image'] = 'ecr/' + component + '@sha256:' + 'c' * 64
+
+    def test_image_sources_are_published_without_code_mounts(self):
+        self.built_application_fixture()
+        info = self.build()
+        for name in ('fedow', 'laboutik'):
+            component = info['components'][name]
+            files = offer.read_archive((self.output / component['archive']).read_bytes(), strip_root=True)
+            self.assertEqual(files['core.py'][0], b"print('built-in change')\n")
+            self.assertEqual(component['overlays']['core.py']['delivery'], 'image')
+            self.assertNotIn('.env', files)
+
+    def test_derived_image_with_unaudited_base_cannot_be_published(self):
+        self.built_application_fixture()
+        self.manifest['image_builds']['fedow']['base_image'] = 'other@sha256:' + 'd' * 64
+        with self.assertRaisesRegex(ValueError, 'audited'):
+            self.build()
+
     def test_template_directories_support_each_upstream_base_dir_type(self):
         # Evaluate the actual settings declarations without starting Django or
         # importing production integrations. Laboutik's BASE_DIR is a string,

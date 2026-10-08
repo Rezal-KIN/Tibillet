@@ -9,7 +9,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
-from card_stock import EMPTY_STOCK, validate_catalogue
+from card_stock import EMPTY_STOCK, validate_catalogue, smoke_release_id
+from application_images import validate_image_builds
 
 IMAGE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
@@ -24,11 +25,15 @@ def create(candidate: dict[str, object], pinned: dict[str, object], stock=None) 
     if candidate.get("platform") != "v1" or pinned.get("schema_version") != 1:
         raise ValueError("unexpected Smoke platform or image-lock schema")
     images = {"lespass_image": candidate.get("lespass_image")}
-    images.update({key: pinned.get(key) for key in ("fedow_image", "laboutik_image", "traefik_image")})
+    builds = validate_image_builds(candidate)
+    images.update({key: candidate.get(key) if builds else pinned.get(key)
+                   for key in ("fedow_image", "laboutik_image")})
+    images['traefik_image'] = pinned.get('traefik_image')
     if any(not isinstance(image, str) or not IMAGE.fullmatch(image) for image in images.values()):
         raise ValueError("every Smoke image must be fixed by digest")
-    return {
-        "release_id": f"smoke-{commit}",
+    stock = validate_catalogue(EMPTY_STOCK if stock is None else stock)
+    manifest = {
+        "release_id": smoke_release_id(commit, stock),
         "gala_slug": "gala-smoke",
         "platform": "v1",
         "application_repository": "Rezal-KIN/Tibillet",
@@ -37,8 +42,11 @@ def create(candidate: dict[str, object], pinned: dict[str, object], stock=None) 
         "tibillet_upstream_commit": commit,
         **images,
         "schema_generation": "v1",
-        "card_stock": validate_catalogue(EMPTY_STOCK if stock is None else stock),
+        "card_stock": stock,
     }
+    if builds:
+        manifest['image_builds'] = builds
+    return manifest
 
 
 def main() -> None:

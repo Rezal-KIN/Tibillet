@@ -77,6 +77,7 @@ for group in "${compose_groups[@]}"; do
   # SSM truncates noisy stderr at 24 KB; keep the actual deployment error visible.
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" pull --quiet
 done
+python3 "$SCRIPT_DIR/validate-application-images.py" "$MANIFEST_PATH"
 
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
   "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs" \
@@ -99,10 +100,9 @@ for group in "${compose_groups[@]}"; do
   if [[ -n "$app_service" ]]; then
     previous_id="$(docker inspect --format '{{.Id}}' "$app_service" 2>/dev/null || true)"
   fi
-  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --remove-orphans
-  # Fedow and Laboutik images can remain pinned while their versioned bind-
-  # mounted code changes. Restart only an existing, reused app container; on a
-  # fresh host Compose starts it once. Never restart its database for this.
+  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --no-build --remove-orphans
+  # Reload configuration only for an existing reused application container;
+  # on a fresh host Compose starts it once. Never restart its database here.
   if [[ -n "$previous_id" ]]; then
     current_id="$(docker inspect --format '{{.Id}}' "$app_service")"
     if [[ "$previous_id" == "$current_id" ]]; then

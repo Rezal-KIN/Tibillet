@@ -31,6 +31,29 @@ data "aws_iam_policy_document" "test_deploy" {
   }
 
   statement {
+    sid       = "ListOnlyCardUploadFolder"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.backups[0].arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["card-stock/uploads/*"]
+    }
+  }
+
+  statement {
+    sid       = "ReadUploadedAndFrozenCardStock"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.backups[0].arn}/card-stock/*"]
+  }
+
+  statement {
+    sid       = "PublishOnlyChecksumCardStock"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.backups[0].arn}/card-stock/*.csv"]
+  }
+
+  statement {
     sid     = "WriteOnlySmokeManifests"
     actions = ["s3:PutObject", "s3:GetObject"]
     resources = [

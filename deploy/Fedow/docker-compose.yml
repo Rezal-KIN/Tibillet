@@ -7,7 +7,10 @@ services:
     networks:
       - fedow_backend
   fedow_django:
-    image: tibillet/fedow:${FEDOW_VERSION:-latest}
+    image: ${FEDOW_IMAGE:-gala-fedow:local}
+    build:
+      context: ../..
+      dockerfile: deploy/Fedow/Dockerfile
     container_name: fedow_django
     hostname: fedow_django
     restart: always
@@ -19,8 +22,6 @@ services:
       - ./sqlite-database:/home/fedow/Fedow/database
       - ./www:/home/fedow/Fedow/www
       - ./logs:/home/fedow/Fedow/logs
-      - ./settings.py:/home/fedow/Fedow/fedowallet_django/settings.py
-      - ../source/admin-templates:/home/fedow/Fedow/source_templates:ro
     networks:
       - fedow_backend
     extra_hosts:

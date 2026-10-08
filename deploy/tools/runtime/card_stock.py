@@ -7,6 +7,7 @@ S3 objects named by their byte checksum, outside Git and public source offers.
 import csv
 import hashlib
 import io
+import json
 import re
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -14,6 +15,16 @@ from uuid import UUID
 
 EMPTY_STOCK = {"schema_version": 1, "lots": []}
 MAX_CSV_BYTES = 10 * 1024 * 1024
+
+
+def smoke_release_id(commit, stock):
+    """Same code with different uploaded lots must have a different proof."""
+    validate_catalogue(stock)
+    suffix = ''
+    if stock['lots']:
+        encoded = json.dumps(stock, sort_keys=True, separators=(',', ':')).encode()
+        suffix = '-' + hashlib.sha256(encoded).hexdigest()
+    return 'smoke-' + commit + suffix
 
 
 def validate_catalogue(stock):

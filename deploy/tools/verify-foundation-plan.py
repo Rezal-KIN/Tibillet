@@ -258,6 +258,9 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         f'aws_iam_role_policy.production_validate["{slug}"]',
         f'aws_codebuild_project.production_validate["{slug}"]',
     }
+    for component in ('fedow', 'laboutik'):
+        allowed_new.update({f'aws_ecr_repository.applications["{component}"]',
+                            f'aws_ecr_lifecycle_policy.applications["{component}"]'})
     # A reviewed, one-time Foundation run may retire only the two obsolete
     # validation delivery chains. EC2s, secrets, backups and logs are excluded.
     retired_slugs = {"gala-validation", "gala-validation-2"}
@@ -317,6 +320,13 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
         if actions == ["update"] and safe_card_stock_read_addition(item["change"], address):
             changed.append(f"allow-shared-card-stock-read {address}")
             continue
+        if actions == ['update'] and safe_image_policy_refresh(item['change'], address):
+            changed.append(f'refresh-image-permissions {address}')
+            continue
+        if (actions == ['update'] and address == 'aws_codebuild_project.test[0]'
+                and safe_application_build_project(item['change'])):
+            changed.append(f'configure-three-application-build {address}')
+            continue
         # Updating the Test deploy buildspec defers this unchanged policy
         # document until apply. Permit only that computed value, with the
         # existing role and policy identity intact.
@@ -375,6 +385,49 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
                     continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
+
+
+def safe_image_policy_refresh(change, address):
+    if address == 'aws_iam_role_policy.test_build[0]':
+        role = name = 'tibillet-gala-paris-production-test-build'
+    else:
+        match = re.fullmatch(r'module\.gala\["([a-z0-9-]+)"\]\.aws_iam_role_policy\.runtime', address)
+        if not match:
+            return False
+        role = 'tibillet-gala-paris-' + match[1] + '-ec2'
+        name = 'tibillet-gala-paris-' + match[1] + '-runtime'
+    before = change.get('before', {})
+    return (before.get('role') == role and before.get('name') == name
+            and safe_computed_policy_refresh(change))
+
+
+def safe_application_build_project(change):
+    """Only add the two sibling ECR names; preserve build role and resources."""
+    before, after = change.get('before'), change.get('after')
+    if not isinstance(before, dict) or not isinstance(after, dict) or has_unknown(change.get('after_unknown', {})):
+        return False
+    if {k: v for k, v in before.items() if k not in {'source', 'description', 'environment'}} != {
+            k: v for k, v in after.items() if k not in {'source', 'description', 'environment'}}:
+        return False
+    old_source, new_source = before.get('source'), after.get('source')
+    old_env, new_env = before.get('environment'), after.get('environment')
+    if not all(isinstance(value, list) and len(value) == 1 for value in (old_source, new_source, old_env, new_env)):
+        return False
+    if {k: v for k, v in old_source[0].items() if k != 'buildspec'} != {
+            k: v for k, v in new_source[0].items() if k != 'buildspec'}:
+        return False
+    if {k: v for k, v in old_env[0].items() if k != 'environment_variable'} != {
+            k: v for k, v in new_env[0].items() if k != 'environment_variable'}:
+        return False
+    prior = old_env[0].get('environment_variable', [])
+    later = new_env[0].get('environment_variable', [])
+    refs = [v for v in prior if v.get('name') == 'LESPASS_ECR_REPOSITORY']
+    if len(refs) != 1 or refs[0].get('value') != 'tibillet-gala-paris/lespass':
+        return False
+    additions = [{'name': component.upper()+'_ECR_REPOSITORY', 'type': 'PLAINTEXT',
+                  'value': 'tibillet-gala-paris/'+component} for component in ('fedow', 'laboutik')]
+    canonical = lambda values: sorted(json.dumps(value, sort_keys=True) for value in values)
+    return canonical(later) == canonical(prior + additions)
 
 
 def has_unknown(value: object) -> bool:

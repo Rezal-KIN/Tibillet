@@ -22,6 +22,10 @@ variable "ecr_lespass_repository_arn" {
   type    = string
   default = null
 }
+variable "ecr_application_repository_arns" {
+  type    = list(string)
+  default = []
+}
 variable "shared_stripe_secret_arn" {
   type    = string
   default = null

@@ -2,8 +2,8 @@ version: 0.2
 
 # The source connection must target the Rezal fork of TiBillet/Lespass, never
 # the production Gala EC2 checkout. CodeBuild receives a fixed source revision.
-# Output is a candidate image digest only; a complete immutable release manifest
-# (pinning all four service images) must be assembled and reviewed before promotion.
+# Output pins the three application images built from that exact revision.
+# A complete release manifest is assembled and tested before promotion.
 phases:
   install:
     commands:
@@ -22,10 +22,7 @@ phases:
     commands:
       - |
         set -euo pipefail
-        commit="$(git rev-parse HEAD)"
-        tag="sha-${commit}"
         registry="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
-        image_uri="${registry}/${LESPASS_ECR_REPOSITORY}:${tag}"
         password_file="$(mktemp)"
         cleanup() { rm -f "$password_file"; }
         trap cleanup EXIT
@@ -33,18 +30,7 @@ phases:
         aws ecr get-login-password --region "$AWS_DEFAULT_REGION" > "$password_file"
         docker login --username AWS --password-stdin "$registry" < "$password_file"
 
-        # Tags are immutable in ECR. Re-running the same commit reuses the
-        # recorded digest instead of creating a different release.
-        digest="$(aws ecr describe-images --repository-name "$LESPASS_ECR_REPOSITORY" --image-ids imageTag="$tag" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)"
-        if [ -z "$digest" ] || [ "$digest" = "None" ]; then
-          docker build --pull=true --tag "$image_uri" --file dockerfile .
-          docker push "$image_uri"
-          digest="$(aws ecr describe-images --repository-name "$LESPASS_ECR_REPOSITORY" --image-ids imageTag="$tag" --query 'imageDetails[0].imageDigest' --output text)"
-        fi
-        test -n "$digest"
-        test "$digest" != "None"
-        printf '{"application_repository":"Rezal-KIN/Tibillet","fork_commit":"%s","lespass_image":"%s@%s","platform":"%s"}\n' \
-          "$commit" "$registry/$LESPASS_ECR_REPOSITORY" "$digest" "$RELEASE_PLATFORM" > release-candidate.json
+        python3 deploy/tools/build-application-images.py
 artifacts:
   files:
     - release-candidate.json

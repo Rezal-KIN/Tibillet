@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
-from card_stock import EMPTY_STOCK, validate_catalogue
+from card_stock import EMPTY_STOCK, validate_catalogue, smoke_release_id
 
 IMAGES = ("lespass_image", "fedow_image", "laboutik_image", "traefik_image")
 
@@ -26,6 +26,8 @@ def compare(manifest: dict[str, object], tested: dict[str, object], slug: str) -
     for field in IMAGES:
         if manifest.get(field) != tested.get(field):
             raise ValueError(f"{field} differs from the successful Smoke deployment")
+    if manifest.get('image_builds') != tested.get('image_builds'):
+        raise ValueError('image_builds differs from the successful Smoke deployment')
     stock = validate_catalogue(manifest.get('card_stock', EMPTY_STOCK))
     if stock != validate_catalogue(tested.get('card_stock', EMPTY_STOCK)):
         raise ValueError('card_stock differs from the successful Smoke deployment')
@@ -49,11 +51,20 @@ def main() -> None:
     commit = manifest["fork_commit"]
     with tempfile.TemporaryDirectory() as directory:
         marker = Path(directory) / "tested.json"
-        subprocess.run([
-            "aws", "s3", "cp", "--only-show-errors",
-            f"s3://{args.bucket}/test-validated/smoke-{commit}.json",
-            str(marker), "--region", "eu-west-3",
-        ], check=True)
+        identity = smoke_release_id(commit, manifest.get('card_stock', EMPTY_STOCK))
+        command = ["aws", "s3", "cp", "--only-show-errors",
+                   f"s3://{args.bucket}/test-validated/{identity}.json",
+                   str(marker), "--region", "eu-west-3"]
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as error:
+            # Releases tested before S3 selection used a commit-only marker.
+            # Never mask access/network errors or accept a different stock.
+            if identity == f'smoke-{commit}' or not any(
+                    message in (error.stderr or '') for message in ('404', 'NoSuchKey', 'Not Found')):
+                raise
+            command[4] = f"s3://{args.bucket}/test-validated/smoke-{commit}.json"
+            subprocess.run(command, check=True, capture_output=True, text=True)
         compare(manifest, json.loads(marker.read_text(encoding="utf-8")), args.gala)
     source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     args.output.write_bytes(args.manifest.read_bytes())

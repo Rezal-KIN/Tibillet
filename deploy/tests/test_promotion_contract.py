@@ -28,6 +28,30 @@ preparer = load("reconcile_runtime", ROOT / "tools/runtime/reconcile-runtime.py"
 
 
 class PromotionContractTests(unittest.TestCase):
+    def test_built_application_images_reach_smoke_and_production_together(self):
+        commit = 'a' * 40
+        candidate = {'application_repository': 'Rezal-KIN/Tibillet', 'fork_commit': commit,
+                     'platform': 'v1', 'lespass_image': 'ecr/lespass@sha256:' + 'a' * 64,
+                     'fedow_image': 'ecr/fedow@sha256:' + 'b' * 64,
+                     'laboutik_image': 'ecr/laboutik@sha256:' + 'c' * 64,
+                     'image_builds': {component: {'base_image': 'native/' + component + '@sha256:' + 'd' * 64,
+                                                  'source_commit': commit} for component in ('fedow', 'laboutik')}}
+        pinned = {'schema_version': 1, 'traefik_image': 'traefik@sha256:' + 'e' * 64}
+        manifest = smoke.create(candidate, pinned)
+        for field in ('fedow_image', 'laboutik_image', 'image_builds'):
+            self.assertEqual(manifest[field], candidate[field])
+        production = {**manifest, 'gala_slug': 'gala-example'}
+        promotion.compare(production, manifest, 'gala-example')
+        with self.assertRaisesRegex(ValueError, 'image_builds'):
+            promotion.compare({**production, 'image_builds': None}, manifest, 'gala-example')
+
+    def test_built_image_record_cannot_name_other_sources(self):
+        candidate = {'fork_commit': 'a' * 40, 'application_repository': 'Rezal-KIN/Tibillet', 'platform': 'v1',
+                     'image_builds': {component: {'base_image': 'native@sha256:' + 'b' * 64,
+                                                  'source_commit': 'c' * 40} for component in ('fedow', 'laboutik')}}
+        with self.assertRaisesRegex(ValueError, 'fork_commit'):
+            smoke.create(candidate, {'schema_version': 1})
+
     def test_validation_exports_exactly_two_lines_for_codebuild(self) -> None:
         commit = "a" * 40
         tested = {

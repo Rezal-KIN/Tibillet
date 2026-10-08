@@ -71,6 +71,7 @@ class CardStockContractTests(unittest.TestCase):
             shutil.copyfile(ROOT / 'tools/create-smoke-manifest.py', repo / 'deploy/tools/create-smoke-manifest.py')
             (repo / 'deploy/tools/runtime').mkdir()
             shutil.copyfile(RUNTIME / 'card_stock.py', repo / 'deploy/tools/runtime/card_stock.py')
+            shutil.copyfile(RUNTIME / 'application_images.py', repo / 'deploy/tools/runtime/application_images.py')
             (repo / 'deploy/card-stock.json').write_text(json.dumps(CATALOGUE))
             current = subprocess.run(['bash', '-euc', script], cwd=repo, env=env,
                                      text=True, capture_output=True)
