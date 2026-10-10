@@ -12,7 +12,12 @@ Les quatre images communes à Aix et Smoke proviennent du Test applicatif
 aucun code applicatif ni script runtime. La [preuve finale](2026-10-10-finalisation-preuves.json)
 retrouve les mêmes images, montages et trois lots sur les deux hôtes.
 
-Ce document est une synthèse actuelle ; les audits précédents restent historiques.
+Ce document décrit le snapshot `37ed3fc2` ; les audits précédents restent historiques.
+Mise à jour après ce snapshot : les variables PostgreSQL résiduelles Fedow,
+encore recensées dans le tableau ci-dessous, ont été retirées par la PR #110.
+Le commit `64044190` est livré lors de la
+[réinitialisation Smoke et Aix](2026-10-10-reinitialisation-native-smoke-aix.md).
+L'inventaire TSV garde sa référence historique `37ed3fc2`.
 L'installation manuelle n'existe plus : sa comparaison utilise les inventaires
 et reçus conservés, pas une nouvelle inspection d'une machine encore allumée.
 
