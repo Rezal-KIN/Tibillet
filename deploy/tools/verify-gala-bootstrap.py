@@ -32,6 +32,14 @@ FIRST_RUN_RETIREMENT = {
 FIRST_RUN_SLUG = "gala-first-run-20260926"
 FIRST_RUN_INSTANCE_ID = "i-0f32df17b219428dd"
 FIRST_RUN_VOLUME_ID = "vol-06682cc1dace8854f"
+ALIGNMENT_RETIREMENT = {
+    "Prepare Gala Alignment Retirement": "prepare",
+    "Retire Gala Alignment": "retire",
+}
+ALIGNMENT_IDENTITIES = {
+    "gala-alignement-vanilla-2026-10-10": ("i-0fb1dd7f460d6d88d", "vol-029ab722ab927334d", "snap-0b451152f049f9908"),
+    "gala-alignement-final-2026-10-10": ("i-03a85efbda0291201", "vol-0ea485dd48a918a26", "snap-095d819c58f31b22a"),
+}
 
 
 def verify_validation_retirement(
@@ -65,14 +73,23 @@ def verify_validation_retirement(
         exact_temporary = {
             "gala-verification": (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
             FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
+            **{name: identity[:2] for name, identity in ALIGNMENT_IDENTITIES.items()},
         }.get(slug)
         if exact_temporary and (instance_id, volume_id) != exact_temporary:
             raise RuntimeError("temporary Gala EC2 or root volume identity changed")
+        if slug in ALIGNMENT_IDENTITIES:
+            snapshots = aws("ec2", "describe-snapshots", "--snapshot-ids", ALIGNMENT_IDENTITIES[slug][2]).get("Snapshots", [])
+            if (len(snapshots) != 1 or snapshots[0].get("State") != "completed"
+                    or snapshots[0].get("OwnerId") != ACCOUNT
+                    or snapshots[0].get("VolumeId") != volume_id
+                    or snapshots[0].get("Encrypted") is not True):
+                raise RuntimeError(f"completed private archive snapshot is missing: {slug}")
         if phase == "prepare":
             found = aws("ec2", "describe-instances", "--instance-ids", instance_id)
             instances = [item for group in found.get("Reservations", []) for item in group.get("Instances", [])]
-            if len(instances) != 1 or instances[0].get("State", {}).get("Name") != "running":
-                raise RuntimeError(f"prepared EC2 is not running: {slug}")
+            allowed_states = {"running", "stopped"} if slug in ALIGNMENT_IDENTITIES else {"running"}
+            if len(instances) != 1 or instances[0].get("State", {}).get("Name") not in allowed_states:
+                raise RuntimeError(f"prepared EC2 is not in an allowed state: {slug}")
             tags = {item["Key"]: item["Value"] for item in instances[0].get("Tags", [])}
             if tags.get("Project") != project or tags.get("Gala") != slug or tags.get("ManagedBy") != "terraform":
                 raise RuntimeError(f"prepared EC2 identity mismatch: {slug}")
@@ -224,6 +241,15 @@ def main() -> None:
     retirement_phase = VALIDATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     verification_phase = VERIFICATION_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     first_run_phase = FIRST_RUN_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    alignment_phase = ALIGNMENT_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    if alignment_phase:
+        if args.slug != next(iter(ALIGNMENT_IDENTITIES)) or not args.foundation_plan:
+            raise ValueError("alignment retirement requires the exact plan and slug")
+        verify_validation_retirement(
+            json.loads(args.foundation_plan.read_text(encoding="utf-8")),
+            alignment_phase, args.project_name, targets=tuple(ALIGNMENT_IDENTITIES),
+        )
+        return
     if retirement_phase:
         if args.slug != "gala-validation" or not args.foundation_plan:
             raise ValueError("validation retirement requires the exact plan and slug")

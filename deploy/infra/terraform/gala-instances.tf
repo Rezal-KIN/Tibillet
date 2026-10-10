@@ -35,6 +35,17 @@ module "gala" {
   extra_tags                      = var.extra_tags
 }
 
+# Two exact disposable alignment trials, snapshotted before reviewed retirement.
+moved {
+  from = module.gala["gala-alignement-vanilla-2026-10-10"].aws_instance.runtime[0]
+  to   = module.gala["gala-alignement-vanilla-2026-10-10"].aws_instance.retirable[0]
+}
+
+moved {
+  from = module.gala["gala-alignement-final-2026-10-10"].aws_instance.runtime[0]
+  to   = module.gala["gala-alignement-final-2026-10-10"].aws_instance.retirable[0]
+}
+
 # Move only the two disposable trial hosts to a resource without the
 # production prevent_destroy rule. Aix and Smoke keep that rule unchanged.
 moved {
