@@ -6,3 +6,7 @@
 services:
   fedow_django:
     image: ${FEDOW_IMAGE}
+    # Native membership callbacks must return to this Gala's Lespass, even
+    # while another Gala holds the shared public IP. Keep normal TLS checks.
+    extra_hosts:
+      - "${LESPASS_PUBLIC_DOMAIN}:host-gateway"

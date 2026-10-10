@@ -74,6 +74,7 @@ services:
       - lespass_memcached:memcached
     command: "poetry run celery -A TiBillet worker -l INFO -B"
     networks:
+      - frontend
       - lespass_backend
 
 

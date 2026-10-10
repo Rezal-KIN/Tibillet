@@ -1,0 +1,2094 @@
+{
+  "date": "2026-10-09",
+  "head": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+  "branch": "Vaporik/vaporik/remboursements-admin",
+  "scope": "Snapshot public du dépôt, références originales fixes; contrôle runtime décrit séparément",
+  "lespass_base": {
+    "upstream_commit": "fd7680891c31bbdf6215e7a0750074de89ff5e8e",
+    "equivalent_commit_in_fork": "f0f0d82087a7551dae2d3b835bdd6c0dba4c89a9",
+    "tree": "1c1816a9fed44f433ea31e8711968c0cf246a384"
+  },
+  "image_references": {
+    "schema_version": 1,
+    "fedow": {
+      "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "repository": "TiBillet/Fedow",
+      "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+    },
+    "laboutik": {
+      "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "repository": "TiBillet/LaBoutik",
+      "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+      "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+      "image_overlays": {
+        "docker_push_update.sh": {
+          "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+          "replacements": [
+            [
+              "VERSION=\"1.4\"",
+              "VERSION=\"1.7\""
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "git_difference": {
+    "total_files": 348,
+    "status_counts": {
+      "A": 331,
+      "M": 17
+    },
+    "category_counts": {
+      "documentation": 91,
+      "construction/exclusions": 3,
+      "application Lespass": 20,
+      "archives": 40,
+      "publication sources": 3,
+      "tests": 34,
+      "configuration déploiement": 4,
+      "exemples": 9,
+      "assemblage Docker": 13,
+      "application en image Fedow/LaBoutik": 9,
+      "développement": 1,
+      "copies statiques historiques": 2,
+      "pipeline AWS": 9,
+      "infrastructure AWS": 29,
+      "périmètre exploitation": 2,
+      "exploitation AWS": 47,
+      "outils historiques": 15,
+      "manifestes historiques": 17
+    },
+    "shortstat": "348 files changed, 50657 insertions(+), 51 deletions(-)"
+  },
+  "image_copies": [
+    {
+      "component": "fedow",
+      "source": "deploy/Fedow/settings.py",
+      "target": "fedowallet_django/settings.py",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "f3fb4086132f30c03a6fc81d117b2ce3197d76c10062dd4ec7ac5c9549222e2b",
+      "current_sha256": "f7b56e8be7e8f836ea7d8b728bfeb23837a29a55511d63a10ee6466dfb9a4b61",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 3,
+      "removed_lines": 1
+    },
+    {
+      "component": "fedow",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "form": "Dockerfile COPY",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 8,
+      "removed_lines": 0
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/views.py",
+      "target": "webview/views.py",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+      "current_sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "check_carte"
+        ]
+      },
+      "added_lines": 31,
+      "removed_lines": 6
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/validators.py",
+      "target": "webview/validators.py",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+      "current_sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "DataAchatDepuisClientValidator.validate_tag_id"
+        ]
+      },
+      "added_lines": 22,
+      "removed_lines": 4
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/install.py",
+      "target": "administration/management/commands/install.py",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "6fd3cbfd0bd6fddf2d7430709cfc5836a63827c52f7dac277a28bd5aa66e3cc8",
+      "current_sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": [
+          "Command.handle"
+        ]
+      },
+      "added_lines": 42,
+      "removed_lines": 12
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/settings.py",
+      "target": "Cashless/settings.py",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "368ff8960bb8cd83f1272fa7f9c0ad599f84a2d66bee228627017ed9de767361",
+      "current_sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 6,
+      "removed_lines": 3
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/login.html",
+      "target": "webview/templates/login.html",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "01cc77702df119cca39bcd7791887b7faff1b7c8b0f9a2238c03422933920b2d",
+      "current_sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 3,
+      "removed_lines": 1
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/kiosk_base.html",
+      "target": "htmxview/templates/kiosk/base.html",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "c2d41d10dcdf9cd5b033042fbd7d9cefdd70bc56c6089711aa132652d36ee81e",
+      "current_sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 2,
+      "removed_lines": 0
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/Laboutik/source_templates/infos.html",
+      "target": "htmxview/templates/appsettings/infos.html",
+      "form": "Dockerfile COPY",
+      "native_exists": true,
+      "native_sha256": "e49aede8100f9cd429fa7a2f75238155108c72294a7f9ca0759af4f31e20eac3",
+      "current_sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 4,
+      "removed_lines": 0
+    },
+    {
+      "component": "laboutik",
+      "source": "deploy/source/admin-templates/admin/base_site.html",
+      "target": "source_templates/admin/base_site.html",
+      "form": "Dockerfile COPY",
+      "native_exists": false,
+      "native_sha256": null,
+      "current_sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+      "different": true,
+      "function_differences": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "added_lines": 8,
+      "removed_lines": 0
+    }
+  ],
+  "unique_image_sources": 9,
+  "mounts": {
+    "rows": [
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./sqlite-database",
+        "target": "/home/fedow/Fedow/database",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "a219b5d6346dafdd8f0037e3dae5548962617c70"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./www",
+        "target": "/home/fedow/Fedow/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_django",
+        "source": "./logs",
+        "target": "/home/fedow/Fedow/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Fedow/docker-compose.yml",
+        "service": "fedow_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "sources publiques ajoutées Gala",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_postgres",
+        "source": "./database/data",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes locales",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH/Borg",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Laboutik/docker-compose.yml",
+        "service": "laboutik_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "sources publiques ajoutées Gala",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_postgres",
+        "source": "./database",
+        "target": "/var/lib/postgresql/data",
+        "mode": "rw",
+        "category": "base persistante",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./backup",
+        "target": "/Backup",
+        "mode": "rw",
+        "category": "sauvegardes locales",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_django",
+        "source": "./ssh",
+        "target": "/home/tibillet/.ssh",
+        "mode": "rw",
+        "category": "configuration SSH/Borg",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./www",
+        "target": "/DjangoFiles/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_celery",
+        "source": "./logs",
+        "target": "/DjangoFiles/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "e2ad140601ffce29eff38c3e9f403d829098b39e"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "../source/public",
+        "target": "/source",
+        "mode": "ro",
+        "category": "sources publiques ajoutées Gala",
+        "declarations": 1,
+        "introduction_first_parent": "01ca834903d5a93d3a740f154637e008abaf0ec2"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./www",
+        "target": "/www",
+        "mode": "rw",
+        "category": "médias/statiques générés",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./logs",
+        "target": "/logs",
+        "mode": "rw",
+        "category": "logs",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/Lespass/docker-compose.yml",
+        "service": "lespass_nginx",
+        "source": "./nginx",
+        "target": "/etc/nginx/conf.d",
+        "mode": "rw",
+        "category": "configuration Nginx",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "/var/run/docker.sock",
+        "target": "/var/run/docker.sock",
+        "mode": "ro",
+        "category": "socket Docker",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      },
+      {
+        "compose": "deploy/traefik/docker-compose.yml",
+        "service": "traefik",
+        "source": "./acme.json",
+        "target": "/acme.json",
+        "mode": "rw",
+        "category": "certificats",
+        "declarations": 1,
+        "introduction_first_parent": "bc5b1a85a59872faf885c3916698042abe91f0d0"
+      }
+    ],
+    "total": 29,
+    "raw_declarations": 29,
+    "category_counts": {
+      "base persistante": 3,
+      "médias/statiques générés": 7,
+      "logs": 7,
+      "configuration Nginx": 3,
+      "sources publiques ajoutées Gala": 3,
+      "sauvegardes locales": 2,
+      "configuration SSH/Borg": 2,
+      "socket Docker": 1,
+      "certificats": 1
+    }
+  },
+  "native_database_assignments_exact": {
+    "fedow": true,
+    "laboutik": true,
+    "lespass": true
+  },
+  "unchanged_lespass_checks": {
+    "BaseBillet/models.py": true,
+    "BaseBillet/views.py": true,
+    "BaseBillet/templates/reunion/views/account/balance.html": true,
+    "AuthBillet/models.py": true,
+    "pyproject.toml": true,
+    "poetry.lock": true,
+    "LICENSE": true,
+    "start.sh": true
+  },
+  "migration_changes": [],
+  "static_copies": [
+    {
+      "source": "BaseBillet/static/reunion/css/tibillet.css",
+      "historical_copy": "deploy/Lespass/www/static/reunion/css/tibillet.css",
+      "current_sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+      "historical_sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+      "vanilla_sha256": "ad7ceacd83ffc8ed98b2d63b6992462bec95855883bab76d5cab4a5f7e6a82e9",
+      "current_equals_historical": true
+    },
+    {
+      "source": "BaseBillet/static/reunion/js/membership-form.mjs",
+      "historical_copy": "deploy/Lespass/www/static/reunion/js/membership-form.mjs",
+      "current_sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+      "historical_sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+      "vanilla_sha256": "3d2776085c2a7c3aba1a76e5178e4992f39407d6726b5eee45db98249c233ecc",
+      "current_equals_historical": true
+    }
+  ],
+  "limitations": [
+    "Référence originale fixe, pas latest main amont",
+    "Fichiers ignorés, secrets, données privées exclus",
+    "TSV inclut les fichiers ajoutés même jamais exécutés",
+    "Rapport et annexes créés dans cette tâche hors snapshot audité",
+    "Diff de sources ne prouve pas une absence de bug ou une conformité financière/légale"
+  ],
+  "usage_reference_method": "Recherche de références littérales limitée aux outils, buildspecs, systemd et Terraform actifs; absence ne prouve pas jamais exécuté",
+  "public_static_today": [
+    {
+      "url": "https://galas-am-aix.rezal.fr/static/reunion/css/tibillet.css",
+      "status": 200,
+      "sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+      "size": 5554,
+      "equals_current": true,
+      "equals_historical": true
+    },
+    {
+      "url": "https://galas-am-aix.rezal.fr/static/reunion/js/membership-form.mjs",
+      "status": 200,
+      "sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+      "size": 12654,
+      "equals_current": true,
+      "equals_historical": true
+    }
+  ],
+  "public_source_pages_today": [
+    {
+      "url": "https://galas-am-aix.rezal.fr/source/",
+      "status": 200,
+      "sha256": "219189751daaa47c45a67d171da1fbd5d3dcdaa34de7e8a3ed7a202c66974259",
+      "commit_mentions": [
+        "1668d94fb2391cd1b9fef28abf857c356e13207c",
+        "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+        "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba"
+      ],
+      "release_mentions": [
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546-cd677bb39cf7"
+      ]
+    },
+    {
+      "url": "https://fedow.galas-am-aix.rezal.fr/source/",
+      "status": 200,
+      "sha256": "219189751daaa47c45a67d171da1fbd5d3dcdaa34de7e8a3ed7a202c66974259",
+      "commit_mentions": [
+        "1668d94fb2391cd1b9fef28abf857c356e13207c",
+        "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+        "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba"
+      ],
+      "release_mentions": [
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546-cd677bb39cf7"
+      ]
+    },
+    {
+      "url": "https://cashless.galas-am-aix.rezal.fr/source/",
+      "status": 200,
+      "sha256": "219189751daaa47c45a67d171da1fbd5d3dcdaa34de7e8a3ed7a202c66974259",
+      "commit_mentions": [
+        "1668d94fb2391cd1b9fef28abf857c356e13207c",
+        "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+        "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba"
+      ],
+      "release_mentions": [
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+        "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546-cd677bb39cf7"
+      ]
+    }
+  ],
+  "native_restoration_today": {
+    "scope": "LaBoutik native files except declared E spans/notices, native Fedow API selected by Compose, previous C/D/F/G/H/I restorations; no live runtime verification.",
+    "reference_repository": "TiBillet/LaBoutik",
+    "reference_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "reference_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+    "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+    "units": [
+      {
+        "feature": "C",
+        "upstream_path": "webview/validators.py",
+        "local_path": "deploy/Laboutik/validators.py",
+        "class_name": "DataAchatDepuisClientValidator",
+        "function_name": "validate_articles",
+        "byte_length": 1557,
+        "upstream_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+        "restored_sha256": "b95a4da3adb6f3c0c470ca3209f30c0f9d5f0c81237fad09b5c2f0f5fdb5a3b8",
+        "exact_text_match": true,
+        "source_provider": "local_overlay"
+      },
+      {
+        "feature": "D",
+        "upstream_path": "webview/views.py",
+        "local_path": "deploy/Laboutik/views.py",
+        "class_name": null,
+        "function_name": "index",
+        "byte_length": 5397,
+        "upstream_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+        "restored_sha256": "0f0b735909dd8fec79f7385d42014a7bc8ee769ce9c39081869efa4259ddb698",
+        "exact_text_match": true,
+        "source_provider": "local_overlay"
+      },
+      {
+        "feature": "D",
+        "upstream_path": "webview/views.py",
+        "local_path": "deploy/Laboutik/views.py",
+        "class_name": null,
+        "function_name": "preparation",
+        "byte_length": 6713,
+        "upstream_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+        "restored_sha256": "22b39a1b27f08441a5697c3ec83001af9485585ec6665102ff1faa9481995331",
+        "exact_text_match": true,
+        "source_provider": "local_overlay"
+      },
+      {
+        "feature": "D",
+        "upstream_path": "webview/views.py",
+        "local_path": "deploy/Laboutik/views.py",
+        "class_name": null,
+        "function_name": "paiement",
+        "byte_length": 1114,
+        "upstream_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+        "restored_sha256": "9c1e16337057c46ddfe55c9477fc532d9fc4c9343ef0f954e1fc276e97b3b32a",
+        "exact_text_match": true,
+        "source_provider": "local_overlay"
+      },
+      {
+        "feature": "F",
+        "upstream_path": "fedow_connect/fedow_api.py",
+        "local_path": null,
+        "class_name": "FedowAPI",
+        "function_name": "send_assets_from_cashless",
+        "byte_length": 1718,
+        "upstream_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+        "restored_sha256": "0493e54eb8848f080c864d5ca3027be70f684a5b17984547dacef27d0964cf91",
+        "exact_text_match": true,
+        "source_provider": "native_image"
+      },
+      {
+        "feature": "E",
+        "upstream_path": "fedow_connect/fedow_api.py",
+        "local_path": null,
+        "class_name": null,
+        "function_name": "_get",
+        "byte_length": 1449,
+        "upstream_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+        "restored_sha256": "094d5b188142ddad3d96ae984fede3078af48d7121e9faf71882b222cbed5361",
+        "exact_text_match": true,
+        "source_provider": "native_image"
+      },
+      {
+        "feature": "E",
+        "upstream_path": "fedow_connect/fedow_api.py",
+        "local_path": null,
+        "class_name": null,
+        "function_name": "_post",
+        "byte_length": 1471,
+        "upstream_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+        "restored_sha256": "b9c9946a0a18489bce0afc9a1ab2d8d6ef54e304728cdb048d24d2d3e89e4e71",
+        "exact_text_match": true,
+        "source_provider": "native_image"
+      }
+    ],
+    "retained_laboutik_files": [
+      {
+        "upstream_path": "webview/views.py",
+        "local_path": "deploy/Laboutik/views.py",
+        "upstream_sha256": "39e481a5d9cc8cf23ebf1f548d930967a55772cfe0735368ca585ca9c5c9960c",
+        "restored_sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6",
+        "exact_except_declared_E_and_notice": true
+      },
+      {
+        "upstream_path": "webview/validators.py",
+        "local_path": "deploy/Laboutik/validators.py",
+        "upstream_sha256": "0161676bbe6de15cdc5881b2ae21e3b972dda1b2e19b0e0d9e0bdac4cc6d4b56",
+        "restored_sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e",
+        "exact_except_declared_E_and_notice": true
+      }
+    ],
+    "native_laboutik_api": {
+      "upstream_path": "fedow_connect/fedow_api.py",
+      "upstream_sha256": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+      "source_override_removed": true
+    },
+    "native_image_files": [
+      {
+        "feature": "G",
+        "upstream_path": "fedow_core/serializers.py",
+        "reference_repository": "TiBillet/Fedow",
+        "reference_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+        "reference_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+        "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+        "upstream_sha256": "9e7fe20e720d27cbbb7f2fbb859143fb47f99651d0ae572df7a1159c71d17d69",
+        "byte_length": 70171,
+        "source_override_removed": true
+      }
+    ],
+    "native_database_settings": {
+      "feature": "I",
+      "upstream_path": "fedowallet_django/settings.py",
+      "native_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "exact_text_match": true,
+      "sha256": "5fef99a0549abe58833dafee17d914e5410754e0b8e1775a1f29eee75acffea2"
+    },
+    "native_dashboard": {
+      "feature": "H",
+      "reference_repository": "TiBillet/Fedow",
+      "reference_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+      "reference_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+      "source_override_removed": true,
+      "shared_template_override_absent": true,
+      "files": [
+        {
+          "upstream_path": "fedow_dashboard/__init__.py",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_length": 0
+        },
+        {
+          "upstream_path": "fedow_dashboard/admin.py",
+          "upstream_sha256": "b2e328e31f08dc907100505521d13ee6a9ea67a240655d051120011ce49cfaf8",
+          "byte_length": 63
+        },
+        {
+          "upstream_path": "fedow_dashboard/apps.py",
+          "upstream_sha256": "8786b57b13804157ca8accb8a6fc86f5ebc7efe075f0bdb0ac1a2676d691a16b",
+          "byte_length": 161
+        },
+        {
+          "upstream_path": "fedow_dashboard/migrations/__init__.py",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_length": 0
+        },
+        {
+          "upstream_path": "fedow_dashboard/models.py",
+          "upstream_sha256": "563734a765db00f804e87c9317abe597df00e1e0e103902f690aac738910f404",
+          "byte_length": 57
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist.zip",
+          "upstream_sha256": "8fa2016a3dee1e204bd1623e050dcf477e9d28c13bb98a1f58f57e0fd40cdd38",
+          "byte_length": 1470438
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css",
+          "upstream_sha256": "22b464461c1d3b621c3f6fb5b678b6531ab0a704d0e1bd078ddd371b87473db0",
+          "byte_length": 237950
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.css.map",
+          "upstream_sha256": "ae5430d563ba9975d8543cfb00650e283b18c19c9603461a8460f2372af03f21",
+          "byte_length": 608300
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css",
+          "upstream_sha256": "c0bcf7898fdc3b87babca678cd19a8e3ef570e931c80a3afbffcc453738c951a",
+          "byte_length": 194901
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/css/bootstrap.min.css.map",
+          "upstream_sha256": "ff724ca73ac50a9391851129cd451c98e8c3015a28ff851f97dad247b052a577",
+          "byte_length": 522639
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js",
+          "upstream_sha256": "4ea6de9832c8e17c55a323a97dfbfe1532f9a0f9e74f46bfa962c9cb6fc035e8",
+          "byte_length": 145543
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.js.map",
+          "upstream_sha256": "e0fcd2fa3a0e8ee661dcf986bb9dc2d21c3edb637ac8cf0c2287c55ec31e62fa",
+          "byte_length": 309348
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js",
+          "upstream_sha256": "9bcd4d0f29dc6556ebeeff44eaa0965f0c7f7308ee58394708cce2f698cca1b0",
+          "byte_length": 60404
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/bootstrap/bootstrap-5.2.3-dist/js/bootstrap.min.js.map",
+          "upstream_sha256": "973689199c4c7417a62153086e699c22e26c5ac1febaf7115cedab8f42230e17",
+          "byte_length": 216913
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/css/main.css",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_length": 0
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/bars.svg",
+          "upstream_sha256": "d076a48a74769f64db2fb6b7ec0f6da8a948795eafbb1eac7e87ffaa606b706c",
+          "byte_length": 2320
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/baseline-home-work.svg",
+          "upstream_sha256": "6789f8f8513c30b1edbc694694d0c023cb9a712e59bc68ffc56f541f23b67512",
+          "byte_length": 240
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/edit.svg",
+          "upstream_sha256": "f29b50a54d4f92f63e2adc7393da388ce301aec63658ac27a82ce10aeffc671e",
+          "byte_length": 658
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/fav_blanc.png",
+          "upstream_sha256": "c555b8b91a547479f16eb937f9e556f7e02c2a1444670921084bb276bd676ef7",
+          "byte_length": 7990
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/fedow_circle.svg",
+          "upstream_sha256": "3008b5fbeaf0183678cf35ed4640fe9bac8bf642964f6b483515d70998c71847",
+          "byte_length": 18464
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/frame-reload.svg",
+          "upstream_sha256": "a4e9706871acab2821c682838fb9a2c269024f131db6ad5ac54509d4e4c74ede",
+          "byte_length": 536
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/img.png",
+          "upstream_sha256": "129671667098e89d1c0d8daac638d9631940e68b777ed270e2245e3d75985b1a",
+          "byte_length": 34591
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/user-4-fill.svg",
+          "upstream_sha256": "ba8b1f5020b91c61cc6a9bbfeaeb07ff1e8c065109706090ad8e1a368fe0851b",
+          "byte_length": 987
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/img/view-grid-detail.svg",
+          "upstream_sha256": "69c603aa7e8d35a99e0d5cd855de589e3943ff67ddd9c7ecbd08bf6958457a85",
+          "byte_length": 347
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/chart.umd.4.4.1.min.js",
+          "upstream_sha256": "d2af8974e95271638772e9e9524db5b9a6f58d6ec2d5d781400447b4a31c681e",
+          "byte_length": 205399
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/fedow_charts.js",
+          "upstream_sha256": "9bc145e4f853457fb6d81ae86dd9ed913da48449bb3693a471c80b85a8d1aff9",
+          "byte_length": 6075
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/fedow_simulateur.js",
+          "upstream_sha256": "90e6de004b61b6d67b9400bb731d283925a50e3fd394d12234b8656aaea3e381",
+          "byte_length": 15382
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/htmx.d.ts",
+          "upstream_sha256": "50f4c4b412fafb7c622ec0d43a6c40a8756c245a49317b99d01777e54ffb0e85",
+          "byte_length": 12561
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.6.js",
+          "upstream_sha256": "cbb723c305cf6d6315c890909815523588509e2e092a59f8cfc4a885829689d5",
+          "byte_length": 46044
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/htmx.min.1.9.7.js",
+          "upstream_sha256": "30c95cb75e7f7c9471c2bf43fa3db0a30a39077764295b15c405869fed7e5764",
+          "byte_length": 46674
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/hyperscript.0.9.11.min.js",
+          "upstream_sha256": "9e63e5162f36c11d8621ab025251a7e28eb421266f1cb10e2b4dcbbbb91a7d1e",
+          "byte_length": 99758
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/js/loading-states.js",
+          "upstream_sha256": "d9f5823548e5bae7c1b2e7882580dd5b881dae1b7aae089e35211937e9887d32",
+          "byte_length": 5116
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css",
+          "upstream_sha256": "71756f2c107af344d1fcbad15380edcadc1d5a8ebea46941bf4544fbad4b02e6",
+          "byte_length": 517381
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.css.map",
+          "upstream_sha256": "7e1fa71d3f8473b2c462dc5d281478ed9db481edf9901881aa14a41aad6b90a9",
+          "byte_length": 1223696
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js",
+          "upstream_sha256": "dec116081d7f72b3ebb6187e10639f12e418014c88e7a0982ebbfd417d6b8572",
+          "byte_length": 29580
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.js.map",
+          "upstream_sha256": "3f7d8ac0ee80d431bdf14a1b54901f02fe1d26b7fe2f438d1f8727c04aad63b6",
+          "byte_length": 20121
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.css",
+          "upstream_sha256": "8f59bd46307f0fd8e02b7da8bb8179fc5ea8ccbfe885d622425e8064c2937491",
+          "byte_length": 410231
+        },
+        {
+          "upstream_path": "fedow_dashboard/static/material-dashbboard-bootsrap5-creativetim/material-dashboard.min.js",
+          "upstream_sha256": "8f267b0c5ab6ff8a51a4dcbc6ef88e31cc51a4fd6c76a573338a2e11580282fe",
+          "byte_length": 18516
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/asset/asset_card.html",
+          "upstream_sha256": "3b8017f31a9daa105ace1cba3c95233f47394013dba6ecaa68419b5cc0229d13",
+          "byte_length": 1332
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/asset/asset_transactions.html",
+          "upstream_sha256": "e3ad1a103deadc90805707d20b626b541b2607b38c3c294b57e7dd140e8914a4",
+          "byte_length": 35941
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/asset/asset_transactions_membership.html",
+          "upstream_sha256": "22bb454d47ee830f79590d2a0abfaab2d0dfe322afeed54536b947d5d102d21b",
+          "byte_length": 4992
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/asset/badgeuse.html",
+          "upstream_sha256": "03fc1ab34995e631c99edc634eb4e89dc3f8f492153bb57c4acb64a1bcd0b9d5",
+          "byte_length": 3741
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/base.html",
+          "upstream_sha256": "a92e7dcfe2458f43449aaebaf64fd5fe6593b5ce82b06e8e2e0cefa5652c7dba",
+          "byte_length": 2291
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/htmx/spinner.html",
+          "upstream_sha256": "3f275ada6513c6e0df8192e41b85925a5634e605a886eeb8b5a16c178574b1f5",
+          "byte_length": 1390
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/index.html",
+          "upstream_sha256": "022404aecf4256db57349db74eb2af6c3d400d0ed7ed9a289b88df29fa5d8429",
+          "byte_length": 952
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/index/index.html",
+          "upstream_sha256": "5a04f66aca7f8bc1285485dd7e821ce55ca720c8c88f60eaa246944df11bbdf6",
+          "byte_length": 13835
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/place/place.html",
+          "upstream_sha256": "a378150696601999a449127c96744b4e0ee278502585e8e79cf1cea3119c4dad",
+          "byte_length": 1324
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/place/place_card.html",
+          "upstream_sha256": "6debc6152bca41ea60fbb4e48decb75a34fdf2bad415c8c00874f97371b4c8b6",
+          "byte_length": 1545
+        },
+        {
+          "upstream_path": "fedow_dashboard/templates/tailwind/index.html",
+          "upstream_sha256": "1ca7bdedce211309b84a97c67c20c6f5ea570fba33984a64c8495398a26f164d",
+          "byte_length": 7882
+        },
+        {
+          "upstream_path": "fedow_dashboard/templatetags/__init__.py",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_length": 0
+        },
+        {
+          "upstream_path": "fedow_dashboard/templatetags/fedow_dashboard_tags.py",
+          "upstream_sha256": "33e14d4e1b66cf800989d2e0359224a7a27dff742d5b0fe35f03417050d2f901",
+          "byte_length": 680
+        },
+        {
+          "upstream_path": "fedow_dashboard/tests.py",
+          "upstream_sha256": "9ab6c6191360e63c1b4c9b5659aef348a743c9e078be68190917369e4e9563e8",
+          "byte_length": 60
+        },
+        {
+          "upstream_path": "fedow_dashboard/urls.py",
+          "upstream_sha256": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+          "byte_length": 404
+        },
+        {
+          "upstream_path": "fedow_dashboard/views.py",
+          "upstream_sha256": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+          "byte_length": 27645
+        }
+      ]
+    }
+  },
+  "original_audit_files_verified_unchanged": 40,
+  "runtime_inspection": {
+    "aws_account": "318629836660",
+    "region": "eu-west-3",
+    "profile": "gala-elevated",
+    "fresh_aws_verified": true,
+    "observed_at": "2026-10-09T08:57:40.820Z",
+    "scope": "Read-only current AWS metadata and SSM inventory on active Smoke; no restart/deploy/import/application action; stopped/offline hosts not inspected internally",
+    "active_gala": "gala-smoke",
+    "instances": [
+      {
+        "instance_id": "i-0801aa8a2273838aa",
+        "gala": "gala-am-aix",
+        "state": "running",
+        "ssm_status": "ConnectionLost",
+        "ssm_last_ping": "2026-10-06T01:09:39+02:00",
+        "public_ip": null,
+        "instance_type": "t3.medium"
+      },
+      {
+        "instance_id": "i-0037b98572fccdff2",
+        "gala": "gala-smoke",
+        "state": "running",
+        "ssm_status": "Online",
+        "ssm_last_ping": "2026-10-09T10:51:00.174000+02:00",
+        "public_ip": "51.44.90.200",
+        "instance_type": "t3.medium"
+      },
+      {
+        "instance_id": "i-00cb72994b875e92d",
+        "gala": "gala-premier-lancement-2026-10-05",
+        "state": "stopped",
+        "ssm_status": null,
+        "ssm_last_ping": null,
+        "public_ip": null,
+        "instance_type": "t3.medium"
+      },
+      {
+        "instance_id": "i-06c4a26b49ac45afa",
+        "gala": "gala-import-cartes-2026-10-07",
+        "state": "stopped",
+        "ssm_status": null,
+        "ssm_last_ping": null,
+        "public_ip": null,
+        "instance_type": "t3.medium"
+      },
+      {
+        "instance_id": "i-0824730d4d46b3673",
+        "gala": "gala-images-csv-2026-10-08",
+        "state": "stopped",
+        "ssm_status": null,
+        "ssm_last_ping": null,
+        "public_ip": null,
+        "instance_type": "t3.medium"
+      }
+    ],
+    "eips": [
+      {
+        "public_ip": "13.36.118.48",
+        "instance_id": null
+      },
+      {
+        "public_ip": "51.44.90.200",
+        "instance_id": "i-0037b98572fccdff2"
+      }
+    ],
+    "ssm_probe_command_id": "df51d8a9-0c7c-4b6d-afeb-df16dab31923",
+    "ssm_probe_status": "Success",
+    "active_runtime": {
+      "containers": [
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+          "image_id": "sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/backup",
+              "target": "/Backup",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/ssh",
+              "target": "/home/tibillet/.ssh",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/www",
+              "target": "/DjangoFiles/www",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/logs",
+              "target": "/DjangoFiles/logs",
+              "type": "bind"
+            }
+          ],
+          "name": "lespass_django",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend",
+            "GALA_APEX_TENANT": "1",
+            "GALA_LOCAL_FEDOW": "1",
+            "STRIPE_TEST": "1"
+          },
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+          "image_id": "sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/www",
+              "target": "/DjangoFiles/www",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/logs",
+              "target": "/DjangoFiles/logs",
+              "type": "bind"
+            }
+          ],
+          "name": "lespass_celery",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend",
+            "GALA_APEX_TENANT": "1",
+            "GALA_LOCAL_FEDOW": "1",
+            "STRIPE_TEST": "1"
+          },
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.release.yml",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:874ff20c258fca91ca7f2636cabc56e8abaf116b07c24130bb6e2e3f72fd9519",
+          "image_id": "sha256:874ff20c258fca91ca7f2636cabc56e8abaf116b07c24130bb6e2e3f72fd9519",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/www",
+              "target": "/DjangoFiles/www",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/logs",
+              "target": "/DjangoFiles/logs",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/backup",
+              "target": "/Backup",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/ssh",
+              "target": "/home/tibillet/.ssh",
+              "type": "bind"
+            }
+          ],
+          "name": "laboutik_django",
+          "native_base": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+          "restart_policy": "no",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend"
+          },
+          "source_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.release.yml",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:ad55fc17eac04784c83015430e280a40b467c0e48ba230db5442358f8656048f",
+          "image_id": "sha256:ad55fc17eac04784c83015430e280a40b467c0e48ba230db5442358f8656048f",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/logs",
+              "target": "/home/fedow/Fedow/logs",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/sqlite-database",
+              "target": "/home/fedow/Fedow/database",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/www",
+              "target": "/home/fedow/Fedow/www",
+              "type": "bind"
+            }
+          ],
+          "name": "fedow_django",
+          "native_base": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+          "restart_policy": "always",
+          "runtime_flags": {
+            "STRIPE_TEST": "1"
+          },
+          "source_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "nginx:latest",
+          "image_id": "sha256:f9ea18bfa4fad859e1ed38259d711da7ccad2c3516e875cec3351a57c859f571",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/logs",
+              "target": "/logs",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/nginx",
+              "target": "/etc/nginx/conf.d",
+              "type": "bind"
+            },
+            {
+              "rw": false,
+              "source": "/opt/tibillet-gala/repository/deploy/source/public",
+              "target": "/source",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/www",
+              "target": "/www",
+              "type": "bind"
+            }
+          ],
+          "name": "lespass_nginx",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "memcached:1.6",
+          "image_id": "sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171",
+          "mounts": [],
+          "name": "lespass_memcached",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.release.yml",
+          "image": "nginx",
+          "image_id": "sha256:f9ea18bfa4fad859e1ed38259d711da7ccad2c3516e875cec3351a57c859f571",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/www",
+              "target": "/DjangoFiles/www",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/logs",
+              "target": "/DjangoFiles/logs",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/nginx",
+              "target": "/etc/nginx/conf.d",
+              "type": "bind"
+            },
+            {
+              "rw": false,
+              "source": "/opt/tibillet-gala/repository/deploy/source/public",
+              "target": "/source",
+              "type": "bind"
+            }
+          ],
+          "name": "laboutik_nginx",
+          "native_base": null,
+          "restart_policy": "no",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.release.yml",
+          "image": "memcached:1.6",
+          "image_id": "sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171",
+          "mounts": [],
+          "name": "laboutik_memcached",
+          "native_base": null,
+          "restart_policy": "no",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.release.yml",
+          "image": "nginx:latest",
+          "image_id": "sha256:f9ea18bfa4fad859e1ed38259d711da7ccad2c3516e875cec3351a57c859f571",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/www",
+              "target": "/www",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/logs",
+              "target": "/logs",
+              "type": "bind"
+            },
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Fedow/nginx",
+              "target": "/etc/nginx/conf.d",
+              "type": "bind"
+            },
+            {
+              "rw": false,
+              "source": "/opt/tibillet-gala/repository/deploy/source/public",
+              "target": "/source",
+              "type": "bind"
+            }
+          ],
+          "name": "fedow_nginx",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Fedow/docker-compose.release.yml",
+          "image": "memcached:1.6",
+          "image_id": "sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171",
+          "mounts": [],
+          "name": "fedow_memcached",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "postgres:13-bookworm",
+          "image_id": "sha256:f0cffcc050a9f1f3c78a9968e221badc1cdd02e2ae15b1de9b12bee1ba5ea2db",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Lespass/database",
+              "target": "/var/lib/postgresql/data",
+              "type": "bind"
+            }
+          ],
+          "name": "lespass_postgres",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend",
+            "GALA_APEX_TENANT": "1",
+            "GALA_LOCAL_FEDOW": "1",
+            "STRIPE_TEST": "1"
+          },
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Lespass/docker-compose.release.yml",
+          "image": "redis:7.2.3-bookworm",
+          "image_id": "sha256:a7cee7c8178ff9b5297cb109e6240f5072cdaaafd775ce6b586c3c704b06458e",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/var/lib/docker/volumes/1688dba06146ca7c44a75d210eaebb8befa75a91ce0ae337f82b3c04fc8224ea/_data",
+              "target": "/data",
+              "type": "volume"
+            }
+          ],
+          "name": "lespass_redis",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.release.yml",
+          "image": "redis:6-alpine",
+          "image_id": "sha256:b362b5dff9d14d961dc3352db4776aba6a8c53ca2661d7c74ad2c121f82cdaea",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/var/lib/docker/volumes/5e6afcd60f27eea4ce75c57cd7e55928792fd449182c01cdbabe1e5cf380c7c7/_data",
+              "target": "/data",
+              "type": "volume"
+            }
+          ],
+          "name": "laboutik_redis",
+          "native_base": null,
+          "restart_policy": "no",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend"
+          },
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/Laboutik/docker-compose.release.yml",
+          "image": "postgres:11.5-alpine",
+          "image_id": "sha256:611cad554d4f491ed6a0379f3ea897b375646a7dddff786e9fb9e4d964d9f25c",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/Laboutik/database/data",
+              "target": "/var/lib/postgresql/data",
+              "type": "bind"
+            }
+          ],
+          "name": "laboutik_postgres",
+          "native_base": null,
+          "restart_policy": "no",
+          "runtime_flags": {
+            "EMAIL_BACKEND": "django.core.mail.backends.dummy.EmailBackend"
+          },
+          "source_commit": null,
+          "state": "running"
+        },
+        {
+          "compose_files": "/opt/tibillet-gala/repository/deploy/traefik/docker-compose.yml,/opt/tibillet-gala/repository/deploy/traefik/docker-compose.release.yml",
+          "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+          "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+          "mounts": [
+            {
+              "rw": true,
+              "source": "/opt/tibillet-gala/repository/deploy/traefik/acme.json",
+              "target": "/acme.json",
+              "type": "bind"
+            },
+            {
+              "rw": false,
+              "source": "/var/run/docker.sock",
+              "target": "/var/run/docker.sock",
+              "type": "bind"
+            }
+          ],
+          "name": "traefik",
+          "native_base": null,
+          "restart_policy": "always",
+          "runtime_flags": {},
+          "source_commit": null,
+          "state": "running"
+        }
+      ],
+      "markers": [
+        {
+          "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:ad55fc17eac04784c83015430e280a40b467c0e48ba230db5442358f8656048f",
+          "fork_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+          "gala_slug": "gala-smoke",
+          "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:874ff20c258fca91ca7f2636cabc56e8abaf116b07c24130bb6e2e3f72fd9519",
+          "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+          "path": "/var/lib/tibillet-gala/gala-smoke/releases/deployed-manifest.json",
+          "release_id": "smoke-cd677bb39cf7efcd43f55cd943d6177fb07cf1ba-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+          "stock_cards": 7020
+        }
+      ],
+      "repos": [
+        {
+          "head": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+          "root": "/opt/tibillet-gala/repository"
+        }
+      ],
+      "source_files": [
+        {
+          "container": "fedow_django",
+          "exit_code": 0,
+          "files": {
+            "/home/fedow/Fedow/fedow_core/management/commands/import_cards.py": "cf1217b46eacd7f8e85ef71c6c5e6df79ec6e03baeb422030e38dabc001c30a6",
+            "/home/fedow/Fedow/fedow_core/serializers.py": "9e7fe20e720d27cbbb7f2fbb859143fb47f99651d0ae572df7a1159c71d17d69",
+            "/home/fedow/Fedow/fedow_dashboard/urls.py": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+            "/home/fedow/Fedow/fedow_dashboard/views.py": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+            "/home/fedow/Fedow/fedowallet_django/settings.py": "f7b56e8be7e8f836ea7d8b728bfeb23837a29a55511d63a10ee6466dfb9a4b61",
+            "/home/fedow/Fedow/source_templates/admin/base_site.html": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf"
+          }
+        },
+        {
+          "container": "laboutik_django",
+          "exit_code": 0,
+          "files": {
+            "/DjangoFiles/Cashless/settings.py": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+            "/DjangoFiles/administration/management/commands/install.py": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+            "/DjangoFiles/fedow_connect/fedow_api.py": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+            "/DjangoFiles/htmxview/templates/appsettings/infos.html": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+            "/DjangoFiles/htmxview/templates/kiosk/base.html": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+            "/DjangoFiles/source_templates/admin/base_site.html": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+            "/DjangoFiles/webview/templates/login.html": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+            "/DjangoFiles/webview/validators.py": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e",
+            "/DjangoFiles/webview/views.py": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6"
+          }
+        },
+        {
+          "container": "lespass_django",
+          "exit_code": 0,
+          "files": {
+            "/DjangoFiles/BaseBillet/static/reunion/css/tibillet.css": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+            "/DjangoFiles/BaseBillet/static/reunion/js/membership-form.mjs": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+            "/DjangoFiles/BaseBillet/views_qr_card.py": "529bb8cdb5bf05e3dd018a52ac80a542badfb3dd535e0d9de1118d0c9fff32c7",
+            "/DjangoFiles/TiBillet/settings.py": "e33330e56c02307cb8e48e19f5689e8167cc1049b86672ec5bf6d8b849f9dc5c",
+            "/DjangoFiles/fedow_connect/fedow_api.py": "b1b084a33c8506569a41c28bf9d56e0f12ff4c35600c0b5d856c4a82d9af2a1b"
+          }
+        }
+      ],
+      "timers": {
+        "tibillet-gala-backup@gala-smoke.timer": "active",
+        "tibillet-gala-stacks@gala-smoke.service": "failed"
+      }
+    },
+    "source_file_checks": [
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/fedow_core/management/commands/import_cards.py",
+        "sha256": "cf1217b46eacd7f8e85ef71c6c5e6df79ec6e03baeb422030e38dabc001c30a6",
+        "matches_expected": true
+      },
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/fedow_core/serializers.py",
+        "sha256": "9e7fe20e720d27cbbb7f2fbb859143fb47f99651d0ae572df7a1159c71d17d69",
+        "matches_expected": true
+      },
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/fedow_dashboard/urls.py",
+        "sha256": "8a8b0f34b31dcf762b9d0b0bee19ea05e8138d8151384f169044f63f9996c77f",
+        "matches_expected": true
+      },
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/fedow_dashboard/views.py",
+        "sha256": "27fccbb1e5951318ad46d20759472fa77a9f688854a677065af690e01784343f",
+        "matches_expected": true
+      },
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/fedowallet_django/settings.py",
+        "sha256": "f7b56e8be7e8f836ea7d8b728bfeb23837a29a55511d63a10ee6466dfb9a4b61",
+        "matches_expected": true
+      },
+      {
+        "container": "fedow_django",
+        "path": "/home/fedow/Fedow/source_templates/admin/base_site.html",
+        "sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/Cashless/settings.py",
+        "sha256": "8f93e981bd84c8034f5a46d612ea63f9fb59be6c78cd3d38cdb0ce3322a16870",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/administration/management/commands/install.py",
+        "sha256": "ebd9153529da0dc0c51abedf8d93d3b98d7dbdca5b229df4c360680b05fb4588",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/fedow_connect/fedow_api.py",
+        "sha256": "42e00af1d1d87d0af69b6405e556f0dc71d1c9fdda85fef8fb8dd7e6f2687f19",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/htmxview/templates/appsettings/infos.html",
+        "sha256": "edd733d0bcede74e5a5d0c03f266233d5a88333ff2b927936b5c0a6c1afc7be4",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/htmxview/templates/kiosk/base.html",
+        "sha256": "74f0107decdba618f2e285466f0a09c8746d041709ba647571c8749618c7fedd",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/source_templates/admin/base_site.html",
+        "sha256": "421c54f6056486e49d3de7a0a2968671c4fc559fa1a82d27fe6222cce91047bf",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/webview/templates/login.html",
+        "sha256": "cc12372f8123bebd5a34fb315a98d642610124b8ddbfb8ce1e25bbb0aec5d79b",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/webview/validators.py",
+        "sha256": "f1abe26cd55c7cb56c9b74d85545ac52b3ae759e8eeae26f14d470c8ed251c9e",
+        "matches_expected": true
+      },
+      {
+        "container": "laboutik_django",
+        "path": "/DjangoFiles/webview/views.py",
+        "sha256": "e273051980473210bcb88a07d96ebbe4c668d8cd4385c4959267e2c7a0f963c6",
+        "matches_expected": true
+      },
+      {
+        "container": "lespass_django",
+        "path": "/DjangoFiles/BaseBillet/static/reunion/css/tibillet.css",
+        "sha256": "df6d8b66c2deea23fa0858d2893b9144b95f606507b98856a8fb43e6bf1d1d32",
+        "matches_expected": true
+      },
+      {
+        "container": "lespass_django",
+        "path": "/DjangoFiles/BaseBillet/static/reunion/js/membership-form.mjs",
+        "sha256": "a1010ef73c822907ca730a670c55f43b4530d9d84ce546c47eb8df5e8abd618f",
+        "matches_expected": true
+      },
+      {
+        "container": "lespass_django",
+        "path": "/DjangoFiles/BaseBillet/views_qr_card.py",
+        "sha256": "529bb8cdb5bf05e3dd018a52ac80a542badfb3dd535e0d9de1118d0c9fff32c7",
+        "matches_expected": true
+      },
+      {
+        "container": "lespass_django",
+        "path": "/DjangoFiles/TiBillet/settings.py",
+        "sha256": "e33330e56c02307cb8e48e19f5689e8167cc1049b86672ec5bf6d8b849f9dc5c",
+        "matches_expected": true
+      },
+      {
+        "container": "lespass_django",
+        "path": "/DjangoFiles/fedow_connect/fedow_api.py",
+        "sha256": "b1b084a33c8506569a41c28bf9d56e0f12ff4c35600c0b5d856c4a82d9af2a1b",
+        "matches_expected": true
+      }
+    ],
+    "application_sources_covered_by_mount": false,
+    "mount_counts": {
+      "real": 31,
+      "bind": 29,
+      "redis_implicit_volume": 2
+    },
+    "live_uploaded_stock_checks": [
+      {
+        "key": "card-stock/uploads/1/gala-am-G1.csv",
+        "generation": 1,
+        "sha256": "de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567",
+        "matches_tested_stock": true,
+        "rows": 3510,
+        "size": 308880
+      },
+      {
+        "key": "card-stock/uploads/2/white.csv",
+        "generation": 2,
+        "sha256": "bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab",
+        "matches_tested_stock": true,
+        "rows": 1755,
+        "size": 154440
+      },
+      {
+        "key": "card-stock/uploads/3/black.csv",
+        "generation": 3,
+        "sha256": "7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461",
+        "matches_tested_stock": true,
+        "rows": 1755,
+        "size": 154440
+      }
+    ],
+    "latest_smoke_backup": {
+      "id": "20261009T061545Z",
+      "objects": [
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/SHA256SUMS",
+          "Size": 343,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/fedow.sqlite3-shm",
+          "Size": 32768,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/fedow.sqlite3-wal",
+          "Size": 0,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/fedow.sqlite3.gz",
+          "Size": 970547,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/laboutik_postgres.sql.gz",
+          "Size": 33550,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/lespass_postgres.sql.gz",
+          "Size": 578671,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        },
+        {
+          "Key": "galas/gala-smoke/postgres/20261009T061545Z/metadata.txt",
+          "Size": 303,
+          "LastModified": "2026-10-09T06:15:52+00:00"
+        }
+      ],
+      "contents_not_restored_in_this_audit": true
+    },
+    "systemd_status": {
+      "Result": "exit-code",
+      "ExecMainStartTimestamp": "Fri 2026-09-25 17:16:13 UTC",
+      "ExecMainExitTimestamp": "Fri 2026-09-25 17:16:15 UTC",
+      "ExecMainCode": "1",
+      "ExecMainStatus": "254",
+      "ActiveState": "failed",
+      "SubState": "failed",
+      "FragmentPath": "/etc/systemd/system/tibillet-gala-stacks@.service",
+      "UnitFileState": "enabled",
+      "journal_keyword_counts": {
+        "backup": 0,
+        "manifest": 0,
+        "locked": 0,
+        "healthcheck": 0,
+        "free space": 0,
+        "SQLite": 0,
+        "apex": 0,
+        "refill": 0,
+        "permission": 0,
+        "Failed": 4,
+        "ERROR": 2,
+        "No such file": 0,
+        "Traceback": 0
+      },
+      "recognized_failures": []
+    },
+    "pipelines": [
+      {
+        "name": "tibillet-gala-paris-production-test",
+        "stages": [
+          {
+            "name": "Source",
+            "pipelineExecutionId": "5f4701fb-543a-40d8-8097-bcacce590b0d",
+            "status": "Succeeded"
+          },
+          {
+            "name": "BuildAndPublishCandidate",
+            "pipelineExecutionId": "5f4701fb-543a-40d8-8097-bcacce590b0d",
+            "status": "Succeeded"
+          },
+          {
+            "name": "DeploySmoke",
+            "pipelineExecutionId": "5f4701fb-543a-40d8-8097-bcacce590b0d",
+            "status": "Succeeded"
+          }
+        ]
+      },
+      {
+        "name": "tibillet-gala-paris-production-production-gala-am-aix",
+        "stages": [
+          {
+            "name": "Source",
+            "pipelineExecutionId": "dbec3ba1-5ea6-49ae-9baf-f160f0202636",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ValidatePromotion",
+            "pipelineExecutionId": "dbec3ba1-5ea6-49ae-9baf-f160f0202636",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ApprovePromotion",
+            "pipelineExecutionId": "dbec3ba1-5ea6-49ae-9baf-f160f0202636",
+            "status": "Succeeded"
+          },
+          {
+            "name": "DeployExactManifest",
+            "pipelineExecutionId": "dbec3ba1-5ea6-49ae-9baf-f160f0202636",
+            "status": "Succeeded"
+          }
+        ]
+      },
+      {
+        "name": "tibillet-gala-paris-production-production-gala-images-csv-2026-10-08",
+        "stages": [
+          {
+            "name": "Source",
+            "pipelineExecutionId": "95aac80f-ebe6-4883-b611-c364b9b1f936",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ValidatePromotion",
+            "pipelineExecutionId": "95aac80f-ebe6-4883-b611-c364b9b1f936",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ApprovePromotion",
+            "pipelineExecutionId": "95aac80f-ebe6-4883-b611-c364b9b1f936",
+            "status": "Succeeded"
+          },
+          {
+            "name": "DeployExactManifest",
+            "pipelineExecutionId": "95aac80f-ebe6-4883-b611-c364b9b1f936",
+            "status": "Succeeded"
+          }
+        ]
+      },
+      {
+        "name": "tibillet-gala-paris-production-production-gala-premier-lancement-2026-10-05",
+        "stages": [
+          {
+            "name": "Source",
+            "pipelineExecutionId": "1fb9ed8a-3e60-4dc7-8da6-61d6b527bfd9",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ValidatePromotion",
+            "pipelineExecutionId": "1fb9ed8a-3e60-4dc7-8da6-61d6b527bfd9",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ApprovePromotion",
+            "pipelineExecutionId": "1fb9ed8a-3e60-4dc7-8da6-61d6b527bfd9",
+            "status": "Succeeded"
+          },
+          {
+            "name": "DeployExactManifest",
+            "pipelineExecutionId": "1fb9ed8a-3e60-4dc7-8da6-61d6b527bfd9",
+            "status": "Succeeded"
+          }
+        ]
+      },
+      {
+        "name": "tibillet-gala-paris-production-production-gala-import-cartes-2026-10-07",
+        "stages": [
+          {
+            "name": "Source",
+            "pipelineExecutionId": "e4e79da6-d562-4692-bda6-ce7123027c52",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ValidatePromotion",
+            "pipelineExecutionId": "e4e79da6-d562-4692-bda6-ce7123027c52",
+            "status": "Succeeded"
+          },
+          {
+            "name": "ApprovePromotion",
+            "pipelineExecutionId": "e4e79da6-d562-4692-bda6-ce7123027c52",
+            "status": "Succeeded"
+          },
+          {
+            "name": "DeployExactManifest",
+            "pipelineExecutionId": "e4e79da6-d562-4692-bda6-ce7123027c52",
+            "status": "Succeeded"
+          }
+        ]
+      }
+    ],
+    "aix_last_delivered_manifest": {
+      "application_repository": "Rezal-KIN/Tibillet",
+      "fedow_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "fork_commit": "3cfd531b4ca3c9953f27ca06b2391cadcf33db00",
+      "gala_slug": "gala-am-aix",
+      "laboutik_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:6a2f68b089380b25480f10254c675a20ede1a5b61a4cb0b9e55d8227521e0c2a",
+      "platform": "v1",
+      "release_id": "gala-am-aix-v1.0.11",
+      "schema_generation": "v1",
+      "tibillet_upstream_commit": "3cfd531b4ca3c9953f27ca06b2391cadcf33db00",
+      "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+    },
+    "aix_last_delivered_code_mounts": [
+      {
+        "component": "Fedow",
+        "declaration": "- ./settings.py:/home/fedow/Fedow/fedowallet_django/settings.py"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_core/serializers.py:/home/fedow/Fedow/fedow_core/serializers.py"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/urls.py:/home/fedow/Fedow/fedow_dashboard/urls.py"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/views.py:/home/fedow/Fedow/fedow_dashboard/views.py"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/index.html:/home/fedow/Fedow/fedow_dashboard/templates/index/index.html"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/suivi.html:/home/fedow/Fedow/fedow_dashboard/templates/index/suivi.html"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/base.html:/home/fedow/Fedow/fedow_dashboard/templates/base.html:ro"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ./custom_patches/fedow_dashboard/public_index.html:/home/fedow/Fedow/fedow_dashboard/templates/index.html:ro"
+      },
+      {
+        "component": "Fedow",
+        "declaration": "- ../source/admin-templates:/home/fedow/Fedow/source_templates:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./settings.py:/DjangoFiles/Cashless/settings.py"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./install.py:/DjangoFiles/administration/management/commands/install.py:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./source_templates/login.html:/DjangoFiles/webview/templates/login.html:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./source_templates/kiosk_base.html:/DjangoFiles/htmxview/templates/kiosk/base.html:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./source_templates/infos.html:/DjangoFiles/htmxview/templates/appsettings/infos.html:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ../source/admin-templates:/DjangoFiles/source_templates:ro"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./views.py:/DjangoFiles/webview/views.py"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./fedow_api.py:/DjangoFiles/fedow_connect/fedow_api.py"
+      },
+      {
+        "component": "Laboutik",
+        "declaration": "- ./validators.py:/DjangoFiles/webview/validators.py"
+      }
+    ],
+    "aix_live_internal_inspection_possible": false,
+    "limitations": [
+      "Aix running but SSM ConnectionLost and no public IPv4; current Docker state not inspected",
+      "Three stopped Galas left stopped; current internal state not inspected",
+      "Last-delivered Aix manifest/source comparison does not prove current Docker mounts",
+      "No real Stripe payment, email, physical reader, password submission or new import exercised",
+      "Systemd stacks failure dates to 2026-09-25; current containers running, boot path not rerun",
+      "S3 latest-backup object presence is not a new restore drill"
+    ],
+    "last_known_new_gala_receipt": {
+      "gala_slug": "gala-images-csv-2026-10-08",
+      "gala_instance_id": "i-0824730d4d46b3673",
+      "application_commit": "9bece97e3303a89bff04eacd115e920311c63405",
+      "delivery_main_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+      "foundation_execution": "9e7e8677-6aa2-4285-b2ed-e302fac9b5c9",
+      "test_execution": "a6208210-d3d0-4b78-b0b7-2720c28f9a36",
+      "production_execution": "95aac80f-ebe6-4883-b611-c364b9b1f936",
+      "stock": {
+        "lots": 3,
+        "cards": 7020,
+        "created_first_boot": 7020,
+        "second_check_created": 0
+      },
+      "unknown_nfc_paths_tested": 2,
+      "unknown_nfc_cards_retained": 2,
+      "positive_balances_new_gala": 0,
+      "code_files_baked_and_checked": 10,
+      "no_code_file_volume_mounts": true,
+      "qr_lots_checked": 3,
+      "admin_forms_checked": 3,
+      "backups": {
+        "initial": "20261008T130009Z",
+        "checksum_and_sqlite_integrity_verified": true,
+        "postgres_isolated_restore_tables": {
+          "laboutik": 59,
+          "lespass": 180
+        },
+        "fedow_sqlite_isolated_restore_verified": true
+      },
+      "new_gala_final_state": "stopped",
+      "old_galas_and_volumes_preserved": true,
+      "active_gala": "gala-smoke",
+      "shared_eip_unchanged": true,
+      "real_payment_performed": false,
+      "real_email_sent_in_test": false,
+      "physical_reader_used_in_new_test": false,
+      "last_main_test_execution": "5f4701fb-543a-40d8-8097-bcacce590b0d",
+      "last_main_test_status": "Succeeded",
+      "last_main_stock_matches_first_test": true
+    }
+  },
+  "audit_outputs": {
+    "report": "2026-10-09-differences-vanilla.md",
+    "file_inventory": "2026-10-09-differences-vanilla-fichiers.tsv",
+    "code_diff": "2026-10-09-differences-vanilla-code.diff",
+    "file_inventory_sha256": "ddeace05f8d37866df68ed0e6363040b2c93dad2b0035c10f523754a162a0681",
+    "code_diff_sha256": "93871d835c300dbf0b4e52dbed191f2fee1aeeb06c0c70205234945d65bcacb2"
+  }
+}

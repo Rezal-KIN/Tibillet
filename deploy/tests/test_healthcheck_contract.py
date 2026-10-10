@@ -23,7 +23,9 @@ class HealthcheckContractTests(unittest.TestCase):
                 "#!/bin/sh\n"
                 "case \"$1\" in\n"
                 "  inspect) printf '%s\\n' \"$MOCK_CELERY_RUNNING\" ; exit 0 ;;\n"
-                "  exec) [ \"$MOCK_CELERY_PING\" = true ] ; exit $? ;;\n"
+                "  exec) if [ \"$2\" = lespass_celery ] && [ \"$3\" = curl ]; then\n"
+                "          [ \"$MOCK_WORKER_FEDOW\" = true ]; exit $?; fi\n"
+                "        [ \"$MOCK_CELERY_PING\" = true ] ; exit $? ;;\n"
                 "esac\nexit 2\n",
                 encoding="utf-8",
             )
@@ -51,18 +53,20 @@ class HealthcheckContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
             env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
-            for running, ping, admin, domain, expected_success in (
-                ("false", "false", "true", "true", False),
-                ("true", "false", "true", "true", False),
-                ("true", "true", "false", "true", False),
-                ("true", "true", "true", "false", False),
-                ("true", "true", "true", "true", True),
+            for running, ping, admin, domain, worker_fedow, expected_success in (
+                ("false", "false", "true", "true", "true", False),
+                ("true", "false", "true", "true", "true", False),
+                ("true", "true", "false", "true", "true", False),
+                ("true", "true", "true", "false", "true", False),
+                ("true", "true", "true", "true", "false", False),
+                ("true", "true", "true", "true", "true", True),
             ):
                 with self.subTest(running=running, ping=ping, admin=admin, domain=domain):
                     result = subprocess.run(
                         ["bash", str(HEALTHCHECK), str(config)],
                         env={**env, "MOCK_CELERY_RUNNING": running, "MOCK_CELERY_PING": ping,
-                             "MOCK_ADMIN_READY": admin, "MOCK_REFILL_DOMAIN_READY": domain},
+                             "MOCK_ADMIN_READY": admin, "MOCK_REFILL_DOMAIN_READY": domain,
+                             "MOCK_WORKER_FEDOW": worker_fedow},
                         text=True,
                         capture_output=True,
                         check=False,

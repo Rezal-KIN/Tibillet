@@ -1,0 +1,1669 @@
+diff --git a/Administration/admin/dashboard.py b/Administration/admin/dashboard.py
+index dfff2987..29302e90 100644
+--- a/Administration/admin/dashboard.py
++++ b/Administration/admin/dashboard.py
+@@ -70,6 +70,12 @@ def get_sidebar_navigation(request):
+                     "link": reverse_lazy("staff_admin:AuthBillet_humanuser_changelist"),
+                     "permission": admin_permission,
+                 },
++                # AM-Rezal source offer, 2026-10-03 (GNU AGPLv3).
++                {
++                    "title": _("Code source de cette instance — AGPLv3"),
++                    "icon": "code",
++                    "link": "/source/",
++                },
+                 # This menu option is here only for debug purpose
+                 # {
+                 #     "title": _("Produit"),
+diff --git a/Administration/admin/site.py b/Administration/admin/site.py
+index 122240bc..e30ebdaf 100644
+--- a/Administration/admin/site.py
++++ b/Administration/admin/site.py
+@@ -1,4 +1,5 @@
+ import logging
++import os
+ 
+ from django.contrib import messages
+ from django.db import models
+@@ -28,11 +29,12 @@ def sanitize_textfields(instance: models.Model) -> None:
+ 
+ class StaffAdminSite(UnfoldAdminSite):
+     def login(self, request, extra_context=None):
+-        """
+-        Redirect admin login to the root URL for better security.
+-        """
++        # Gala administrators can use Django's password login as well as the
++        # existing email flow. Other TiBillet installations keep email login.
++        if os.environ.get('GALA_APEX_TENANT') == '1':
++            return super().login(request, extra_context=extra_context)
+         messages.add_message(request, messages.WARNING, _("Please login to access this page."))
+-        return HttpResponseRedirect('/')
++        return HttpResponseRedirect('/?login=1')
+ 
+     def has_permission(self, request):
+         return TenantAdminPermissionWithRequest(request)
+diff --git a/Administration/management/commands/configure_gala_apex.py b/Administration/management/commands/configure_gala_apex.py
+new file mode 100644
+index 00000000..1b9386f0
+--- /dev/null
++++ b/Administration/management/commands/configure_gala_apex.py
+@@ -0,0 +1,66 @@
++"""Assign the shared public hostname to this Gala's Lespass tenant.
++
++The upstream installer gives the apex to the generic public tenant. Gala
++deployments use the apex for their event/QR site instead. Run this command
++after ``install`` on *every* release so fresh and existing Galas converge.
++"""
++
++import os
++
++from django.core.management.base import BaseCommand, CommandError
++from django.db import transaction
++from django.utils.text import slugify
++
++from Customers.models import Client, Domain
++
++
++class Command(BaseCommand):
++    help = 'Idempotently route the shared Lespass apex to the Gala tenant'
++
++    def add_arguments(self, parser):
++        parser.add_argument('--check', action='store_true', help='Verify without changing domains')
++
++    def handle(self, *args, **options):
++        if os.environ.get('GALA_APEX_TENANT') != '1':
++            raise CommandError('GALA_APEX_TENANT=1 is required')
++        domain = os.environ.get('DOMAIN', '').strip().lower()
++        subdomain = slugify(os.environ.get('SUB', ''))
++        if not domain or not subdomain or '.' in subdomain or '/' in domain:
++            raise CommandError('DOMAIN and SUB must identify one Gala')
++
++        with transaction.atomic():
++            try:
++                public = Client.objects.get(schema_name='public', categorie=Client.ROOT)
++                gala = Client.objects.get(schema_name=subdomain, categorie=Client.SALLE_SPECTACLE)
++                apex = Domain.objects.select_for_update().get(domain=domain)
++                www = Domain.objects.select_for_update().get(domain=f'www.{domain}', tenant=public)
++                first = Domain.objects.select_for_update().get(
++                    domain=f'{subdomain}.{domain}', tenant=gala,
++                )
++            except (Client.DoesNotExist, Domain.DoesNotExist) as error:
++                raise CommandError('Gala tenant or expected domains are missing') from error
++
++            if apex.tenant_id not in (public.pk, gala.pk):
++                raise CommandError('apex is owned by an unexpected tenant')
++
++            if options.get('check'):
++                if not (apex.tenant_id == gala.pk and apex.is_primary
++                        and www.is_primary and not first.is_primary):
++                    raise CommandError('Gala apex does not route to the Gala tenant')
++                self.stdout.write(self.style.SUCCESS(f'Gala apex verified: {domain} -> {subdomain}'))
++                return
++
++            # Preserve a primary address for the internal public tenant, while
++            # making QR redirects and magic-link emails resolve to the apex.
++            if not www.is_primary:
++                www.is_primary = True
++                www.save(update_fields=['is_primary'])
++            if first.is_primary:
++                first.is_primary = False
++                first.save(update_fields=['is_primary'])
++            if apex.tenant_id != gala.pk or not apex.is_primary:
++                apex.tenant = gala
++                apex.is_primary = True
++                apex.save(update_fields=['tenant', 'is_primary'])
++
++        self.stdout.write(self.style.SUCCESS(f'Gala apex reconciled: {domain} -> {subdomain}'))
+diff --git a/Administration/management/commands/configure_gala_refill.py b/Administration/management/commands/configure_gala_refill.py
+new file mode 100644
+index 00000000..aabbda86
+--- /dev/null
++++ b/Administration/management/commands/configure_gala_refill.py
+@@ -0,0 +1,59 @@
++"""Keep the QR-card refill action visible on every deployed Gala.
++
++Gala cashless refills use Fedow's shared Stripe account, not Lespass ticket
++payouts. Lespass otherwise hides the action when no Connect payout account is
++configured. Run after Fedow credentials have been reconciled on each release.
++"""
++
++import os
++
++from django.core.management.base import BaseCommand, CommandError
++from django.db import transaction
++from django.utils.text import slugify
++from django_tenants.utils import tenant_context
++
++from BaseBillet.models import Configuration
++from Customers.models import Client
++
++
++class Command(BaseCommand):
++    help = 'Idempotently enable the Gala QR-card refill action'
++
++    def add_arguments(self, parser):
++        parser.add_argument('--check', action='store_true', help='Verify without changing configuration')
++
++    def handle(self, *args, **options):
++        if os.environ.get('GALA_APEX_TENANT') != '1':
++            raise CommandError('GALA_APEX_TENANT=1 is required')
++        subdomain = slugify(os.environ.get('SUB', ''))
++        if not subdomain or subdomain != os.environ.get('SUB'):
++            raise CommandError('SUB must identify one Gala tenant')
++        stripe_test = os.environ.get('STRIPE_TEST')
++        if stripe_test not in {'0', '1'}:
++            raise CommandError('STRIPE_TEST must be 0 or 1')
++        mode = 'test' if stripe_test == '1' else 'live'
++        key_name = 'STRIPE_KEY_TEST' if mode == 'test' else 'STRIPE_KEY'
++        webhook_name = 'STRIPE_ENDPOINT_SECRET_TEST' if mode == 'test' else 'STRIPE_ENDPOINT_SECRET'
++        if not (os.environ.get(key_name, '').startswith(f'sk_{mode}_')
++                and os.environ.get(webhook_name, '').startswith('whsec_')):
++            raise CommandError('Gala Stripe credentials are missing or invalid')
++
++        try:
++            gala = Client.objects.get(schema_name=subdomain, categorie=Client.SALLE_SPECTACLE)
++        except Client.DoesNotExist as error:
++            raise CommandError('Gala tenant is missing') from error
++
++        with tenant_context(gala), transaction.atomic():
++            config = Configuration.get_solo()
++            if config.hide_refill_button:
++                raise CommandError('Gala refill is explicitly hidden; refusing to override it')
++            if options.get('check'):
++                if not (config.force_show_refill_button and config.show_refill_button()):
++                    raise CommandError('Gala QR-card refill is not visible')
++                self.stdout.write(self.style.SUCCESS('Gala QR-card refill verified'))
++                return
++            if not config.force_show_refill_button:
++                config.force_show_refill_button = True
++                config.save(update_fields=['force_show_refill_button'])
++
++        self.stdout.write(self.style.SUCCESS('Gala QR-card refill ready'))
+diff --git a/AuthBillet/utils.py b/AuthBillet/utils.py
+index c9986e20..e21dcaba 100644
+--- a/AuthBillet/utils.py
++++ b/AuthBillet/utils.py
+@@ -25,7 +25,7 @@ def get_client_ip(request):
+ 
+ 
+ 
+-def sender_mail_connect(email, subject_mail=None, next_url=None):
++def sender_mail_connect(email, subject_mail=None, next_url=None, template=None):
+     # Mail de confirmation de création de compte
+     try :
+         base_url = connection.tenant.get_primary_domain().domain
+@@ -47,7 +47,8 @@ def sender_mail_connect(email, subject_mail=None, next_url=None):
+         #   Outside a transaction (public views), the callback runs immediately.
+         transaction.on_commit(
+             lambda: connexion_celery_mailer.delay(
+-                email, f"https://{base_url}", subject_mail, next_url=next_url
++                email, f"https://{base_url}", subject_mail,
++                template=template, next_url=next_url
+             )
+         )
+     except Exception as e:
+@@ -60,6 +61,7 @@ def get_or_create_user(email: str,
+                        send_mail=True,
+                        force_mail=False,
+                        next_url=None,
++                       return_created=False,
+                        ) -> "TibilletUser" or None:
+     """
+     If user not created, set it inactive.
+@@ -103,7 +105,7 @@ def get_or_create_user(email: str,
+     else:
+         if user.email_error:
+             logger.info("utilisateur n'a pas un email valide")
+-            return None
++            return (None, False) if return_created else None
+ 
+         if force_mail:
+             sender_mail_connect(user.email, next_url=next_url)
+@@ -114,7 +116,5 @@ def get_or_create_user(email: str,
+                 logger.info("utilisateur est inactif, il n'a pas encore validé son mail, on lance le mail de validation")
+                 sender_mail_connect(user.email, next_url=next_url)
+ 
+-    return user
+-
+-
++    return (user, created) if return_created else user
+ 
+diff --git a/BaseBillet/static/reunion/css/tibillet.css b/BaseBillet/static/reunion/css/tibillet.css
+index 201464f7..d7302576 100644
+--- a/BaseBillet/static/reunion/css/tibillet.css
++++ b/BaseBillet/static/reunion/css/tibillet.css
+@@ -1,3 +1,11 @@
++@font-face {
++    font-family: "DM Serif Text";
++    font-style: normal;
++    font-weight: 400;
++    font-display: swap;
++    src: url('../font/dm-serif-text/dm-serif-text.ttf') format('truetype');
++}
++
+ @font-face {
+     font-family: 'luciole';
+     src: url('../font/luciole/luciole.woff2') format('woff2');
+@@ -41,27 +49,139 @@ a {
+     color: inherit;
+ }
+ 
++/* Hide memberships entry points on public site */
++a[href="/memberships/"],
++a[href^="/memberships/"] {
++    display: none !important;
++}
++
++/* Hide agenda entry points on public site */
++a[href="/event/"],
++a[href^="/event/"] {
++    display: none !important;
++}
++
+ body {
+-    font-family: luciole, sans-serif;
++    font-family: "DM Serif Text", serif !important;
++    background-color: #021244 !important;
++}
++
++h1, h2, h3, h4, h5, h6,
++.navbar .nav-link, .navbar .navbar-brand,
++.btn, .badge {
++    font-family: "DM Serif Text", serif !important;
+ }
+ 
+ .display-1 {
+-    font-family: Playwrite IS, serif;
++    font-family: "DM Serif Text", serif;
+ }
+ 
+ .navbar {
+     padding-block: 20px;
++    background-color: #021244 !important;
++    color: #ffffff !important;
+ 
+     .badge {
+-        font-family: luciole, sans-serif;
++        font-family: "DM Serif Text", serif;
+         font-size: var(--bs-badge-font-size);
+     }
+ 
+     .nav-link, .navbar-brand {
+-        font: 20px staatliches, sans-serif;
++        font: 20px "DM Serif Text", serif;
+     }
+ }
+ 
++.navbar .nav-link,
++.navbar .navbar-brand,
++.navbar .navbar-toggler,
++.navbar .navbar-toggler-icon,
++.navbar .dropdown-toggle,
++.navbar .dropdown-item,
++.navbar .btn,
++.navbar .bi {
++    color: #ffffff !important;
++}
++
++.navbar .navbar-brand-logo {
++    height: 64px;
++    width: auto;
++    display: inline-block;
++    vertical-align: middle;
++}
++
++/* Mobile hamburger menu: keep labels readable on dark navbar */
++.navbar .navbar-collapse,
++.navbar .navbar-collapse .nav-link,
++.navbar .navbar-collapse .dropdown-toggle,
++.navbar .navbar-collapse .btn,
++.navbar .navbar-collapse .bi {
++    color: #ffffff !important;
++}
++
++.navbar .navbar-toggler {
++    border-color: rgba(255, 255, 255, 0.65) !important;
++}
++
++.navbar .navbar-toggler-icon {
++    filter: invert(1) brightness(1.6);
++}
++
++/* Account page tweaks: hide memberships/bookings entries and improve contrast */
++main.container-lg a[href="/my_account/membership/"],
++main.container-lg a[href="/my_account/my_reservations/"] {
++    display: none !important;
++}
++
++/* Collapse bootstrap grid columns that contain hidden account entries */
++main.container-lg .row > .col:has(> a[href="/my_account/membership/"]),
++main.container-lg .row > .col:has(> a[href="/my_account/my_reservations/"]) {
++    display: none !important;
++}
++
++main.container-lg,
++main.container-lg .lead,
++main.container-lg p,
++main.container-lg span,
++main.container-lg code,
++main.container-lg .btn,
++main.container-lg .btn i,
++main.container-lg .btn span {
++    color: #ffffff !important;
++}
++
++/* Home central card contrast */
++.home-bg h1.display-1,
++.home-bg p.lead,
++.home-bg p.lead.fs-4,
++.home-bg .text-white {
++    color: #111111 !important;
++}
++
++/* Account content readability: keep descriptive texts dark inside light cards */
++main.container-lg .card .lead,
++main.container-lg .card .text-muted,
++main.container-lg .card p,
++main.container-lg .card .card-text,
++main.container-lg .card h1,
++main.container-lg .card h2,
++main.container-lg .card h3,
++main.container-lg .card h4,
++main.container-lg .card h5,
++main.container-lg .card h6 {
++    color: #111111 !important;
++}
++
++/* Wallet details block: white panel with dark table text */
++main.container-lg .table,
++main.container-lg .table thead,
++main.container-lg .table tbody,
++main.container-lg .table tr,
++main.container-lg .table th,
++main.container-lg .table td {
++    background-color: #ffffff !important;
++    color: #111111 !important;
++}
++
+ .table th, .table td {
+ 	padding: 1rem;
+ 	background: none;
+diff --git a/BaseBillet/static/reunion/font/dm-serif-text/OFL.txt b/BaseBillet/static/reunion/font/dm-serif-text/OFL.txt
+new file mode 100644
+index 00000000..be384f0e
+--- /dev/null
++++ b/BaseBillet/static/reunion/font/dm-serif-text/OFL.txt
+@@ -0,0 +1,93 @@
++Copyright 2014-2018 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries. Copyright 2019 Google LLC.
++
++This Font Software is licensed under the SIL Open Font License, Version 1.1.
++
++This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
++
++
++-----------------------------------------------------------
++SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
++-----------------------------------------------------------
++
++PREAMBLE
++The goals of the Open Font License (OFL) are to stimulate worldwide
++development of collaborative font projects, to support the font creation
++efforts of academic and linguistic communities, and to provide a free and
++open framework in which fonts may be shared and improved in partnership
++with others.
++
++The OFL allows the licensed fonts to be used, studied, modified and
++redistributed freely as long as they are not sold by themselves. The
++fonts, including any derivative works, can be bundled, embedded,
++redistributed and/or sold with any software provided that any reserved
++names are not used by derivative works. The fonts and derivatives,
++however, cannot be released under any other type of license. The
++requirement for fonts to remain under this license does not apply
++to any document created using the fonts or their derivatives.
++
++DEFINITIONS
++"Font Software" refers to the set of files released by the Copyright
++Holder(s) under this license and clearly marked as such. This may
++include source files, build scripts and documentation.
++
++"Reserved Font Name" refers to any names specified as such after the
++copyright statement(s).
++
++"Original Version" refers to the collection of Font Software components as
++distributed by the Copyright Holder(s).
++
++"Modified Version" refers to any derivative made by adding to, deleting,
++or substituting -- in part or in whole -- any of the components of the
++Original Version, by changing formats or by porting the Font Software to a
++new environment.
++
++"Author" refers to any designer, engineer, programmer, technical
++writer or other person who contributed to the Font Software.
++
++PERMISSION & CONDITIONS
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of the Font Software, to use, study, copy, merge, embed, modify,
++redistribute, and sell modified and unmodified copies of the Font
++Software, subject to the following conditions:
++
++1) Neither the Font Software nor any of its individual components,
++in Original or Modified Versions, may be sold by itself.
++
++2) Original or Modified Versions of the Font Software may be bundled,
++redistributed and/or sold with any software, provided that each copy
++contains the above copyright notice and this license. These can be
++included either as stand-alone text files, human-readable headers or
++in the appropriate machine-readable metadata fields within text or
++binary files as long as those fields can be easily viewed by the user.
++
++3) No Modified Version of the Font Software may use the Reserved Font
++Name(s) unless explicit written permission is granted by the corresponding
++Copyright Holder. This restriction only applies to the primary font name as
++presented to the users.
++
++4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
++Software shall not be used to promote, endorse or advertise any
++Modified Version, except to acknowledge the contribution(s) of the
++Copyright Holder(s) and the Author(s) or with their explicit written
++permission.
++
++5) The Font Software, modified or unmodified, in part or in whole,
++must be distributed entirely under this license, and must not be
++distributed under any other license. The requirement for fonts to
++remain under this license does not apply to any document created
++using the Font Software.
++
++TERMINATION
++This license becomes null and void if any of the above conditions are
++not met.
++
++DISCLAIMER
++THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
++OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
++COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
++DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
++OTHER DEALINGS IN THE FONT SOFTWARE.
+diff --git a/BaseBillet/static/reunion/font/dm-serif-text/dm-serif-text.ttf b/BaseBillet/static/reunion/font/dm-serif-text/dm-serif-text.ttf
+new file mode 100644
+index 00000000..a8adbe2a
+Binary files /dev/null and b/BaseBillet/static/reunion/font/dm-serif-text/dm-serif-text.ttf differ
+diff --git a/BaseBillet/static/reunion/img/GALA-SOURCES.md b/BaseBillet/static/reunion/img/GALA-SOURCES.md
+new file mode 100644
+index 00000000..5a99492f
+--- /dev/null
++++ b/BaseBillet/static/reunion/img/GALA-SOURCES.md
+@@ -0,0 +1,16 @@
++# Assets Gala embarqués
++
++Le logo provient du site public du Gala :
++https://galas-am-aix.com/wp-content/uploads/2025/08/Logo-Video-seul-copie.png
++Téléchargé le 5 octobre 2026, puis converti en WebP sans perte, sans changement
++de dimensions ou de transparence. Il remplace une référence vers un fichier
++absent du dépôt et renvoyant HTTP 404 sur l'instance.
++
++La police `../font/dm-serif-text/dm-serif-text.ttf` est DM Serif Text Regular :
++https://github.com/google/fonts/blob/main/ofl/dmseriftext/DMSerifText-Regular.ttf
++Blob Git vérifié : `a8adbe2a9b66c477841e52fd69c96934263f0873`.
++Sa licence originale SIL Open Font License est conservée dans le même dossier.
++
++Les CSS et JavaScript Gala sont désormais dans les sources `BaseBillet/static`
++collectées normalement par `collectstatic`. Aucune copie manuelle après le
++premier démarrage n'est requise.
+diff --git a/BaseBillet/static/reunion/img/logo.webp b/BaseBillet/static/reunion/img/logo.webp
+new file mode 100644
+index 00000000..f7a938cf
+Binary files /dev/null and b/BaseBillet/static/reunion/img/logo.webp differ
+diff --git a/BaseBillet/static/reunion/js/membership-form.mjs b/BaseBillet/static/reunion/js/membership-form.mjs
+index 0236aad3..7120c1d9 100644
+--- a/BaseBillet/static/reunion/js/membership-form.mjs
++++ b/BaseBillet/static/reunion/js/membership-form.mjs
+@@ -108,9 +108,280 @@ const attachMembershipForm = (root = document) => {
+   });
+ };
+ 
++const removeMembershipLinks = (root = document) => {
++  const candidates = root.querySelectorAll(
++    'a[href="/memberships/"], a[href^="/memberships/"], a[href="/my_account/"], a[href^="/my_account/"], button, a'
++  );
++  candidates.forEach((link) => {
++    const txt = (link.textContent || '').toLowerCase();
++    const hasMembershipLabel = txt.includes('adhésion') || txt.includes('adhesion') || txt.includes('subscription');
++    const hasMembershipIcon = !!link.querySelector('.bi-postcard');
++    if (!hasMembershipLabel && !hasMembershipIcon) {
++      return;
++    }
++    const col = link.closest('.col-md');
++    if (col) {
++      col.remove();
++      return;
++    }
++    const navItem = link.closest('.nav-item');
++    if (navItem) {
++      navItem.remove();
++      return;
++    }
++    const listItem = link.closest('li');
++    if (listItem) {
++      listItem.remove();
++      return;
++    }
++    link.remove();
++  });
++};
++
++const removeAgendaLinks = (root = document) => {
++  const links = root.querySelectorAll('a[href="/event/"], a[href^="/event/"]');
++  links.forEach((link) => {
++    const col = link.closest('.col-md');
++    if (col) {
++      col.remove();
++      return;
++    }
++    const navItem = link.closest('.nav-item');
++    if (navItem) {
++      navItem.remove();
++      return;
++    }
++    const listItem = link.closest('li');
++    if (listItem) {
++      listItem.remove();
++      return;
++    }
++    link.remove();
++  });
++};
++
++const addGalaSiteLinks = (root = document) => {
++  const url = 'https://galas-am-aix.com';
++  const galaLabel = '<i class="bi bi-globe2 me-1"></i> Site du Gala';
++
++  // Navbar link
++  const navList = root.querySelector('.navbar .navbar-nav.me-auto');
++  if (navList && !navList.querySelector('[data-gala-site-link="1"]')) {
++    const li = document.createElement('li');
++    li.className = 'nav-item';
++    const a = document.createElement('a');
++    a.className = 'nav-link';
++    a.href = url;
++    a.setAttribute('data-gala-site-link', '1');
++    a.innerHTML = galaLabel;
++    li.appendChild(a);
++    navList.appendChild(li);
++  }
++
++  // Home buttons row
++  const homeRow = root.querySelector('.home-bg .row');
++  if (homeRow && !homeRow.querySelector('[data-gala-site-btn="1"]')) {
++    const col = document.createElement('div');
++    col.className = 'col-md mb-3';
++    const a = document.createElement('a');
++    a.className = 'btn btn-lg btn-primary d-block my-3';
++    a.href = url;
++    a.setAttribute('data-gala-site-btn', '1');
++    a.innerHTML = galaLabel;
++    col.appendChild(a);
++    homeRow.appendChild(col);
++  }
++
++  // Footer link
++  const footerList = root.querySelector('footer .nav.flex-column');
++  if (footerList && !footerList.querySelector('[data-gala-site-footer="1"]')) {
++    const li = document.createElement('li');
++    li.className = 'nav-item';
++    const a = document.createElement('a');
++    a.className = 'nav-link';
++    a.href = url;
++    a.setAttribute('data-gala-site-footer', '1');
++    a.innerHTML = galaLabel;
++    li.appendChild(a);
++    footerList.appendChild(li);
++  }
++};
++
++const addCardManagementLinks = (root = document) => {
++  // Le panneau login peut exister même quand l'utilisateur est connecté.
++  // On se base donc sur la présence du lien "Mon compte" dans la navbar.
++  const isAuthenticated = !!root.querySelector('.navbar a[href="/my_account/"]');
++  const requiresLogin = !isAuthenticated;
++  const cardManagementLabel = 'Recharger / Gestion carte';
++
++  const buildLink = () => {
++    const a = document.createElement('a');
++    a.className = 'nav-link';
++    a.innerHTML = '<i class="bi bi-credit-card-2-front me-1"></i> ' + cardManagementLabel;
++    a.setAttribute('data-card-management-link', '1');
++    if (requiresLogin) {
++      a.href = '#';
++      a.setAttribute('data-bs-toggle', 'offcanvas');
++      a.setAttribute('data-bs-target', '#loginPanel');
++      a.setAttribute('aria-controls', 'loginPanel');
++    } else {
++      a.href = '/my_account/';
++      a.setAttribute('hx-get', '/my_account/');
++      a.setAttribute('hx-target', 'body');
++      a.setAttribute('hx-push-url', 'true');
++    }
++    return a;
++  };
++
++  // Navbar link
++  const navList = root.querySelector('.navbar .navbar-nav.me-auto');
++  if (navList && !navList.querySelector('[data-card-management-link="1"]')) {
++    const li = document.createElement('li');
++    li.className = 'nav-item';
++    li.appendChild(buildLink());
++    navList.appendChild(li);
++  }
++
++  // Home buttons row
++  const homeRow = root.querySelector('.home-bg .row');
++  if (homeRow && !homeRow.querySelector('[data-card-management-btn="1"]')) {
++    const col = document.createElement('div');
++    col.className = 'col-md mb-3';
++    const a = document.createElement('a');
++    a.className = 'btn btn-lg btn-primary d-block my-3';
++    a.innerHTML = '<i class="bi bi-credit-card-2-front me-1"></i> ' + cardManagementLabel;
++    a.setAttribute('data-card-management-btn', '1');
++    if (requiresLogin) {
++      a.href = '#';
++      a.setAttribute('data-bs-toggle', 'offcanvas');
++      a.setAttribute('data-bs-target', '#loginPanel');
++      a.setAttribute('aria-controls', 'loginPanel');
++    } else {
++      a.href = '/my_account/';
++      a.setAttribute('hx-get', '/my_account/');
++      a.setAttribute('hx-target', 'body');
++      a.setAttribute('hx-push-url', 'true');
++    }
++    col.appendChild(a);
++    homeRow.appendChild(col);
++  }
++
++  // Footer link
++  const footerList = root.querySelector('footer .nav.flex-column');
++  if (footerList && !footerList.querySelector('[data-card-management-footer="1"]')) {
++    const li = document.createElement('li');
++    li.className = 'nav-item';
++    const a = buildLink();
++    a.className = 'nav-link';
++    a.setAttribute('data-card-management-footer', '1');
++    li.appendChild(a);
++    footerList.appendChild(li);
++  }
++};
++
++const updateHomeManagementTitle = (root = document) => {
++  const title = root.querySelector('.home-bg h1.display-1');
++  if (!title) return;
++  title.innerHTML = '<i class="bi bi-credit-card-2-front me-2"></i> Espace de gestion carte';
++
++  const subtitle = root.querySelector('.home-bg p.lead.fs-4');
++  if (subtitle) {
++    subtitle.textContent = 'Rechargez votre carte et accedez a votre espace personnel en quelques clics.';
++  }
++
++  const secondaryLead = root.querySelector('.home-bg p.lead:not(.fs-4)');
++  if (secondaryLead) {
++    secondaryLead.textContent = '';
++    secondaryLead.style.display = 'none';
++  }
++};
++
++const removeLanguageAndThemeOptions = (root = document) => {
++  const languageBtn = root.querySelector('#languageDropdown');
++  if (languageBtn) {
++    const item = languageBtn.closest('.nav-item');
++    if (item) {
++      item.remove();
++    } else {
++      languageBtn.remove();
++    }
++  }
++
++  const themeBtn = root.querySelector('#themeToggle');
++  if (themeBtn) {
++    const item = themeBtn.closest('.nav-item');
++    if (item) {
++      item.remove();
++    } else {
++      themeBtn.remove();
++    }
++  }
++};
++
++const replaceNavbarBrandWithLogo = (root = document) => {
++  const brand = root.querySelector('.navbar .navbar-brand');
++  if (!brand) return;
++  if (brand.querySelector('img[data-brand-logo="1"]')) return;
++  brand.textContent = '';
++  const img = document.createElement('img');
++  img.src = '/static/reunion/img/logo.webp';
++  img.alt = 'Logo';
++  img.setAttribute('data-brand-logo', '1');
++  img.className = 'navbar-brand-logo';
++  brand.appendChild(img);
++};
++
++const setCustomFavicon = () => {
++  const faviconHref = '/static/reunion/img/logo.webp';
++  const head = document.head;
++  if (!head) return;
++  let icon = head.querySelector('link[rel="icon"][data-custom-favicon="1"]');
++  if (!icon) {
++    icon = document.createElement('link');
++    icon.setAttribute('rel', 'icon');
++    icon.setAttribute('data-custom-favicon', '1');
++    head.appendChild(icon);
++  }
++  icon.setAttribute('type', 'image/webp');
++  icon.setAttribute('href', faviconHref);
++};
++
++const renameEntityLabel = (root = document) => {
++  const fromNames = new Set(['KIN', 'Kin']);
++  const target = 'Gala-am-Aix';
++  const selectors = [
++    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
++    'p', 'span', 'a', 'strong', 'small', 'label'
++  ];
++  root.querySelectorAll(selectors.join(',')).forEach((el) => {
++    const text = (el.textContent || '').trim();
++    if (fromNames.has(text)) {
++      el.textContent = target;
++    }
++  });
++};
++
+ export const init = () => {
+   attachMembershipForm(document);
++  removeMembershipLinks(document);
++  removeAgendaLinks(document);
++  addGalaSiteLinks(document);
++  addCardManagementLinks(document);
++  updateHomeManagementTitle(document);
++  removeLanguageAndThemeOptions(document);
++  replaceNavbarBrandWithLogo(document);
++  setCustomFavicon();
++  renameEntityLabel(document);
+   document.body.addEventListener('htmx:afterSwap', (event) => {
+     attachMembershipForm(event.target || document);
++    removeMembershipLinks(event.target || document);
++    removeAgendaLinks(event.target || document);
++    addGalaSiteLinks(event.target || document);
++    addCardManagementLinks(event.target || document);
++    updateHomeManagementTitle(event.target || document);
++    removeLanguageAndThemeOptions(event.target || document);
++    replaceNavbarBrandWithLogo(event.target || document);
++    setCustomFavicon();
++    renameEntityLabel(event.target || document);
+   });
+ };
+diff --git a/BaseBillet/tasks.py b/BaseBillet/tasks.py
+index 48a22f1e..bf9f5ed9 100644
+--- a/BaseBillet/tasks.py
++++ b/BaseBillet/tasks.py
+@@ -1251,12 +1251,10 @@ def connexion_celery_mailer(self, user_email,
+     user = User.objects.get(email=user_email)
+     connexion_url = forge_connexion_url(user, base_url)
+     if next_url:
+-        logger.info(f"next_url : {next_url}")
+         connexion_url += f"?next={next_url}"
+ 
+ 
+     logger.info(f"connexion_celery_mailer -> connection.tenant.schema_name : {connection.tenant.schema_name}")
+-    logger.info(f"{connexion_url}")
+ 
+     config = Configuration.get_solo()
+     activate(config.language)
+diff --git a/BaseBillet/templates/emails/qr_connexion.html b/BaseBillet/templates/emails/qr_connexion.html
+new file mode 100644
+index 00000000..4110aaff
+--- /dev/null
++++ b/BaseBillet/templates/emails/qr_connexion.html
+@@ -0,0 +1,25 @@
++<!DOCTYPE html>
++<html lang="fr">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1">
++  <title>Connexion {{ organisation }}</title>
++</head>
++<body style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
++  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f7fb;padding:24px 0;">
++    <tr><td align="center">
++      <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="max-width:640px;width:100%;background:#fff;border-radius:14px;overflow:hidden;">
++        <tr><td style="background:#021244;padding:28px 24px;text-align:center;">
++          <img src="{{ image_url }}" alt="{{ organisation }}" style="height:72px;max-width:100%;width:auto;display:inline-block;">
++        </td></tr>
++        <tr><td style="padding:34px 28px 24px;text-align:center;">
++          <h1 style="font-size:24px;line-height:1.3;margin:0 0 18px;">Votre carte {{ organisation }}</h1>
++          <p style="font-size:18px;line-height:1.55;color:#334155;">Cliquez sur ce lien pour accéder directement à votre carte et la recharger.</p>
++          <a href="{{ connexion_url }}" style="display:inline-block;padding:14px 24px;background:#2563eb;border-radius:10px;color:#fff;text-decoration:none;font-size:18px;font-weight:700;">Accéder à ma carte</a>
++          <p style="font-size:14px;line-height:1.6;color:#64748b;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
++        </td></tr>
++      </table>
++    </td></tr>
++  </table>
++</body>
++</html>
+diff --git a/BaseBillet/templates/reunion/views/home.html b/BaseBillet/templates/reunion/views/home.html
+index feb44949..1675f126 100644
+--- a/BaseBillet/templates/reunion/views/home.html
++++ b/BaseBillet/templates/reunion/views/home.html
+@@ -12,7 +12,7 @@
+ 
+ {% block main %}
+     <div class="home-bg py-5 flex-fill">
+-        <div class="container-lg my-5">
++        <main class="container-lg my-5">
+             <div class="bg-body rounded-5 px-5 py-3{% if config.img %} shadow{% endif %}">
+                 <h1 class="display-1 mt-5 mb-3">{{ config.organisation }}</h1>
+                 <p class="lead fs-4">{{ config.short_description | default:"" }}</p>
+@@ -29,10 +29,19 @@
+                 {% endif %}
+                 {% if config.module_adhesion %}
+                     <div class="col-md">
++                        {% if user.is_authenticated %}
+                         <a class="btn btn-lg btn-primary d-block my-3"
+                            href="/memberships/" hx-get="/memberships/" hx-target="body" hx-push-url="true">
+                             <i class="bi bi-person-badge"></i>{% if config.membership_menu_name %}{{ config.membership_menu_name }}{% else %}{% trans 'Subscriptions' %}{% endif %}
+                         </a>
++                        {% else %}
++                        <button class="btn btn-lg btn-primary d-block my-3 w-100" type="button"
++                                data-bs-toggle="offcanvas" data-bs-target="#loginPanel"
++                                aria-controls="loginPanel">
++                            <i class="bi bi-postcard" aria-hidden="true"></i>
++                            {% if config.membership_menu_name %}{{ config.membership_menu_name }}{% else %}{% trans 'Subscriptions' %}{% endif %}
++                        </button>
++                        {% endif %}
+                     </div>
+                 {% endif %}
+                     {% comment %} HIDE: page fédération
+@@ -46,7 +55,41 @@
+                 {% endcomment %}
+                 </div>
+             </div>
+-        </div>
++            <section class="bg-body rounded-5 px-5 py-4 mt-4" aria-labelledby="cashless-how-title">
++                <h2 id="cashless-how-title" class="h4 fw-bold mb-3 text-body">
++                    <i class="bi bi-credit-card me-2" aria-hidden="true"></i>{% trans 'Comment fonctionne la carte cashless ?' %}
++                </h2>
++                <div class="row g-3">
++                    <div class="col-md-4">
++                        <div class="d-flex gap-3 align-items-start">
++                            <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">1</span>
++                            <div>
++                                <div class="fw-semibold text-body">{% trans 'Récupère ta carte' %}</div>
++                                <div class="text-muted small">{% trans "À l'entrée du gala, on te remet une carte NFC avec un QR code unique." %}</div>
++                            </div>
++                        </div>
++                    </div>
++                    <div class="col-md-4">
++                        <div class="d-flex gap-3 align-items-start">
++                            <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">2</span>
++                            <div>
++                                <div class="fw-semibold text-body">{% trans 'Recharge en ligne ou en caisse' %}</div>
++                                <div class="text-muted small">{% trans 'Scanne le QR code sur ta carte pour lier ton email et recharger en ligne, ou recharge directement à la caisse.' %}</div>
++                            </div>
++                        </div>
++                    </div>
++                    <div class="col-md-4">
++                        <div class="d-flex gap-3 align-items-start">
++                            <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">3</span>
++                            <div>
++                                <div class="fw-semibold text-body">{% trans 'Paye par NFC aux bars' %}</div>
++                                <div class="text-muted small">{% trans 'Approche ta carte du terminal : la transaction est instantanée.' %}</div>
++                            </div>
++                        </div>
++                    </div>
++                </div>
++            </section>
++        </main>
+     </div>
+     <style>
+         .home-bg {
+diff --git a/BaseBillet/templates/reunion/views/qr_check_email.html b/BaseBillet/templates/reunion/views/qr_check_email.html
+new file mode 100644
+index 00000000..6a126b66
+--- /dev/null
++++ b/BaseBillet/templates/reunion/views/qr_check_email.html
+@@ -0,0 +1,15 @@
++{% extends base_template %}
++{% load i18n %}
++
++{% block title %}{% translate 'Check your email' %}{% endblock %}
++
++{% block main %}
++<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
++  <div class="container text-center text-white" style="max-width:440px;">
++    <div class="display-2" aria-hidden="true">📧</div>
++    <h1>{% translate 'Check your email' %}</h1>
++    <p>{% translate 'We sent you a secure sign-in link. Open it to access your card.' %}</p>
++    <p class="text-white-50">{% translate 'Remember to check your spam folder.' %}</p>
++  </div>
++</main>
++{% endblock %}
+diff --git a/BaseBillet/templates/reunion/views/qr_landing.html b/BaseBillet/templates/reunion/views/qr_landing.html
+new file mode 100644
+index 00000000..a3c77baa
+--- /dev/null
++++ b/BaseBillet/templates/reunion/views/qr_landing.html
+@@ -0,0 +1,32 @@
++{% extends base_template %}
++{% load i18n %}
++
++{% block title %}{% translate 'My Pass card' %}{% endblock %}
++
++{% block main %}
++<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
++  <div class="container" style="max-width:500px;">
++    <div class="text-center text-white mb-4">
++      <div class="display-3" aria-hidden="true">💳</div>
++      <h1>{% translate 'Card linked!' %}</h1>
++      <p class="text-white-50">{% blocktranslate with name=user.first_name|default:user.email %}Hello {{ name }}, what would you like to do?{% endblocktranslate %}</p>
++    </div>
++    {% if show_refill_button %}
++    <a href="/my_account/balance/" hx-get="/my_account/refill_wallet/" hx-indicator="#tibillet-spinner"
++       class="btn btn-primary w-100 text-start p-4 mb-3 rounded-4 shadow">
++      <span class="fs-3 me-2" aria-hidden="true">⚡</span>
++      <span class="fs-4 fw-bold">{% translate 'Refill my card' %}</span>
++      <small class="d-block ms-5">{% translate 'Online payment via Stripe' %}</small>
++    </a>
++    {% endif %}
++    <a href="/my_account/" class="btn btn-outline-light w-100 text-start p-4 rounded-4">
++      <span class="fs-3 me-2" aria-hidden="true">👤</span>
++      <span class="fs-4 fw-bold">{% translate 'Go to my account' %}</span>
++      <small class="d-block ms-5">{% translate 'Balance, history and refunds' %}</small>
++    </a>
++    {% if not user.email_valid %}
++    <p class="text-white-50 text-center mt-4">{% translate 'Please confirm your email to secure your account.' %}</p>
++    {% endif %}
++  </div>
++</main>
++{% endblock %}
+diff --git a/BaseBillet/templates/reunion/views/register.html b/BaseBillet/templates/reunion/views/register.html
+index 55fa2c87..a5d12ca3 100644
+--- a/BaseBillet/templates/reunion/views/register.html
++++ b/BaseBillet/templates/reunion/views/register.html
+@@ -8,6 +8,7 @@
+             <div class="row">
+                 <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
+                     <h1>{% trans 'Linking my TiBillet card' %}</h1>
++                    <p class="lead">{% trans 'One step to refill your card: enter your email, then use the Refill button.' %}</p>
+                     <p>
+                         {% blocktranslate %}
+                             In order to use my TiBillet account, refill my card and as a way
+@@ -17,6 +18,7 @@
+                     </p>
+                     <form id="linkform" role="form" hx-post="/qr/link/"
+                           hx-indicator="#tibillet-spinner">
++                        {% csrf_token %}
+                         <div class="form-floating mb-3">
+                             <input name="email" id="link_email" type="email" class="form-control"
+                                    placeholder="adresse@exemple.fr"
+@@ -86,10 +88,8 @@
+     <script>
+         document.getElementById("linkform").addEventListener("htmx:configRequest", function (event) {
+             const email = document.getElementById("link_email").value;
+-            console.log(email);
+             const confirmEmail = document.getElementById("confirm-email").value;
+             const errorDiv = document.getElementById("email-error");
+-            console.log(confirmEmail);
+ 
+             if (email !== confirmEmail) {
+                 event.preventDefault(); // empêche l’envoi de la requête HTMX
+diff --git a/BaseBillet/urls.py b/BaseBillet/urls.py
+index e2e54940..b1cb6de3 100644
+--- a/BaseBillet/urls.py
++++ b/BaseBillet/urls.py
+@@ -4,6 +4,7 @@ from django.urls import path, include
+ from django.views.generic import RedirectView
+ from rest_framework import routers
+ from BaseBillet import views as base_view
++from BaseBillet import views_qr_card
+ from BaseBillet.views_robots import robots_txt
+ from BaseBillet.views_humans import humans_txt
+ from BaseBillet.test_error_views import test_404, test_500
+@@ -112,6 +113,10 @@ urlpatterns = [
+     path("event/propose/", lambda r: redirect("event-wizard-place"), name="event-propose"),
+ 
+     path('', base_view.index, name="index"),
++    # Literal QR routes must precede the DRF router's /qr/<pk>/ pattern.
++    path('qr/link/', views_qr_card.qr_card_link, name='qr_card_link'),
++    path('qr/check-email/<uuid:pk>/', views_qr_card.qr_check_email, name='qr_check_email'),
++    path('qr/<uuid:pk>/', views_qr_card.qr_card_landing, name='qr_card_landing'),
+ ]
+ 
+ # Wizards d'evenement AVANT le routeur principal : leurs chemins litteraux
+diff --git a/BaseBillet/views_qr_card.py b/BaseBillet/views_qr_card.py
+new file mode 100644
+index 00000000..2baf4f2d
+--- /dev/null
++++ b/BaseBillet/views_qr_card.py
+@@ -0,0 +1,194 @@
++"""Fast QR-card onboarding, adapted from the archived 100J flow.
++
++The QR code is public (printed on the card): it is not an authentication token
++for an already linked card or an existing email account.
++"""
++
++import logging
++
++from django.contrib import messages
++from django.contrib.auth import login
++from django.core import signing
++from django.core.cache import cache
++from django.db import connection
++from django.http import Http404, HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseRedirect
++from django.shortcuts import render
++from django.utils.translation import gettext as _
++from django.views.decorators.http import require_GET
++from django_htmx.http import HttpResponseClientRedirect
++from django_tenants.utils import tenant_context
++
++from AuthBillet.models import TibilletUser, Wallet
++from AuthBillet.utils import get_or_create_user, sender_mail_connect
++from BaseBillet.models import Configuration, Membership
++from BaseBillet.validators import LinkQrCodeValidator
++from Customers.models import Client, Domain
++from fedow_connect.fedow_api import FedowAPI
++
++logger = logging.getLogger(__name__)
++
++
++def _card(request, card_id):
++    """Resolve a generic QR in its originating tenant, as ScanQrCode does."""
++    tenant = connection.tenant
++    if tenant.categorie != Client.SALLE_SPECTACLE:
++        tenant = Client.objects.filter(categorie=Client.SALLE_SPECTACLE).first()
++    if tenant is None:
++        raise Http404("Carte inconnue")
++    with tenant_context(tenant):
++        card = FedowAPI().NFCcard.qr_retrieve(card_id)
++        if not card:
++            raise Http404("Carte inconnue")
++        lespass_domain = card.get('origin', {}).get('place', {}).get('lespass_domain')
++        domain = Domain.objects.filter(domain=lespass_domain).first()
++        if domain is None or domain.tenant.get_primary_domain() is None:
++            raise Http404("Origine de la carte inconnue")
++        canonical = domain.tenant.get_primary_domain().domain
++    return card, canonical
++
++
++def _context(request, card_id=None):
++    # Import lazily: views.py also imports this module through urls.py.
++    from BaseBillet.views import get_context
++    context = get_context(request)
++    context['qrcode_uuid'] = card_id
++    return context
++
++
++def _send_magic_link(user, card_id):
++    # Avoid triggering unlimited mail from repeated QR scans. The link itself
++    # is generated by the existing mailer and remains tied to the user's email.
++    key = f'qr-card-magic:{card_id}:{user.pk}'
++    try:
++        if cache.add(key, True, timeout=300):
++            sender_mail_connect(
++                user.email,
++                next_url=signing.dumps(f'/qr/{card_id}/'),
++                template='emails/qr_connexion.html',
++            )
++    except Exception:
++        logger.exception('QR sign-in email dispatch failed')
++
++
++def _link_card(user, card_id):
++    api = FedowAPI()
++    wallet, created = api.wallet.get_or_create_wallet(user)
++    if not created:
++        existing = api.wallet.retrieve_by_signature(user)
++        if existing.validated_data.get('has_user_card'):
++            return False
++    card = api.NFCcard.linkwallet_cardqrcode(user=user, qrcode_uuid=card_id)
++    if not card:
++        return False
++    number = card.get('number_printed')
++    if number:
++        for membership in Membership.objects.filter(user__isnull=True, card_number=number):
++            membership.user = user
++            membership.first_name = user.first_name
++            membership.last_name = user.last_name
++            membership.save(update_fields=['user', 'first_name', 'last_name'])
++    return True
++
++
++@require_GET
++def qr_card_landing(request, pk):
++    try:
++        card, canonical = _card(request, pk)
++    except Http404:
++        raise
++    except Exception:
++        logger.exception('QR card lookup failed')
++        raise Http404("Carte indisponible")
++
++    if request.get_host().split(':')[0].lower() != canonical.lower():
++        return HttpResponseRedirect(f'https://{canonical}/qr/{pk}/')
++
++    if card.get('is_wallet_ephemere'):
++        if request.user.is_authenticated:
++            try:
++                if _link_card(request.user, pk):
++                    return HttpResponseRedirect(f'/qr/{pk}/')
++            except Exception:
++                logger.exception('QR card link failed')
++            messages.error(request, _("Cette carte ne peut pas être liée à votre compte."))
++            return HttpResponseRedirect('/my_account/')
++        return render(request, 'reunion/views/register.html', _context(request, pk))
++
++    try:
++        owner = Wallet.objects.get(uuid=card['wallet_uuid']).user
++    except (KeyError, Wallet.DoesNotExist, TibilletUser.DoesNotExist):
++        raise Http404("Propriétaire introuvable")
++
++    if request.user.is_authenticated:
++        if request.user.pk != owner.pk:
++            return HttpResponseForbidden(_("Cette carte est liée à un autre compte."))
++        context = _context(request, pk)
++        context['show_refill_button'] = Configuration.get_solo().show_refill_button
++        return render(request, 'reunion/views/qr_landing.html', context)
++
++    _send_magic_link(owner, pk)
++    return render(request, 'reunion/views/qr_check_email.html', _context(request, pk))
++
++
++def qr_card_link(request):
++    if request.method != 'POST':
++        return HttpResponseNotAllowed(['POST'])
++    validator = LinkQrCodeValidator(data=request.POST)
++    if not validator.is_valid():
++        messages.error(request, _("Vérifiez l'adresse email, sa confirmation et les conditions d'utilisation."))
++        return HttpResponseClientRedirect('/')
++
++    card_id = validator.validated_data['qrcode_uuid']
++    try:
++        card, canonical = _card(request, card_id)
++    except Http404:
++        messages.error(request, _("Cette carte n'est pas reconnue."))
++        return HttpResponseClientRedirect('/')
++    except Exception:
++        logger.exception('QR card lookup failed')
++        messages.error(request, _("Carte indisponible, veuillez réessayer."))
++        return HttpResponseClientRedirect('/')
++    if request.get_host().split(':')[0].lower() != canonical.lower():
++        return HttpResponseClientRedirect(f'https://{canonical}/qr/{card_id}/')
++    if not card.get('is_wallet_ephemere'):
++        return HttpResponseClientRedirect(f'/qr/{card_id}/')
++
++    if request.user.is_authenticated:
++        return HttpResponseClientRedirect(f'/qr/{card_id}/')
++
++    email = validator.validated_data['email'].strip().lower()
++    try:
++        user, created = get_or_create_user(
++            email=email, send_mail=False, return_created=True,
++        )
++        if not user:
++            raise ValueError('Invalid email')
++        if not created:
++            # A known account must prove control of its email before linking
++            # the new card. The signed return URL completes linking on GET.
++            _send_magic_link(user, card_id)
++            return HttpResponseClientRedirect(f'/qr/check-email/{card_id}/')
++
++        user.first_name = validator.validated_data.get('firstname', '')
++        user.last_name = validator.validated_data.get('lastname', '')
++        user.accept_newsletter = bool(validator.validated_data.get('newsletter'))
++        user.save(update_fields=['first_name', 'last_name', 'accept_newsletter'])
++        if not _link_card(user, card_id):
++            messages.error(request, _("La liaison de la carte a échoué. Veuillez réessayer."))
++            return HttpResponseClientRedirect(f'/qr/{card_id}/')
++        # Only a newly created account can enter immediately. Email remains
++        # unverified until the confirmation mail is opened.
++        user.is_active = True
++        user.save(update_fields=['is_active'])
++        login(request, user)
++        _send_magic_link(user, card_id)
++        return HttpResponseClientRedirect(f'/qr/{card_id}/')
++    except Exception:
++        logger.exception('QR card registration failed')
++        messages.error(request, _("La liaison de la carte a échoué. Veuillez réessayer."))
++        return HttpResponseClientRedirect(f'/qr/{card_id}/')
++
++
++@require_GET
++def qr_check_email(request, pk):
++    return render(request, 'reunion/views/qr_check_email.html', _context(request, pk))
+diff --git a/TiBillet/settings.py b/TiBillet/settings.py
+index e48bda89..16bd6444 100644
+--- a/TiBillet/settings.py
++++ b/TiBillet/settings.py
+@@ -405,13 +405,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "www", "media")
+ MEDIA_URL = '/media/'
+ 
+ # EMAIL
++EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+ EMAIL_HOST = os.environ.get('EMAIL_HOST')
+ EMAIL_PORT = os.environ.get('EMAIL_PORT')
+ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', False)
+-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
++# Environment values are strings: bool('0') is True and makes Django reject
++# the SMTP backend when STARTTLS=1 and SSL=0 are supplied by the Gala runtime.
++EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', '0') == '1'
++EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', '0' if EMAIL_USE_TLS else '1') == '1'
+ 
+ # Celery Configuration Options
+ CELERY_TIMEZONE = os.environ.get('TIME_ZONE', 'UTC')
+@@ -570,5 +573,3 @@ if DEBUG:
+         #
+     ]
+     os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"  # only use in development
+-
+-
+diff --git a/fedow_connect/fedow_api.py b/fedow_connect/fedow_api.py
+index 7d19cf67..55368f6c 100644
+--- a/fedow_connect/fedow_api.py
++++ b/fedow_connect/fedow_api.py
+@@ -1,5 +1,6 @@
+ import json
+ import logging
++import os
+ import uuid
+ from datetime import datetime
+ from decimal import Decimal
+@@ -27,13 +28,25 @@ from fedow_public.models import AssetFedowPublic
+ logger = logging.getLogger(__name__)
+ 
+ 
++def _fedow_base_url(fedow_config: FedowConfig) -> str:
++    """Use the local Docker bridge on Gala hosts without a public certificate.
++
++    API requests are already signed and authenticated. The internal endpoint
++    is a fixed Compose service name, never a user-controlled URL. Other TiBillet
++    installations keep the usual verified public HTTPS transport.
++    """
++    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
++        return 'http://fedow_nginx'
++    return f'https://{fedow_config.fedow_domain()}'
++
++
+ ### GENERIC GET AND POST ###
+ def _post(fedow_config: FedowConfig = None,
+           user: TibilletUser = None,
+           data: dict = None,
+           path: str = None,
+           apikey: str = None):
+-    fedow_domain = fedow_config.fedow_domain()
++    fedow_base_url = _fedow_base_url(fedow_config)
+     now = f"{datetime.now().isoformat()}"
+ 
+     # Pour la création, on prend la clé api de Root. On rempli apikey
+@@ -47,6 +60,8 @@ def _post(fedow_config: FedowConfig = None,
+         'Authorization': f'Api-Key {apikey}',
+         "Content-type": "application/json",
+     }
++    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
++        headers['Host'] = fedow_config.fedow_domain()
+ 
+     # Si un user est donné, on indique son wallet dans le header et on le signe avec now
+     if user:
+@@ -74,7 +89,7 @@ def _post(fedow_config: FedowConfig = None,
+     # / Mandatory timeout: without it, if Fedow does not answer, the server
+     # thread hangs forever (2026-06-11 incident: runserver frozen, all 504).
+     request_fedow = session.post(
+-        f"https://{fedow_domain}/{path}/",
++        f"{fedow_base_url}/{path}/",
+         headers=headers,
+         data=json.dumps(data),
+         verify=bool(not settings.DEBUG),
+@@ -91,7 +106,7 @@ def _get(fedow_config: FedowConfig = None,
+          user: TibilletUser = None,
+          path: str = None,
+          apikey: str = None):
+-    fedow_domain = fedow_config.fedow_domain()
++    fedow_base_url = _fedow_base_url(fedow_config)
+     now = f"{datetime.now().isoformat()}"
+ 
+     if apikey is None:
+@@ -102,6 +117,8 @@ def _get(fedow_config: FedowConfig = None,
+         "Date": f"{now}",
+         'Authorization': f'Api-Key {apikey}',
+     }
++    if os.environ.get('GALA_LOCAL_FEDOW') == '1':
++        headers['Host'] = fedow_config.fedow_domain()
+ 
+     # Si un user est donné, on indique son wallet dans le header et on le signe avec now
+     if user:
+@@ -127,7 +144,7 @@ def _get(fedow_config: FedowConfig = None,
+     # timeout obligatoire : meme raison que _post (incident 2026-06-11).
+     # / Mandatory timeout: same reason as _post (2026-06-11 incident).
+     request_fedow = session.get(
+-        f"https://{fedow_domain}/{path}/",
++        f"{fedow_base_url}/{path}/",
+         headers=headers,
+         verify=bool(not settings.DEBUG),
+         timeout=30,
+diff --git a/seo/templates/seo/partials/tibillet_community_links.html b/seo/templates/seo/partials/tibillet_community_links.html
+index 5f8b0347..22d38ad4 100644
+--- a/seo/templates/seo/partials/tibillet_community_links.html
++++ b/seo/templates/seo/partials/tibillet_community_links.html
+@@ -51,6 +51,11 @@ Variable optionnelle / Optional variable :
+         <i class="bi bi-mastodon me-2" aria-hidden="true"></i>Mastodon
+     </a>
+ </li>
++<li class="nav-item">
++    <a class="nav-link {{ link_class }}" href="/source/">
++        <i class="bi bi-code-slash me-2" aria-hidden="true"></i>{% translate "Code source de cette instance — AGPLv3" %}
++    </a>
++</li>
+ <li class="nav-item">
+     <a class="nav-link {{ link_class }}" href="https://github.com/TiBillet/" target="_blank" rel="noopener">
+         <i class="bi bi-github me-2" aria-hidden="true"></i>Github
+--- fedow/fedowallet_django/settings.py
++++ deploy/Fedow/settings.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ """
+ Django settings for fedowallet_django project.
+ 
+@@ -109,7 +111,7 @@
+ TEMPLATES = [
+     {
+         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+-        'DIRS': [],
++        'DIRS': [BASE_DIR / 'source_templates'],
+         'APP_DIRS': True,
+         'OPTIONS': {
+             'context_processors': [
+--- fedow/source_templates/admin/base_site.html
++++ deploy/source/admin-templates/admin/base_site.html
+@@ -0,0 +1,8 @@
++{% extends "admin/base_site.html" %}
++{% comment %}AM-Rezal modification, 2026-10-03. GNU AGPLv3; original admin template retained through inheritance.{% endcomment %}
++{% block footer %}
++{{ block.super }}
++<footer style="padding:1rem;text-align:center">
++    <a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a>
++</footer>
++{% endblock %}
+--- laboutik/webview/views.py
++++ deploy/Laboutik/views.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ import threading
+ from typing import List
+ 
+@@ -565,15 +567,38 @@
+             fedowApi = FedowAPI()
+             # CardValidator. Mets à jour les assets/tokens depuis Fedow
+             serializer_from_fedow = fedowApi.NFCcard.retrieve(tag_id_request)
++        except FileNotFoundError as e:
++            logger.warning(f"Carte inconnue dans Fedow, tentative enregistrement : {e}")
++            try:
++                fedowApi = FedowAPI()
++                import uuid
++                carte, created = CarteCashless.objects.get_or_create(
++                    tag_id=tag_id_request,
++                    defaults={
++                        'number': tag_id_request,
++                        'uuid_qrcode': uuid.uuid4(),
++                    }
++                )
++                if created:
++                    logger.info(f"Carte vierge créée dans Laboutik : {tag_id_request}")
++                elif not carte.uuid_qrcode:
++                    carte.uuid_qrcode = uuid.uuid4()
++                    carte.number = carte.number or tag_id_request
++                    carte.save()
++                fedowApi.NFCcard.create([carte])
++                serializer_from_fedow = fedowApi.NFCcard.retrieve(tag_id_request)
++            except Exception as e2:
++                logger.error(f"Echec enregistrement carte : {e2}")
++                data = {
++                    'background': '#e93363',
++                    'error_msg': _("Impossible d'enregistrer la carte auprès de Fedow. Réessayez."),
++                }
++                return render(request, 'popup_check_carte.html', data)
+         except Exception as e:
+-            # Carte inconnue (FileNotFoundError) = cas terrain normal : pas de log.
+-            # Les autres exceptions sont de vraies pannes Fedow : on garde le log error.
+-            # / Unknown card is normal (no log); other errors are real failures (keep log).
+-            if not isinstance(e, FileNotFoundError):
+-                logger.error(f"Check carte FEDOW : {e}")
++            logger.error(f"Check carte FEDOW : {e}")
+             data = {
+                 'background': '#e93363',
+-                'error_msg': _('Carte inconnue'),
++                'error_msg': _('Impossible de vérifier la carte auprès de Fedow. Réessayez.'),
+             }
+             return render(request, 'popup_check_carte.html', data)
+ 
+--- laboutik/webview/validators.py
++++ deploy/Laboutik/validators.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ import logging
+ import os
+ from decimal import Decimal
+@@ -169,12 +171,28 @@
+     # Première Carte
+     def validate_tag_id(self, value):
+         if value:
++            import uuid as _uuid
++            tag = value.upper()
+             if self.config.can_fedow():
+                 fedowAPI = FedowAPI()
+-                self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(value.upper())
+-
+-            # On va chercher l'objet après la requete Fedow pour l'avoir à jour des modifs (création wallet, assets, etc ...)
+-            self.card = CarteCashless.objects.get(tag_id=value.upper())
++                try:
++                    try:
++                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
++                    except FileNotFoundError:
++                        carte, created = CarteCashless.objects.get_or_create(
++                            tag_id=tag,
++                            defaults={'number': tag, 'uuid_qrcode': _uuid.uuid4()}
++                        )
++                        if not carte.uuid_qrcode:
++                            carte.uuid_qrcode = _uuid.uuid4()
++                            carte.number = carte.number or tag
++                            carte.save()
++                        fedowAPI.NFCcard.create([carte])
++                        self.fedow_serialized_card = fedowAPI.NFCcard.retrieve(tag)
++                except Exception as e:
++                    logger.error(f"Vérification/enregistrement carte FEDOW : {e}")
++                    raise serializers.ValidationError(_("Impossible de vérifier ou d'enregistrer la carte auprès de Fedow. Réessayez."))
++            self.card = CarteCashless.objects.get(tag_id=tag)
+         return value.upper() if value else None
+ 
+     # Seconde Carte si complémentaire
+--- laboutik/administration/management/commands/install.py
++++ deploy/Laboutik/install.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ import socket
+ import sys
+ from time import sleep
+@@ -95,9 +97,18 @@
+ 
+             def _base_config(self, options):
+                 config = Configuration.get_solo()
++                # Never silently repoint an already paired cashless database.
++                # The shared public hostnames are stable across Galas, but a
++                # different configured target still requires explicit review.
++                lespass_url = os.environ['LESPASS_TENANT_URL']
++                fedow_url = os.environ['FEDOW_URL']
++                if config.string_connect and config.billetterie_url and config.billetterie_url.rstrip("/") != lespass_url.rstrip("/"):
++                    raise Exception("Existing Lespass pairing targets another URL")
++                if config.can_fedow() and config.fedow_domain and config.fedow_domain.rstrip("/") != fedow_url.rstrip("/"):
++                    raise Exception("Existing Fedow pairing targets another URL")
+                 config.email = self.admin_email
+-                config.billetterie_url = os.environ['LESPASS_TENANT_URL']
+-                config.fedow_domain = os.environ['FEDOW_URL']
++                config.billetterie_url = lespass_url
++                config.fedow_domain = fedow_url
+ 
+                 if not options.get('tdd'):
+                     config.save()
+@@ -477,23 +488,36 @@
+                 email_first_admin = self.admin_email
+                 admin, created = User.objects.get_or_create(
+                     username=email_first_admin,
+-                    email=email_first_admin,
+-                    is_staff=True,
+-                    is_active=False,
+-                )
++                    defaults={
++                        "email": email_first_admin,
++                        "is_staff": True,
++                        "is_active": False,
++                    },
++                )
++                if not admin.is_staff:
++                    admin.is_staff = True
+                 admin.groups.add(staff_group)
+                 admin.save()
+-                try:
+-                    email_activation(admin.uuid)
+-                except:
+-                    logger.error("Email for admin activation FAILED")
++                if created:
++                    try:
++                        email_activation(admin.uuid)
++                    except Exception:
++                        logger.exception("Email for admin activation FAILED")
+                 call_command('check_permissions')
+                 return admin
+ 
+             def _lespass_handshake(self):
+-                # On ping LesPass
++                # The Lespass pairing is single-use. A deploy can be retried after
++                # that pairing but before the remaining catalogue/admin setup.
++                # Resume from the durable local handshake instead of polling a
++                # Lespass endpoint which correctly returns 405 once paired.
+                 config = Configuration.get_solo()
+                 lespass_url = os.environ['LESPASS_TENANT_URL']
++                if config.string_connect and config.key_billetterie:
++                    if config.billetterie_url.rstrip("/") != lespass_url.rstrip("/"):
++                        raise Exception("Existing Lespass pairing targets another URL")
++                    logger.info("Existing Lespass pairing found; resuming install")
++                    return
+                 lespass_state = None
+                 ping_count = 0
+ 
+@@ -562,9 +586,15 @@
+                 logger.info("Lespass Plugged !")
+ 
+             def _fedow_handshake(self):
+-                # On ping Fedow
++                # A second deployment must not repeat an already successful
++                # handshake or create a second Fedow place.
+                 config = Configuration.get_solo()
+                 fedow_url = os.environ['FEDOW_URL']
++                if config.can_fedow():
++                    if config.fedow_domain.rstrip("/") != fedow_url.rstrip("/"):
++                        raise Exception("Existing Fedow pairing targets another URL")
++                    logger.info("Existing Fedow pairing found; resuming install")
++                    return
+ 
+                 fedow_state = None
+                 ping_count = 0
+--- laboutik/Cashless/settings.py
++++ deploy/Laboutik/settings.py
+@@ -1,3 +1,5 @@
++# AM-Rezal modified version, imported 2026-09-21; source notices updated 2026-10-03.
++# Original TiBillet authors retained. GNU AGPLv3: see /LICENSE and /NOTICE.md.
+ """
+ Django settings for Cashless project.
+ 
+@@ -171,7 +173,7 @@
+ TEMPLATES = [
+     {
+         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+-        'DIRS': [],
++        'DIRS': [os.path.join(BASE_DIR, 'source_templates')],
+         'APP_DIRS': True,
+         'OPTIONS': {
+             'context_processors': [
+@@ -279,14 +281,15 @@
+ LOGIN_REDIRECT_URL = '/'
+ LOGOUT_REDIRECT_URL = '/'
+ 
++EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+ EMAIL_HOST = os.environ.get('EMAIL_HOST')
+ EMAIL_PORT = os.environ.get('EMAIL_PORT')
+ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+ 
+-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', False)
+-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
++EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS') == '1'
++EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL') == '1'
+ 
+ if DEBUG:
+     SHELL_PLUS = "ipython"
+--- laboutik/webview/templates/login.html
++++ deploy/Laboutik/source_templates/login.html
+@@ -106,7 +106,7 @@
+           background: linear-gradient(to left, #2b3647, #354052);
+           font-family: "Roboto", sans-serif;
+           -webkit-font-smoothing: antialiased;
+-          -moz-osx-font-smoothing: grayscale;      
++          -moz-osx-font-smoothing: grayscale;
+         }
+     </style>
+ 
+@@ -136,5 +136,7 @@
+ </div>
+ 
+ 
++<!-- AM-Rezal modification, 2026-10-03. Original TiBillet authors retained; AGPLv3. Source: /source/ -->
++<footer style="text-align:center;padding:1rem;background:#fff;color:#20242a"><a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a></footer>
+ </body>
+ </html>
+--- laboutik/htmxview/templates/kiosk/base.html
++++ deploy/Laboutik/source_templates/kiosk_base.html
+@@ -45,5 +45,7 @@
+ 
+ {% include "kiosk/spinner.html" %}
+ 
++<!-- AM-Rezal modification, 2026-10-03. Original TiBillet authors retained; AGPLv3. Source: /source/ -->
++<footer style="text-align:center;padding:1rem;background:#fff;color:#20242a"><a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a></footer>
+ </body>
+ </html>
+--- laboutik/htmxview/templates/appsettings/infos.html
++++ deploy/Laboutik/source_templates/infos.html
+@@ -1,4 +1,8 @@
++<!-- AM-Rezal modification, 2026-10-03. Original TiBillet authors retained; AGPLv3. Source: /source/ -->
+ <div class="BF-col-deb l100p h100p" style="font-size: 1.5rem">
++  <div class="BF-col settings-info-line">
++    <a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a>
++  </div>
+   <!-- ajouter si-dessus -->
+   <div class="BF-col settings-info-line">
+     <label class="md16px">Server</label>
+--- laboutik/source_templates/admin/base_site.html
++++ deploy/source/admin-templates/admin/base_site.html
+@@ -0,0 +1,8 @@
++{% extends "admin/base_site.html" %}
++{% comment %}AM-Rezal modification, 2026-10-03. GNU AGPLv3; original admin template retained through inheritance.{% endcomment %}
++{% block footer %}
++{{ block.super }}
++<footer style="padding:1rem;text-align:center">
++    <a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a>
++</footer>
++{% endblock %}

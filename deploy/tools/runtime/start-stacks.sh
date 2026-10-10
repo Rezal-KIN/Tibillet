@@ -23,5 +23,5 @@ docker network inspect frontend >/dev/null 2>&1 || docker network create fronten
 IFS=':' read -r -a compose_groups <<< "$COMPOSE_FILES"
 for group in "${compose_groups[@]}"; do
   compose_group_args "$group"
-  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d
+  docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --no-build --remove-orphans
 done

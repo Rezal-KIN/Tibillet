@@ -203,4 +203,11 @@ trap cleanup EXIT
 cp "$MANIFEST_PATH" "$manifest_copy"
 chmod 600 "$manifest_copy"
 mv -f "$manifest_copy" "$(deployed_manifest_path)"
+# Bootstrap can attempt startup before the first deployed manifest exists.
+# Once this release is healthy and backed up, reconcile the same boot service
+# so a historical first-boot failure is not left behind indefinitely.
+stack_unit="tibillet-gala-stacks@${GALA_SLUG}.service"
+systemctl reset-failed "$stack_unit"
+systemctl start "$stack_unit"
+systemctl is-active --quiet "$stack_unit" || fail "Gala boot service did not start"
 printf 'Deployment completed: gala=%s release=%s\n' "$GALA_SLUG" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_id"])' "$MANIFEST_PATH")"
