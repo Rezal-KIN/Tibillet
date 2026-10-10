@@ -54,7 +54,7 @@ Les tests de régression exécutent la fonction Bash sur un arbre en 0700/0600
 et vérifient la préservation d'un média privé et d'un fichier extérieur lié par
 symlink. Le test du healthcheck vérifie le refus de CSS 403/404 lorsque la page
 et les autres services répondent correctement.
-Validation locale : 151 tests réussis, dont 3 ignorés ; les deux tests ciblés
+Validation locale : 151 tests exécutés, 3 ignorés, succès ; les deux tests ciblés
 ont été rejoués après la liste finale des cinq CSS. Syntaxe Bash vérifiée.
 
 Le CSS public est identique octet par octet à la source personnalisée de
@@ -65,3 +65,13 @@ empreintes avant remplacement et conservation de leurs versions précédentes.
 Cette livraison ne reconstruit pas les images et ne relance pas les installateurs
 ni l'import de cartes. Le prochain lancement de pipeline utilisera aussi ces
 scripts depuis `main`.
+
+Livraison hôte vérifiée au commit
+`a807820fd617377f165dcede1c8d215907a4bca6` : commande SSM
+`d8856f20-bbc7-4255-b17f-95c63fa716c5` sur Smoke et
+`8ce17803-3b9d-426b-91ca-0cdc3c4038c0` sur Aix, toutes deux réussies.
+Le nouveau healthcheck confirme les cinq CSS, les trois applications et le
+worker sur chaque hôte. Les images restent celles du commit applicatif
+`64044190`. L'exécution Test déclenchée par la fusion de ce correctif hôte est
+arrêtée avant DeploySmoke ; le déclenchement automatique des futurs changements
+reste actif.
