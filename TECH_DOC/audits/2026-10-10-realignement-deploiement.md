@@ -16,6 +16,7 @@ Les audits du 9 octobre décrivent l'état avant ces corrections et restent cons
 | Noms Nginx | Retour au `server_name localhost` des trois extraits officiels | Le Host transmis et les règles Traefik déterminent toujours les domaines publics |
 | Contrôle de santé | Vérifie Fedow depuis web ET Celery, puis les correspondances locales des pairs | Empêche une validation web/broker de masquer le défaut réseau constaté |
 | Démarrage systemd | Après release saine et sauvegardée, réconcilie l'unité de boot ; redémarrage avec `--no-build` | Résout l'état historique de premier démarrage et conserve les digests livrés |
+| Rechargement Nginx | Vérifie la syntaxe puis recharge chaque proxy après mise à jour de sa stack | Un fichier monté mis à jour ne provoque pas à lui seul une relecture du processus ; reprend aussi la résolution des backends recréés |
 
 Aucun modèle, migration, calcul de solde ou fonction de paiement n'est modifié.
 Aucun montage de code ou de CSV n'est ajouté. Les commandes natives de migrations

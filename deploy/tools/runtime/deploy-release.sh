@@ -109,6 +109,21 @@ for group in "${compose_groups[@]}"; do
       docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" restart "$app_service"
     fi
   fi
+  # Bind-mounted configuration changes do not alter Compose's container
+  # identity. Reload the native proxy after each stack update so it reads the
+  # new rules and resolves any backend recreated with a different Docker IP.
+  nginx_service=""
+  case "$group" in
+    *"/deploy/Fedow/docker-compose.yml"*) nginx_service="fedow_nginx" ;;
+    *"/deploy/Laboutik/docker-compose.yml"*) nginx_service="laboutik_nginx" ;;
+    *"/deploy/Lespass/docker-compose.yml"*) nginx_service="lespass_nginx" ;;
+  esac
+  if [[ -n "$nginx_service" ]]; then
+    docker exec "$nginx_service" nginx -t >/dev/null 2>&1 \
+      || fail "invalid Nginx configuration: $nginx_service"
+    docker exec "$nginx_service" nginx -s reload >/dev/null 2>&1 \
+      || fail "Nginx configuration reload failed: $nginx_service"
+  fi
 done
 
 # The upstream Lespass image explicitly ships MIGRATE=0 and comments out its
