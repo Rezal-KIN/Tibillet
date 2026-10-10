@@ -5,6 +5,11 @@ PostgreSQL résiduelles de Fedow et choisi de réinitialiser **les deux instance
 Les bases, médias et caches courants sont archivés avant remplacement. Les
 anciennes archives Aix du réalignement précédent restent conservées.
 
+**Complément après les essais utilisateur :** les pages répondaient 200, mais
+les styles Lespass étaient refusés par Nginx après la restauration des fichiers
+statiques suivis par Git. La [cause et la correction des permissions](2026-10-10-statiques-apres-reinitialisation.md)
+sont conservées séparément ; les nouvelles vérifications couvrent aussi les CSS.
+
 ## Retrait des variables inutilisées
 
 La PR #110 est fusionnée dans `main`, commit

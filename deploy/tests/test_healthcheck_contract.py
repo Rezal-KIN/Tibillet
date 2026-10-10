@@ -17,7 +17,11 @@ class HealthcheckContractTests(unittest.TestCase):
             bin_dir = root / "bin"
             bin_dir.mkdir()
             curl = bin_dir / "curl"
-            curl.write_text("#!/bin/sh\nprintf 200\n", encoding="utf-8")
+            curl.write_text(
+                '#!/bin/sh\ncase "$*" in\n'
+                '  */static/*) printf "%s" "$MOCK_STATIC_STATUS" ;;\n'
+                '  *) printf 200 ;;\nesac\n', encoding="utf-8",
+            )
             docker = bin_dir / "docker"
             docker.write_text(
                 "#!/bin/sh\n"
@@ -53,25 +57,29 @@ class HealthcheckContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
             env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
-            for running, ping, admin, domain, worker_fedow, expected_success in (
-                ("false", "false", "true", "true", "true", False),
-                ("true", "false", "true", "true", "true", False),
-                ("true", "true", "false", "true", "true", False),
-                ("true", "true", "true", "false", "true", False),
-                ("true", "true", "true", "true", "false", False),
-                ("true", "true", "true", "true", "true", True),
+            for running, ping, admin, domain, worker_fedow, static_status, expected_success in (
+                ("false", "false", "true", "true", "true", "200", False),
+                ("true", "false", "true", "true", "true", "200", False),
+                ("true", "true", "false", "true", "true", "200", False),
+                ("true", "true", "true", "false", "true", "200", False),
+                ("true", "true", "true", "true", "false", "200", False),
+                ("true", "true", "true", "true", "true", "403", False),
+                ("true", "true", "true", "true", "true", "404", False),
+                ("true", "true", "true", "true", "true", "200", True),
             ):
-                with self.subTest(running=running, ping=ping, admin=admin, domain=domain):
+                with self.subTest(running=running, ping=ping, admin=admin, domain=domain, static_status=static_status):
                     result = subprocess.run(
                         ["bash", str(HEALTHCHECK), str(config)],
                         env={**env, "MOCK_CELERY_RUNNING": running, "MOCK_CELERY_PING": ping,
                              "MOCK_ADMIN_READY": admin, "MOCK_REFILL_DOMAIN_READY": domain,
-                             "MOCK_WORKER_FEDOW": worker_fedow},
+                             "MOCK_WORKER_FEDOW": worker_fedow, "MOCK_STATIC_STATUS": static_status},
                         text=True,
                         capture_output=True,
                         check=False,
                     )
                     self.assertEqual(result.returncode == 0, expected_success, result.stderr)
+                    if static_status != "200":
+                        self.assertIn("Lespass stylesheet unavailable", result.stderr)
 
 
 if __name__ == "__main__":

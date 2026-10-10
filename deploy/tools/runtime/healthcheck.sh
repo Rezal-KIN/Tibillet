@@ -34,6 +34,17 @@ for url in "${urls[@]}"; do
   esac
 done
 
+# A 200 homepage can still render without its styles after storage preparation.
+# Require the homepage stylesheets from this host's Nginx.
+for asset in bootstrap.min.5.3.3.css bootstrap-icons.min.css vars.css tibillet.css swal.css; do
+  url="https://$LESPASS_PUBLIC_DOMAIN/static/reunion/css/$asset"
+  status="$(curl --silent --show-error --insecure --noproxy '*' \
+    --resolve "$LESPASS_PUBLIC_DOMAIN:443:127.0.0.1" --max-time 20 --max-redirs 0 \
+    --output /dev/null --write-out '%{http_code}' "$url")"
+  [[ "$status" == 200 ]] || fail "Lespass stylesheet unavailable url=$url status=$status"
+  printf 'local healthy stylesheet=%s status=%s\n' "$asset" "$status"
+done
+
 # A 200 response from the generic TiBillet public homepage is not a healthy
 # Gala site. Verify the Django tenant mapping as well as the HTTP endpoint.
 timeout 30s docker exec -w /DjangoFiles lespass_django \
