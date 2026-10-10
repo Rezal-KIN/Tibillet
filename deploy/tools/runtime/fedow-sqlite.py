@@ -101,6 +101,17 @@ def prepare_empty(repo, runtime):
     write_marker(marker, database, "initializing")
 
 
+def begin_initialization(repo, runtime):
+    # Preflight must accept the storage before any marker is written. Only a
+    # genuinely empty host can enter automatic first-boot initialization.
+    # Record that state before the native entrypoint creates its database so
+    # an interrupted first release can resume without adopting unknown data.
+    check_storage(repo, runtime)
+    database, _old_pg, marker = storage_paths(repo, runtime)
+    if not marker.exists():
+        write_marker(marker, database, "initializing")
+
+
 def initialize(repo, runtime, check_only=False):
     database, old_pg, marker = storage_paths(repo, runtime)
     if marker.exists():
@@ -125,7 +136,7 @@ def main():
         command.add_argument("database", type=Path)
         if name == "snapshot":
             command.add_argument("destination", type=Path)
-    for name in ("check-storage", "prepare-empty", "initialize-storage"):
+    for name in ("check-storage", "prepare-empty", "begin-initialization", "initialize-storage"):
         command = sub.add_parser(name)
         command.add_argument("repo", type=Path)
         command.add_argument("runtime", type=Path)
@@ -140,6 +151,8 @@ def main():
         check_storage(args.repo, args.runtime)
     elif args.command == "prepare-empty":
         prepare_empty(args.repo, args.runtime)
+    elif args.command == "begin-initialization":
+        begin_initialization(args.repo, args.runtime)
     else:
         print("initialized" if initialize(args.repo, args.runtime, args.check_only) else "ready")
 

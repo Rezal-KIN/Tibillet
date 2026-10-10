@@ -1,0 +1,676 @@
+{
+  "generated_at": "2026-10-09T20:51:47.968276+00:00",
+  "repo_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+  "scope": {
+    "mode": "read-only application and infrastructure investigation",
+    "aws_account": "318629836660",
+    "aws_profile": "gala-elevated",
+    "region": "eu-west-3",
+    "inspected_instance": "i-0037b98572fccdff2",
+    "active_public_ipv4": "51.44.90.200",
+    "old_aix_instance": "i-0801aa8a2273838aa",
+    "old_aix_interior_inspected": false,
+    "old_aix_limitation": "SSM ConnectionLost; no inside-container evidence in this investigation",
+    "server_changes_applied": false,
+    "transactions_created_or_replayed": false,
+    "instances_created": false
+  },
+  "guide": {
+    "repository": "TiBillet/documentation_v2",
+    "commit": "1dc42966228e535a1a5a4f4a7a373323b6234a7c",
+    "path": "docs/install/server_install.md"
+  },
+  "live_nginx": [
+    {
+      "container": "lespass_nginx",
+      "local_path": "deploy/Lespass/nginx/lespass.conf",
+      "local_sha256": "b6842e9957c81025f01db24776c2f9e37775910c9cb26e1363a3a72be9259fdb",
+      "loaded_sha256": "b6842e9957c81025f01db24776c2f9e37775910c9cb26e1363a3a72be9259fdb",
+      "matches_checkout": true,
+      "nginx_syntax_exit": 0,
+      "loaded_configuration": "server {\n\n    listen 80;\n    server_name galas-am-aix.rezal.fr *.galas-am-aix.rezal.fr;\n    resolver 127.0.0.11 valid=30s;\n\n    access_log /logs/nginxAccess.log;\n    error_log /logs/nginxError.log;\n\n    location /static {\n        root /www;\n    }\n\n    location /media {\n        root /www;\n    }\n\n    location = /adminstaff {\n        return 302 https://$host/admin/;\n    }\n\n    location = /adminstaff/ {\n        return 302 https://$host/admin/;\n    }\n\n    # AM-Rezal modification, 2026-10-03: free source access for this release.\n    location = /source {\n        return 302 /source/;\n    }\n    location ^~ /source/ {\n        alias /source/;\n        index index.html;\n        autoindex off;\n        add_header Cache-Control \"no-store\" always;\n    }\n\n    location / {\n        add_header Link '</source/>; rel=\"describedby\"' always;\n        # everything is passed to Gunicorn\n        set $django_upstream lespass_django:8002;\n        proxy_pass http://$django_upstream;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header Host $host;\n        proxy_redirect off;\n        proxy_http_version 1.1;\n        client_max_body_size 4M;\n        proxy_buffer_size 16k;\n        proxy_buffers 32 16k;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection \"upgrade\";\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-Host $server_name;\n    }\n}\n\ninclude mime.types;\ntypes {\n    # here are additional types\n    application/javascript mjs;\n}\n"
+    },
+    {
+      "container": "fedow_nginx",
+      "local_path": "deploy/Fedow/nginx/django.conf",
+      "local_sha256": "5c3bcd0a91de22efbe5202631573a28b518b7957bc36efacc7d1276cd6fca76d",
+      "loaded_sha256": "5c3bcd0a91de22efbe5202631573a28b518b7957bc36efacc7d1276cd6fca76d",
+      "matches_checkout": true,
+      "nginx_syntax_exit": 0,
+      "loaded_configuration": "upstream fedow_django {\n    server fedow_django:8000;\n}\nserver {\n    listen 80;\n    server_name fedow.galas-am-aix.rezal.fr;\n    # AM-Rezal modification, 2026-10-03: free source access for this release.\n    location = /source {\n        return 302 /source/;\n    }\n    location ^~ /source/ {\n        alias /source/;\n        index index.html;\n        autoindex off;\n        add_header Cache-Control \"no-store\" always;\n    }\n\n    location / {\n        add_header Link '</source/>; rel=\"describedby\"' always;\n        proxy_pass http://fedow_django;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header Host $host;\n        proxy_redirect off;\n    }\n    location /static/ {\n        alias /www/static/;\n    }\n}\n"
+    },
+    {
+      "container": "laboutik_nginx",
+      "local_path": "deploy/Laboutik/nginx/laboutique.conf",
+      "local_sha256": "7b0a1eeeb44d35d406c5f82db137920a8bd8582753cf88d886bd059d14d18e3f",
+      "loaded_sha256": "7b0a1eeeb44d35d406c5f82db137920a8bd8582753cf88d886bd059d14d18e3f",
+      "matches_checkout": true,
+      "nginx_syntax_exit": 0,
+      "loaded_configuration": "server {\n    listen 80;\n    server_name cashless.galas-am-aix.rezal.fr;\n\n    access_log /DjangoFiles/logs/nginxAccess.log;\n    error_log /DjangoFiles/logs/nginxError.log;\n\n    # Keep the common administration URL alongside Laboutik's native routes.\n    location = /admin {\n        return 302 /adminstaff/;\n    }\n    location /admin/ {\n        rewrite ^/admin/(.*)$ /adminstaff/$1 last;\n    }\n\n    # Static and media géré par Nginx :\n     location /static {\n         root /DjangoFiles/www;\n     }\n\n     location /media {\n         root /DjangoFiles/www;\n     }\n\n\n    # Configuration spécifique pour les WebSockets\nlocation ~ ^/(wss|ws)/ {\n        proxy_pass http://laboutik_django:8001; # 8001 fait tourner Daphne\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection \"upgrade\";\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Host $server_name;\n\n        # WebSocket timeout settings\n        proxy_read_timeout 3600s;\n        proxy_send_timeout 3600s;\n        proxy_connect_timeout 3600s;\n    }\n\n    # AM-Rezal modification, 2026-10-03: free source access for this release.\n    location = /source {\n        return 302 /source/;\n    }\n    location ^~ /source/ {\n        alias /source/;\n        index index.html;\n        autoindex off;\n        add_header Cache-Control \"no-store\" always;\n    }\n\n    location / {\n        add_header Link '</source/>; rel=\"describedby\"' always;\n        # everything is passed to Gunicorn/Django\n        proxy_pass http://laboutik_django:8000;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header Host $host;\n        proxy_redirect off;\n    }\n}\n"
+    }
+  ],
+  "live_container_networks_and_ingress": [
+    {
+      "name": "traefik",
+      "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "state": "running",
+      "networks": {
+        "frontend": "172.18.0.2"
+      },
+      "published_ports": {
+        "443/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "443"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "443"
+          }
+        ],
+        "80/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "80"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "80"
+          }
+        ]
+      },
+      "extra_hosts": [],
+      "router_labels": {},
+      "nginx_mounts": []
+    },
+    {
+      "name": "lespass_nginx",
+      "image": "nginx:latest",
+      "state": "running",
+      "networks": {
+        "frontend": "172.18.0.6",
+        "lespass_lespass_backend": "172.21.0.7"
+      },
+      "published_ports": {
+        "80/tcp": null
+      },
+      "extra_hosts": [],
+      "router_labels": {
+        "traefik.docker.network": "frontend",
+        "traefik.enable": "true",
+        "traefik.http.routers.lespass.rule": "Host(`galas-am-aix.rezal.fr`)",
+        "traefik.http.routers.lespass.tls.certresolver": "myresolver"
+      },
+      "nginx_mounts": [
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/Lespass/nginx",
+          "target": "/etc/nginx/conf.d",
+          "rw": true
+        },
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/source/public",
+          "target": "/source",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "name": "fedow_nginx",
+      "image": "nginx:latest",
+      "state": "running",
+      "networks": {
+        "fedow_fedow_backend": "172.19.0.4",
+        "frontend": "172.18.0.3"
+      },
+      "published_ports": {
+        "80/tcp": null
+      },
+      "extra_hosts": [],
+      "router_labels": {
+        "traefik.docker.network": "frontend",
+        "traefik.enable": "true",
+        "traefik.http.routers.fedow_nginx.rule": "Host(`fedow.galas-am-aix.rezal.fr`)",
+        "traefik.http.routers.fedow_nginx.tls.certresolver": "myresolver"
+      },
+      "nginx_mounts": [
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/Fedow/nginx",
+          "target": "/etc/nginx/conf.d",
+          "rw": true
+        },
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/source/public",
+          "target": "/source",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "name": "laboutik_nginx",
+      "image": "nginx",
+      "state": "running",
+      "networks": {
+        "frontend": "172.18.0.4",
+        "laboutik_laboutik_backend": "172.20.0.6"
+      },
+      "published_ports": {
+        "80/tcp": null
+      },
+      "extra_hosts": [],
+      "router_labels": {
+        "traefik.docker.network": "frontend",
+        "traefik.enable": "true",
+        "traefik.http.routers.laboutik_nginx.rule": "Host(`cashless.galas-am-aix.rezal.fr`)",
+        "traefik.http.routers.laboutik_nginx.tls.certresolver": "myresolver"
+      },
+      "nginx_mounts": [
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/Laboutik/nginx",
+          "target": "/etc/nginx/conf.d",
+          "rw": true
+        },
+        {
+          "source": "/opt/tibillet-gala/repository/deploy/source/public",
+          "target": "/source",
+          "rw": false
+        }
+      ]
+    },
+    {
+      "name": "lespass_django",
+      "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+      "state": "running",
+      "networks": {
+        "frontend": "172.18.0.5",
+        "lespass_lespass_backend": "172.21.0.6"
+      },
+      "published_ports": {},
+      "extra_hosts": [
+        "fedow.galas-am-aix.rezal.fr:host-gateway"
+      ],
+      "router_labels": {},
+      "nginx_mounts": []
+    },
+    {
+      "name": "lespass_celery",
+      "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:3903ca6486307e0590ad46150d608badc7daed8e09eb636bcf602c2bbd1c7eb4",
+      "state": "running",
+      "networks": {
+        "lespass_lespass_backend": "172.21.0.5"
+      },
+      "published_ports": {},
+      "extra_hosts": [
+        "fedow.galas-am-aix.rezal.fr:host-gateway"
+      ],
+      "router_labels": {},
+      "nginx_mounts": []
+    },
+    {
+      "name": "fedow_django",
+      "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:ad55fc17eac04784c83015430e280a40b467c0e48ba230db5442358f8656048f",
+      "state": "running",
+      "networks": {
+        "fedow_fedow_backend": "172.19.0.3"
+      },
+      "published_ports": {},
+      "extra_hosts": [
+        "fedow.tibillet.localhost:172.17.0.1",
+        "lespass.tibillet.localhost:172.17.0.1",
+        "cashless.tibillet.localhost:172.17.0.1"
+      ],
+      "router_labels": {},
+      "nginx_mounts": []
+    },
+    {
+      "name": "laboutik_django",
+      "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:874ff20c258fca91ca7f2636cabc56e8abaf116b07c24130bb6e2e3f72fd9519",
+      "state": "running",
+      "networks": {
+        "laboutik_laboutik_backend": "172.20.0.5"
+      },
+      "published_ports": {},
+      "extra_hosts": [
+        "galas-am-aix.rezal.fr:host-gateway",
+        "fedow.galas-am-aix.rezal.fr:host-gateway"
+      ],
+      "router_labels": {},
+      "nginx_mounts": []
+    }
+  ],
+  "live_domain_settings": {
+    "domain": "galas-am-aix.rezal.fr",
+    "sub": "festival",
+    "meta": "agenda",
+    "domains": [
+      {
+        "domain": "agenda.galas-am-aix.rezal.fr",
+        "is_primary": true,
+        "tenant__schema_name": "meta",
+        "tenant__categorie": "M"
+      },
+      {
+        "domain": "m.galas-am-aix.rezal.fr",
+        "is_primary": false,
+        "tenant__schema_name": "meta",
+        "tenant__categorie": "M"
+      },
+      {
+        "domain": "www.galas-am-aix.rezal.fr",
+        "is_primary": true,
+        "tenant__schema_name": "public",
+        "tenant__categorie": "R"
+      },
+      {
+        "domain": "festival.galas-am-aix.rezal.fr",
+        "is_primary": false,
+        "tenant__schema_name": "festival",
+        "tenant__categorie": "S"
+      },
+      {
+        "domain": "galas-am-aix.rezal.fr",
+        "is_primary": true,
+        "tenant__schema_name": "festival",
+        "tenant__categorie": "S"
+      }
+    ],
+    "debug": false,
+    "use_x_forwarded_host": false,
+    "secure_proxy_ssl_header": [
+      "HTTP_X_FORWARDED_PROTO",
+      "https"
+    ],
+    "session_cookie_domain": null,
+    "csrf_cookie_domain": null,
+    "csrf_trusted_origins": [
+      "https://galas-am-aix.rezal.fr",
+      "https://.galas-am-aix.rezal.fr",
+      "https://*.galas-am-aix.rezal.fr",
+      "https://www.galas-am-aix.rezal.fr",
+      "https://festival.galas-am-aix.rezal.fr",
+      "https://agenda.galas-am-aix.rezal.fr"
+    ],
+    "gala_apex_enabled": true,
+    "gala_local_fedow_enabled": true,
+    "fedow_domain": "fedow.galas-am-aix.rezal.fr",
+    "fedow_base_url": "http://fedow_nginx",
+    "pairing_present": true
+  },
+  "live_fedow_domains_and_media": {
+    "place_domains": [
+      "galas-am-aix.rezal.fr"
+    ],
+    "media_url": "/media/",
+    "media_root": "/home/fedow/Fedow/www/media",
+    "media_files_count": 0,
+    "asset_file_fields": [
+      "img"
+    ]
+  },
+  "live_connectivity_tests": {
+    "lespass_django": {
+      "gala_local_fedow_enabled": true,
+      "tests": [
+        {
+          "path": "docker_http",
+          "url": "http://fedow_nginx/helloworld/",
+          "resolved_ip": "172.18.0.3",
+          "status": 200
+        },
+        {
+          "path": "public_name_local_https",
+          "url": "https://fedow.galas-am-aix.rezal.fr/helloworld/",
+          "resolved_ip": "172.17.0.1",
+          "status": 200
+        }
+      ]
+    },
+    "lespass_celery": {
+      "gala_local_fedow_enabled": true,
+      "tests": [
+        {
+          "path": "docker_http",
+          "url": "http://fedow_nginx/helloworld/",
+          "error_type": "gaierror",
+          "dns_error": true
+        },
+        {
+          "path": "public_name_local_https",
+          "url": "https://fedow.galas-am-aix.rezal.fr/helloworld/",
+          "resolved_ip": "172.17.0.1",
+          "status": 200
+        }
+      ]
+    },
+    "laboutik_django": {
+      "gala_local_fedow_enabled": false,
+      "tests": [
+        {
+          "path": "docker_http",
+          "url": "http://fedow_nginx/helloworld/",
+          "error_type": "gaierror",
+          "dns_error": true
+        },
+        {
+          "path": "public_name_local_https",
+          "url": "https://fedow.galas-am-aix.rezal.fr/helloworld/",
+          "resolved_ip": "172.17.0.1",
+          "status": 200
+        }
+      ]
+    }
+  },
+  "live_peer_routing": {
+    "lespass_django": {
+      "configured_cashless_url": "https://cashless.galas-am-aix.rezal.fr",
+      "resolved_cashless_ip": "51.44.90.200"
+    },
+    "lespass_celery": {
+      "configured_cashless_url": "https://cashless.galas-am-aix.rezal.fr",
+      "resolved_cashless_ip": "51.44.90.200"
+    },
+    "fedow": {
+      "lespass_public_name_ip": "51.44.90.200"
+    }
+  },
+  "live_domain_and_button_checks": {
+    "primary_domain": "galas-am-aix.rezal.fr",
+    "cached_primary_domain": "galas-am-aix.rezal.fr",
+    "hide_refill_button": false,
+    "force_show_refill_button": true,
+    "computed_show_refill_button": true,
+    "show_refill_is_method": true,
+    "configure_gala_apex_check": true,
+    "configure_gala_refill_check": true
+  },
+  "live_reward_feature_counts": {
+    "price_rewards_enabled": 0,
+    "ticket_scan_rewards_enabled": 0,
+    "membership_products": 0
+  },
+  "anonymous_public_http_checks": [
+    {
+      "name": "root",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {},
+      "status": 200,
+      "location": null,
+      "source_link_header": "</source/>; rel=\"describedby\"",
+      "canonical_url": "https://galas-am-aix.rezal.fr/"
+    },
+    {
+      "name": "root_admin",
+      "url": "https://galas-am-aix.rezal.fr/admin/login/",
+      "headers_sent": {},
+      "status": 200,
+      "location": null,
+      "source_link_header": "</source/>; rel=\"describedby\""
+    },
+    {
+      "name": "root_admin_alias",
+      "url": "https://galas-am-aix.rezal.fr/adminstaff/",
+      "headers_sent": {},
+      "status": 302,
+      "location": "https://galas-am-aix.rezal.fr/admin/",
+      "source_link_header": null
+    },
+    {
+      "name": "fedow",
+      "url": "https://fedow.galas-am-aix.rezal.fr/helloworld/",
+      "headers_sent": {},
+      "status": 200,
+      "location": null,
+      "source_link_header": "</source/>; rel=\"describedby\""
+    },
+    {
+      "name": "cashless_admin_alias",
+      "url": "https://cashless.galas-am-aix.rezal.fr/admin/",
+      "headers_sent": {},
+      "status": 302,
+      "location": "/adminstaff/login/?next=/adminstaff/",
+      "source_link_header": "</source/>; rel=\"describedby\""
+    },
+    {
+      "name": "cashless_native_admin",
+      "url": "https://cashless.galas-am-aix.rezal.fr/adminstaff/",
+      "headers_sent": {},
+      "status": 302,
+      "location": "/adminstaff/login/?next=/adminstaff/",
+      "source_link_header": "</source/>; rel=\"describedby\""
+    },
+    {
+      "name": "root_untrusted_forwarded_host",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {
+        "X-Forwarded-Host": "routing-audit.invalid",
+        "X-Forwarded-Proto": "http"
+      },
+      "status": 200,
+      "location": null,
+      "source_link_header": "</source/>; rel=\"describedby\"",
+      "canonical_url": "https://galas-am-aix.rezal.fr/"
+    },
+    {
+      "name": "www_host",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {
+        "Host": "www.galas-am-aix.rezal.fr"
+      },
+      "status": 404,
+      "location": null,
+      "source_link_header": null
+    },
+    {
+      "name": "festival_host",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {
+        "Host": "festival.galas-am-aix.rezal.fr"
+      },
+      "status": 404,
+      "location": null,
+      "source_link_header": null
+    },
+    {
+      "name": "agenda_host",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {
+        "Host": "agenda.galas-am-aix.rezal.fr"
+      },
+      "status": 404,
+      "location": null,
+      "source_link_header": null
+    },
+    {
+      "name": "unknown_host",
+      "url": "https://galas-am-aix.rezal.fr/",
+      "headers_sent": {
+        "Host": "routing-audit.galas-am-aix.rezal.fr"
+      },
+      "status": 404,
+      "location": null,
+      "source_link_header": null
+    }
+  ],
+  "source_contract": {
+    "tenant_apex_command": {
+      "path": "Administration/management/commands/configure_gala_apex.py",
+      "introduced_commit": "cb39884d",
+      "uses_native_domain_model": true,
+      "guarded_database_transaction": true
+    },
+    "local_fedow_client": {
+      "path": "fedow_connect/fedow_api.py",
+      "selector": "GALA_LOCAL_FEDOW=1",
+      "selected_base_url": "http://fedow_nginx"
+    },
+    "web_only_network_attachment_commit": "ed5cb0c60de247996cfc297e94362315e8baaeca",
+    "celery_callers": [
+      {
+        "path": "BaseBillet/tasks.py",
+        "line": 1776,
+        "function": "refill_from_lespass_to_user_wallet_from_ticket_scanned"
+      },
+      {
+        "path": "BaseBillet/tasks.py",
+        "line": 1833,
+        "function": "refill_from_lespass_to_user_wallet_from_price_solded"
+      }
+    ],
+    "fedow_membership_signal": {
+      "path": "fedow_core/signals.py",
+      "function": "transaction_webhook_new_membership",
+      "url_pattern": "https://{place.lespass_domain}/fwh/membership/{transaction.uuid}",
+      "tls_verification": "not settings.DEBUG",
+      "timeout_seconds": [
+        1,
+        2
+      ],
+      "http_errors_checked": true,
+      "failures_logged_without_canceling_fedow_transaction": true,
+      "is_stripe_credit_webhook": false
+    },
+    "native_button": {
+      "path": "BaseBillet/models.py",
+      "sha256": "bf42afe43738180371a23d2b0a77de1c9b496c866f3543cc24576ea47f0dda32",
+      "matches_manual_native_witness": true,
+      "show_refill_button_is_method": true,
+      "persistent_fields": [
+        "hide_refill_button",
+        "force_show_refill_button"
+      ],
+      "pipeline_uses_correct_persistent_field": true
+    }
+  },
+  "findings": [
+    {
+      "id": "apex",
+      "status": "verified_on_active_smoke",
+      "conclusion": "Native tenant-domain mapping selects festival on the apex; canonical domain and Fedow place domain match."
+    },
+    {
+      "id": "celery_fedow_dns",
+      "status": "confirmed_configuration_defect",
+      "conclusion": "Worker selects internal HTTP endpoint but cannot resolve fedow_nginx; web path succeeds. Identified reward features currently count zero.",
+      "financial_incident_demonstrated": false
+    },
+    {
+      "id": "inactive_peer_routing",
+      "status": "risk_inferred_from_current_dns_and_native_callers",
+      "conclusion": "Lespass-to-cashless and Fedow-to-Lespass use the shared active public IP; an inactive Gala using those names would contact the active Gala.",
+      "inactive_gala_request_executed": false,
+      "cross_instance_financial_transaction_demonstrated": false
+    },
+    {
+      "id": "secondary_domains",
+      "status": "confirmed_ingress_404",
+      "conclusion": "www/festival/agenda Host checks are 404 at ingress; only apex Lespass rule exists.",
+      "alias_dns_and_certificates_tested": false
+    },
+    {
+      "id": "fedow_media",
+      "status": "missing_native_nginx_media_rule",
+      "conclusion": "Native media path is absent from current Nginx; media folder currently empty.",
+      "existing_broken_image_demonstrated": false
+    },
+    {
+      "id": "admin_and_sources",
+      "status": "anonymous_route_checks_only",
+      "conclusion": "Admin aliases reach authentication; source serving is separate and read-only. No interactive admin login tested."
+    },
+    {
+      "id": "manual_button_probe_correction",
+      "status": "prior_persistence_claim_withdrawn",
+      "conclusion": "Prior manual witness probe assigned to a native method, not the persistent field. Payment and replay observations remain valid; durable witness setting must be retested."
+    }
+  ],
+  "proposed_fixes_not_applied": [
+    {
+      "priority": 1,
+      "action": "Attach lespass_celery to existing frontend network; verify Fedow endpoint and a test task",
+      "new_volume": false,
+      "financial_code_change": false
+    },
+    {
+      "priority": 2,
+      "action": "Complete local cashless/Lespass hostname resolution and verify TLS on inactive fresh Gala; do not disable normal TLS verification"
+    },
+    {
+      "priority": 3,
+      "action": "Decide explicit useful aliases and verify ingress/DNS/TLS; restore official Fedow media/logging configuration if retained"
+    },
+    {
+      "priority": 4,
+      "action": "Test fresh pipeline launch, both directions of communication and reboot before final Aix alignment; use correct field for next native button witness"
+    }
+  ],
+  "limitations": [
+    "Targeted routing review, not complete security certification",
+    "No financial-loss inference from configuration defect",
+    "No full worker task, inactive-server TLS, reboot, email-link or admin-login validation in this investigation",
+    "Initial routing probe domain/media subsections failed; separate subsequent probes corrected those queries"
+  ],
+  "ssm_observation_receipts": {
+    "routing": {
+      "CommandId": "bf51fb71-80c3-425c-a167-6acb98b83dfb",
+      "InstanceId": "i-0037b98572fccdff2",
+      "Status": "Success",
+      "ResponseCode": 0,
+      "ExecutionStartDateTime": "2026-10-09T20:38:17.491Z",
+      "ExecutionEndDateTime": "2026-10-09T20:38:30.491Z"
+    },
+    "domain-connectivity": {
+      "CommandId": "5f204163-4d9f-4d06-b7bf-f13dfcc9a2fe",
+      "InstanceId": "i-0037b98572fccdff2",
+      "Status": "Success",
+      "ResponseCode": 0,
+      "ExecutionStartDateTime": "2026-10-09T20:39:54.614Z",
+      "ExecutionEndDateTime": "2026-10-09T20:40:11.614Z"
+    },
+    "peer-routing": {
+      "CommandId": "e079b831-7f91-4360-aa01-497b79ddeda8",
+      "InstanceId": "i-0037b98572fccdff2",
+      "Status": "Success",
+      "ResponseCode": 0,
+      "ExecutionStartDateTime": "2026-10-09T20:40:52.726Z",
+      "ExecutionEndDateTime": "2026-10-09T20:41:09.726Z"
+    },
+    "native-contract": {
+      "CommandId": "e3b232d7-2fcc-4873-bc2c-e8f13bc5204b",
+      "InstanceId": "i-0037b98572fccdff2",
+      "Status": "Success",
+      "ResponseCode": 0,
+      "ExecutionStartDateTime": "2026-10-09T20:43:25.655Z",
+      "ExecutionEndDateTime": "2026-10-09T20:43:31.655Z"
+    },
+    "feature-scope": {
+      "CommandId": "2e6cdc91-fb3e-46a9-9850-aa420f56c888",
+      "InstanceId": "i-0037b98572fccdff2",
+      "Status": "Success",
+      "ResponseCode": 0,
+      "ExecutionStartDateTime": "2026-10-09T20:45:31.771Z",
+      "ExecutionEndDateTime": "2026-10-09T20:45:37.771Z"
+    }
+  },
+  "private_evidence_sha256": {
+    "domain-connectivity-result.json": "e3dcb2f931c2171f36efa09fb2ce1e5dfc361b9983e06b87b55032af9664a796",
+    "feature-scope-result.json": "91ed6383ef7ed96af07703d2971a7bcd797606f50d642030ba0817c115ca4037",
+    "native-contract-result.json": "dd5d3cdaced03e748092f878ab836318b637ef64129d498d8957e08b5763f24e",
+    "peer-routing-result.json": "c647c59f1dc8d311f19d0f74e887c641ef2d7565f312dc6deb22aff55cc1af19",
+    "routing-result.json": "314bdc2ec34e393c80733dc99c28e7e7d80400a78486fc5909b27eca6ace4a05",
+    "public-http.json": "0989349e1c23d739643e59494d5ecea1fb04a5654625398d2cb7741d66c52d3e",
+    "nginx-vs-guide.diff": "6edc580f5e30d5c68a20be52908a73795f195a4b45efbce69e5d65a678d264be"
+  },
+  "checkout_source_sha256": {
+    "deploy/Lespass/nginx/lespass.conf": "b6842e9957c81025f01db24776c2f9e37775910c9cb26e1363a3a72be9259fdb",
+    "deploy/Fedow/nginx/django.conf": "5c3bcd0a91de22efbe5202631573a28b518b7957bc36efacc7d1276cd6fca76d",
+    "deploy/Laboutik/nginx/laboutique.conf": "7b0a1eeeb44d35d406c5f82db137920a8bd8582753cf88d886bd059d14d18e3f",
+    "deploy/Lespass/docker-compose.yml": "86fb203502305a529241002ba5bb4507b2d39eb07dd6c5ac1458856102afad36",
+    "deploy/Lespass/docker-compose.release.yml": "1c2d2daebed2eeca90c975b90756685a79ddc0742f1ce3ce11c87749e572e388",
+    "deploy/Fedow/docker-compose.release.yml": "1c77c0787a6c76501f6ef49ed69cea654b95bf6e255d956a67b4a005ee42d7a0",
+    "deploy/Laboutik/docker-compose.release.yml": "907140ee4bd55b451f4a07e20d51407dd023a4546ff402dbc841bce84bed880f",
+    "Administration/management/commands/configure_gala_apex.py": "37949272ef90431035bdbc45edb5cc7fc501d369d78ad4ea481edb6feb9b9525",
+    "Administration/management/commands/configure_gala_refill.py": "c6cba8cacf47eeb497b9a8cc040834a9d07edd4f07447901c69d5b2359ea3cfd",
+    "fedow_connect/fedow_api.py": "b1b084a33c8506569a41c28bf9d56e0f12ff4c35600c0b5d856c4a82d9af2a1b",
+    "BaseBillet/models.py": "bf42afe43738180371a23d2b0a77de1c9b496c866f3543cc24576ea47f0dda32",
+    "BaseBillet/tasks.py": "82882598e08723d6a46c371157df9688ecdb4991800d7e2268996231291a64e6"
+  }
+}

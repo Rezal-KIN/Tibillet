@@ -61,9 +61,29 @@ timeout 15s docker exec -w /DjangoFiles laboutik_django \
   'import os; from django.contrib.auth import get_user_model; from APIcashless.models import PointDeVente; assert PointDeVente.objects.exists() and get_user_model().objects.filter(email=os.environ["ADMIN_EMAIL"], is_staff=True).exists()' \
   >/dev/null || fail "Laboutik installation or admin account is missing"
 
-timeout 15s docker exec lespass_django curl --fail --silent --show-error \
-  --header "Host: $FEDOW_PUBLIC_DOMAIN" http://fedow_nginx/helloworld/ \
-  >/dev/null || fail "Lespass cannot reach its local Fedow service"
+# Both processes select the same local Fedow transport. A web-only check
+# previously missed the worker's absent shared Docker network.
+for client in lespass_django lespass_celery; do
+  timeout 15s docker exec "$client" curl --fail --silent --show-error \
+    --connect-timeout 3 --max-time 10 \
+    --header "Host: $FEDOW_PUBLIC_DOMAIN" http://fedow_nginx/helloworld/ \
+    >/dev/null || fail "$client cannot reach its local Fedow service"
+done
+
+# Verify peer routing from the actual application containers. DNS must target
+# the host gateway, not the currently active Gala's public address. HTTPS is
+# checked on the host above; inactive first boots may still have Traefik's
+# temporary certificate, whose trust is checked after activation.
+for client in lespass_django lespass_celery; do
+  timeout 15s docker exec "$client" python -c \
+    'import socket,sys; assert socket.gethostbyname(sys.argv[1]) == socket.gethostbyname(sys.argv[2])' \
+    "$LABOUTIK_PUBLIC_DOMAIN" "$FEDOW_PUBLIC_DOMAIN" \
+    >/dev/null || fail "$client cashless domain is not routed to the local gateway"
+done
+timeout 15s docker exec fedow_django python -c \
+  'import socket,sys; addresses=[line.split()[0] for line in open("/etc/hosts") if sys.argv[1] in line.split()[1:]]; assert addresses and socket.gethostbyname(sys.argv[1]) in addresses' \
+  "$LESPASS_PUBLIC_DOMAIN" \
+  >/dev/null || fail "Fedow Lespass callback domain is not locally mapped"
 
 # HTTP can stay healthy while the Lespass background worker crashes. A release
 # is only healthy when the worker is running and responds through its broker.

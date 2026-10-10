@@ -89,6 +89,10 @@ prepare_writable_mounts "$LESPASS_IMAGE" tibillet \
   "$REPO_ROOT/deploy/Lespass/www" "$REPO_ROOT/deploy/Lespass/logs" \
   "$REPO_ROOT/deploy/Lespass/backup"
 
+# Persist first-boot intent before the native Fedow entrypoint creates SQLite.
+# This never adopts an existing untracked database or resets its contents.
+python3 "$SCRIPT_DIR/fedow-sqlite.py" begin-initialization "$REPO_ROOT" "$(runtime_dir)"
+
 for group in "${compose_groups[@]}"; do
   compose_group_args "$group"
   app_service=""
@@ -100,6 +104,16 @@ for group in "${compose_groups[@]}"; do
   if [[ -n "$app_service" ]]; then
     previous_id="$(docker inspect --format '{{.Id}}' "$app_service" 2>/dev/null || true)"
   fi
+  nginx_service=""
+  case "$group" in
+    *"/deploy/Fedow/docker-compose.yml"*) nginx_service="fedow_nginx" ;;
+    *"/deploy/Laboutik/docker-compose.yml"*) nginx_service="laboutik_nginx" ;;
+    *"/deploy/Lespass/docker-compose.yml"*) nginx_service="lespass_nginx" ;;
+  esac
+  previous_nginx_id=""
+  if [[ -n "$nginx_service" ]]; then
+    previous_nginx_id="$(docker inspect --format '{{.Id}}' "$nginx_service" 2>/dev/null || true)"
+  fi
   docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" up -d --no-build --remove-orphans
   # Reload configuration only for an existing reused application container;
   # on a fresh host Compose starts it once. Never restart its database here.
@@ -107,6 +121,19 @@ for group in "${compose_groups[@]}"; do
     current_id="$(docker inspect --format '{{.Id}}' "$app_service")"
     if [[ "$previous_id" == "$current_id" ]]; then
       docker compose --env-file "$(compose_env_file)" "${COMPOSE_ARGS[@]}" restart "$app_service"
+    fi
+  fi
+  # Bind-mounted configuration changes do not alter Compose's container
+  # identity. A reused proxy must reread them and resolve recreated backends.
+  # A new proxy reads them during startup; signalling it immediately can race
+  # its entrypoint before the master process has written nginx.pid.
+  if [[ -n "$nginx_service" ]]; then
+    docker exec "$nginx_service" nginx -t >/dev/null 2>&1 \
+      || fail "invalid Nginx configuration: $nginx_service"
+    current_nginx_id="$(docker inspect --format '{{.Id}}' "$nginx_service")"
+    if [[ -n "$previous_nginx_id" && "$previous_nginx_id" == "$current_nginx_id" ]]; then
+      docker exec "$nginx_service" nginx -s reload >/dev/null 2>&1 \
+        || fail "Nginx configuration reload failed: $nginx_service"
     fi
   fi
 done
@@ -203,4 +230,11 @@ trap cleanup EXIT
 cp "$MANIFEST_PATH" "$manifest_copy"
 chmod 600 "$manifest_copy"
 mv -f "$manifest_copy" "$(deployed_manifest_path)"
+# Bootstrap can attempt startup before the first deployed manifest exists.
+# Once this release is healthy and backed up, reconcile the same boot service
+# so a historical first-boot failure is not left behind indefinitely.
+stack_unit="tibillet-gala-stacks@${GALA_SLUG}.service"
+systemctl reset-failed "$stack_unit"
+systemctl start "$stack_unit"
+systemctl is-active --quiet "$stack_unit" || fail "Gala boot service did not start"
 printf 'Deployment completed: gala=%s release=%s\n' "$GALA_SLUG" "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release_id"])' "$MANIFEST_PATH")"

@@ -1,0 +1,1439 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-10T14:18:31.972826+00:00",
+  "application_commit": "60147839fd529828b00948b1179e0fa4924ac3d1",
+  "validation": {
+    "deployment_tests": 144,
+    "skipped": 3,
+    "result": "OK"
+  },
+  "pipelines": {
+    "foundation-final": {
+      "name": "tibillet-gala-paris-production-foundation",
+      "execution_id": "106a4cf8-a376-4218-a31f-997ce2cdbc81",
+      "status": "Succeeded",
+      "source_commit": "0859df8a20098e94c4d3bb14f8050f89cd5a2c76"
+    },
+    "test-final": {
+      "name": "tibillet-gala-paris-production-test",
+      "execution_id": "cc69c084-ae14-4438-b558-24d0827807ae",
+      "status": "Succeeded",
+      "source_commit": "60147839fd529828b00948b1179e0fa4924ac3d1"
+    },
+    "final-production": {
+      "name": "tibillet-gala-paris-production-production-gala-alignement-final-2026-10-10",
+      "execution_id": "f2b122c4-6c98-4231-8e8d-17375b8c531b",
+      "status": "Succeeded",
+      "source_commit": "c89218dafd2f7a686a53415339b3164bcb2492c0"
+    },
+    "aix-production": {
+      "name": "tibillet-gala-paris-production-production-gala-am-aix",
+      "execution_id": "5af0a284-973c-4da8-91ab-27942ddf4a73",
+      "status": "Succeeded",
+      "source_commit": "4a49eaafc531d39f929cacd226605243785f9812"
+    },
+    "switch-final": {
+      "name": "tibillet-gala-paris-production-active-gala",
+      "execution_id": "71a95e4e-4f55-4043-8acc-18011f765824",
+      "status": "Succeeded",
+      "source_commit": "4a49eaafc531d39f929cacd226605243785f9812"
+    },
+    "switch-smoke": {
+      "name": "tibillet-gala-paris-production-active-gala",
+      "execution_id": "26276481-3e46-4782-b31e-408339eff21e",
+      "status": "Succeeded",
+      "source_commit": "4a49eaafc531d39f929cacd226605243785f9812"
+    }
+  },
+  "releases": {
+    "final": {
+      "release_id": "gala-alignement-final-2026-10-10-native-20261010-v1",
+      "application_commit": "60147839fd529828b00948b1179e0fa4924ac3d1",
+      "images": {
+        "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+        "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+        "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+        "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+      },
+      "card_stock_generations": [
+        {
+          "generation": 1,
+          "rows": 3510
+        },
+        {
+          "generation": 2,
+          "rows": 1755
+        },
+        {
+          "generation": 3,
+          "rows": 1755
+        }
+      ],
+      "command_id": "a1656928-e653-418b-b1bd-63e848adb1b4",
+      "mounts": [
+        {
+          "service": "fedow_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/database",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "fedow_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "fedow_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "laboutik_nginx",
+          "image": "nginx",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            }
+          ]
+        },
+        {
+          "service": "laboutik_postgres",
+          "image": "postgres:11.5-alpine",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_redis",
+          "image": "redis:6-alpine",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_celery",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "lespass_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_postgres",
+          "image": "postgres:13-bookworm",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_redis",
+          "image": "redis:7.2.3-bookworm",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "traefik",
+          "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/acme.json",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/var/run/docker.sock",
+              "read_only": true
+            }
+          ]
+        }
+      ]
+    },
+    "aix": {
+      "release_id": "gala-am-aix-native-20261010-v2",
+      "application_commit": "60147839fd529828b00948b1179e0fa4924ac3d1",
+      "images": {
+        "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+        "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+        "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+        "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+      },
+      "card_stock_generations": [
+        {
+          "generation": 1,
+          "rows": 3510
+        },
+        {
+          "generation": 2,
+          "rows": 1755
+        },
+        {
+          "generation": 3,
+          "rows": 1755
+        }
+      ],
+      "command_id": "90b6e25c-8adb-4619-8694-d2f0a1bc27bf",
+      "mounts": [
+        {
+          "service": "fedow_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/database",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "fedow_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "fedow_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "laboutik_nginx",
+          "image": "nginx",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            }
+          ]
+        },
+        {
+          "service": "laboutik_postgres",
+          "image": "postgres:11.5-alpine",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_redis",
+          "image": "redis:6-alpine",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_celery",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "lespass_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_postgres",
+          "image": "postgres:13-bookworm",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_redis",
+          "image": "redis:7.2.3-bookworm",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "traefik",
+          "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/acme.json",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/var/run/docker.sock",
+              "read_only": true
+            }
+          ]
+        }
+      ]
+    },
+    "smoke": {
+      "release_id": "smoke-60147839fd529828b00948b1179e0fa4924ac3d1-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+      "application_commit": "60147839fd529828b00948b1179e0fa4924ac3d1",
+      "images": {
+        "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+        "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+        "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+        "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+      },
+      "card_stock_generations": [
+        {
+          "generation": 1,
+          "rows": 3510
+        },
+        {
+          "generation": 2,
+          "rows": 1755
+        },
+        {
+          "generation": 3,
+          "rows": 1755
+        }
+      ],
+      "command_id": "dd786fc5-79c7-49be-9106-6fb40c6990df",
+      "mounts": [
+        {
+          "service": "fedow_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:327a3863140e6314d7cea30da2de0f7859c0197be1d3dd434e92001fd21387e1",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/database",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/fedow/Fedow/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "fedow_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "fedow_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:589c055c2ffe4b621e85df12c581b529ea12a4070efec9806c84d01ef653720b",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "laboutik_nginx",
+          "image": "nginx",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            }
+          ]
+        },
+        {
+          "service": "laboutik_postgres",
+          "image": "postgres:11.5-alpine",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "laboutik_redis",
+          "image": "redis:6-alpine",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_celery",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_django",
+          "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ea910f9f66ac0b2ace6d49c404c041688605a05d97faa0247ee04a6702b76c81",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/Backup",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/DjangoFiles/www",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/home/tibillet/.ssh",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_memcached",
+          "image": "memcached:1.6",
+          "mounts": []
+        },
+        {
+          "service": "lespass_nginx",
+          "image": "nginx:latest",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/etc/nginx/conf.d",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/logs",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/source",
+              "read_only": true
+            },
+            {
+              "type": "bind",
+              "destination": "/www",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_postgres",
+          "image": "postgres:13-bookworm",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/var/lib/postgresql/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "lespass_redis",
+          "image": "redis:7.2.3-bookworm",
+          "mounts": [
+            {
+              "type": "volume",
+              "destination": "/data",
+              "read_only": false
+            }
+          ]
+        },
+        {
+          "service": "traefik",
+          "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+          "mounts": [
+            {
+              "type": "bind",
+              "destination": "/acme.json",
+              "read_only": false
+            },
+            {
+              "type": "bind",
+              "destination": "/var/run/docker.sock",
+              "read_only": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "same_application_and_traefik_images": true,
+  "application_or_csv_mounts": 0,
+  "additional_mounts_vs_manual_guide": {
+    "celery_media_and_logs": 2,
+    "nginx_source_offer_read_only": 3
+  },
+  "fresh_gala": {
+    "command_id": "a070d444-03e7-43fb-a81a-4688f48cc8f7",
+    "status": "Success",
+    "healthcheck_exit": 0,
+    "systemd": [
+      "Result=success",
+      "ActiveState=active",
+      "SubState=exited",
+      "UnitFileState=enabled"
+    ],
+    "card_count": 7020,
+    "native_https": [
+      {
+        "client": "lespass_django",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          }
+        ]
+      },
+      {
+        "client": "lespass_celery",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          }
+        ]
+      },
+      {
+        "client": "fedow_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          }
+        ]
+      },
+      {
+        "client": "laboutik_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          },
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": false,
+            "error": "SSLError"
+          }
+        ]
+      }
+    ],
+    "internal_fedow_clients_verified": 2,
+    "databases": {
+      "fedow": {
+        "database_engine": "django.db.backends.sqlite3",
+        "card_count": 7020,
+        "native_places": 1,
+        "origins": [
+          {
+            "generation": 1,
+            "count": 3510
+          },
+          {
+            "generation": 2,
+            "count": 1755
+          },
+          {
+            "generation": 3,
+            "count": 1755
+          }
+        ]
+      },
+      "lespass": {
+        "database_engine": "postgresql",
+        "apex_tenant": "festival",
+        "domain_count": 5
+      },
+      "laboutik": {
+        "database_engine": "postgresql",
+        "native_pos_count": 3
+      }
+    },
+    "import_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    },
+    "imported_qr_status": 200
+  },
+  "fresh_gala_public": {
+    "command_id": "3f3a2ad4-33da-40ca-979f-c984de9961a0",
+    "status": "Success",
+    "healthcheck_exit": 0,
+    "systemd": [
+      "Result=success",
+      "ActiveState=active",
+      "SubState=exited",
+      "UnitFileState=enabled"
+    ],
+    "card_count": 7020,
+    "native_https": [
+      {
+        "client": "lespass_django",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "lespass_celery",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "fedow_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "laboutik_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      }
+    ],
+    "internal_fedow_clients_verified": 2
+  },
+  "aix": {
+    "command_id": "4cbd7ae2-e104-45b0-a71a-f45887b2a9cb",
+    "status": "Success",
+    "healthcheck_exit": 0,
+    "systemd": [
+      "Result=success",
+      "ActiveState=active",
+      "SubState=exited",
+      "UnitFileState=enabled"
+    ],
+    "card_count": 7020,
+    "native_https": [
+      {
+        "client": "lespass_django",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "lespass_celery",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "fedow_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "laboutik_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      }
+    ],
+    "internal_fedow_clients_verified": 2,
+    "databases": {
+      "fedow": {
+        "database_engine": "django.db.backends.sqlite3",
+        "card_count": 7020,
+        "native_places": 1,
+        "origins": [
+          {
+            "generation": 1,
+            "count": 3510
+          },
+          {
+            "generation": 2,
+            "count": 1755
+          },
+          {
+            "generation": 3,
+            "count": 1755
+          }
+        ]
+      },
+      "lespass": {
+        "database_engine": "postgresql",
+        "apex_tenant": "festival",
+        "domain_count": 5
+      },
+      "laboutik": {
+        "database_engine": "postgresql",
+        "native_pos_count": 3
+      }
+    },
+    "import_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    },
+    "imported_qr_status": 200
+  },
+  "smoke": {
+    "command_id": "c68c8ab4-6523-4b0d-a966-7a9a4623fe2e",
+    "status": "Success",
+    "healthcheck_exit": 0,
+    "systemd": [
+      "Result=success",
+      "ActiveState=active",
+      "SubState=exited",
+      "UnitFileState=enabled"
+    ],
+    "card_count": 7023,
+    "native_https": [
+      {
+        "client": "lespass_django",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "lespass_celery",
+        "results": [
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "cashless.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "fedow_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      },
+      {
+        "client": "laboutik_django",
+        "results": [
+          {
+            "host": "galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          },
+          {
+            "host": "fedow.galas-am-aix.rezal.fr",
+            "tls_verified": true,
+            "status": 200
+          }
+        ]
+      }
+    ],
+    "internal_fedow_clients_verified": 2,
+    "databases": {
+      "fedow": {
+        "database_engine": "django.db.backends.sqlite3",
+        "card_count": 7023,
+        "native_places": 1,
+        "origins": [
+          {
+            "generation": 1,
+            "count": 3513
+          },
+          {
+            "generation": 2,
+            "count": 1755
+          },
+          {
+            "generation": 3,
+            "count": 1755
+          }
+        ]
+      },
+      "lespass": {
+        "database_engine": "postgresql",
+        "apex_tenant": "festival",
+        "domain_count": 5
+      },
+      "laboutik": {
+        "database_engine": "postgresql",
+        "native_pos_count": 3
+      }
+    },
+    "import_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    },
+    "imported_qr_status": 200
+  },
+  "fresh_gala_reboot": {
+    "boot_id_changed": true,
+    "command_id": "7fb7b65e-39dc-4c7e-869e-b758f60e4bda",
+    "health": {
+      "command_id": "7fb7b65e-39dc-4c7e-869e-b758f60e4bda",
+      "status": "Success",
+      "healthcheck_exit": 0,
+      "systemd": [
+        "Result=success",
+        "ActiveState=active",
+        "SubState=exited",
+        "UnitFileState=enabled"
+      ],
+      "card_count": 7020,
+      "native_https": [
+        {
+          "client": "lespass_django",
+          "results": [
+            {
+              "host": "fedow.galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            },
+            {
+              "host": "cashless.galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            }
+          ]
+        },
+        {
+          "client": "lespass_celery",
+          "results": [
+            {
+              "host": "fedow.galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            },
+            {
+              "host": "cashless.galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            }
+          ]
+        },
+        {
+          "client": "fedow_django",
+          "results": [
+            {
+              "host": "galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            }
+          ]
+        },
+        {
+          "client": "laboutik_django",
+          "results": [
+            {
+              "host": "galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            },
+            {
+              "host": "fedow.galas-am-aix.rezal.fr",
+              "tls_verified": false,
+              "error": "SSLError"
+            }
+          ]
+        }
+      ],
+      "internal_fedow_clients_verified": 2
+    }
+  },
+  "aix_legacy_archive": {
+    "command_id": "86886be9-bcdd-468b-b8b5-6802369096ca",
+    "gala": "gala-am-aix",
+    "legacy_backup": "20261010T115551Z",
+    "legacy_directory": "/var/lib/tibillet-gala/gala-am-aix/legacy-databases/20261010T115551Z",
+    "runtime_commit": "60147839fd529828b00948b1179e0fa4924ac3d1",
+    "databases_archived": 3,
+    "private_configuration_readback_verified": true,
+    "isolated_restore_tables": {
+      "fedow": 27,
+      "lespass": 1620,
+      "laboutik": 59
+    }
+  },
+  "backup_restores": {
+    "final": {
+      "backup_id": "20261010T120105Z",
+      "command_id": "606d75f8-0481-403c-a831-c7cbb06191f1",
+      "postgres_tables": {
+        "laboutik": 59,
+        "lespass": 180
+      },
+      "sqlite_integrity_verified": true
+    },
+    "aix": {
+      "backup_id": "20261010T121505Z",
+      "command_id": "b14c1bb1-ebdb-42b5-871b-31bc05fd4da2",
+      "postgres_tables": {
+        "laboutik": 59,
+        "lespass": 180
+      },
+      "sqlite_integrity_verified": true
+    }
+  },
+  "final_media": {
+    "command_id": "166a8147-895a-4054-8556-77301cb1b89a",
+    "native_media_http_status": 200,
+    "served_fixture": true,
+    "temporary_fixture_removed": true
+  },
+  "aix_media": {
+    "command_id": "ba864ddd-7ba2-4d89-9955-94c92ef399ea",
+    "native_media_http_status": 200,
+    "served_fixture": true,
+    "temporary_fixture_removed": true
+  },
+  "final_public_tls": [
+    {
+      "host": "galas-am-aix.rezal.fr",
+      "path": "/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    },
+    {
+      "host": "fedow.galas-am-aix.rezal.fr",
+      "path": "/helloworld/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    },
+    {
+      "host": "cashless.galas-am-aix.rezal.fr",
+      "path": "/adminstaff/login/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    }
+  ],
+  "smoke_public_tls": [
+    {
+      "host": "galas-am-aix.rezal.fr",
+      "path": "/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    },
+    {
+      "host": "fedow.galas-am-aix.rezal.fr",
+      "path": "/helloworld/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    },
+    {
+      "host": "cashless.galas-am-aix.rezal.fr",
+      "path": "/adminstaff/login/",
+      "tls_verified": true,
+      "status": 200,
+      "transport_exit": 0
+    }
+  ],
+  "final_public_state": {
+    "active_gala": "gala-smoke",
+    "eip_instance": "i-0037b98572fccdff2",
+    "fresh_gala_state": "stopped",
+    "first_failed_trial_state": "stopped",
+    "smoke_state": "running",
+    "aix_state": "running"
+  },
+  "limits": [
+    "No payment performed in this session; non-Smoke Gala Stripe configuration remains LIVE.",
+    "No new email receipt, physical NFC sale, or submitted administrator password login is proven by these checks.",
+    "Backup restores are isolated structural checks; active application data was not replaced by restored data.",
+    "Inactive fresh first boot has untrusted temporary TLS certificates; local Lespass-to-Fedow transport remains necessary.",
+    "Aix was rebuilt and checked but not rebooted in this session.",
+    "PR 106 is prepared for review; main has not been merged."
+  ]
+}

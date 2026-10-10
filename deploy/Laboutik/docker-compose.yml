@@ -1,7 +1,7 @@
 services:
   laboutik_postgres:
     image: postgres:11.5-alpine
-    restart: "no"
+    restart: always
     env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     container_name: laboutik_postgres
     hostname: laboutik_postgres
@@ -14,13 +14,13 @@ services:
     image: memcached:1.6
     container_name: laboutik_memcached
     hostname: laboutik_memcached
-    restart: "no"
+    restart: always
     networks:
       - laboutik_backend
 
   laboutik_redis:
     image: redis:6-alpine
-    restart: "no"
+    restart: always
     env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     container_name: laboutik_redis
     hostname: laboutik_redis
@@ -32,7 +32,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/Laboutik/Dockerfile
-    restart: "no"
+    restart: always
     env_file: ${LABOUTIK_RUNTIME_ENV_FILE:-.env}
     # Every Gala uses the same public hostnames. During bootstrap an inactive
     # Gala must handshake with its own Lespass/Fedow, not the active EC2.
@@ -65,7 +65,7 @@ services:
 
   laboutik_nginx:
     image: nginx
-    restart: "no"
+    restart: always
     container_name: laboutik_nginx
     hostname: laboutik_nginx
     depends_on:

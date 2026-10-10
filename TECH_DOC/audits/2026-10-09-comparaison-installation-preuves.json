@@ -1,0 +1,301 @@
+{
+  "generated_at": "2026-10-09T19:57:20.841530+00:00",
+  "repo_commit": "cd677bb39cf7efcd43f55cd943d6177fb07cf1ba",
+  "guide": {
+    "repo": "TiBillet/documentation_v2",
+    "commit": "1dc42966228e535a1a5a4f4a7a373323b6234a7c",
+    "path": "docs/install/server_install.md",
+    "sha256": "a63793690b8c84a6ca1f6ba1b1a88200eb69b8aae5f6754dd9f990493a2f3869"
+  },
+  "guide_prescribed_mount_count": 22,
+  "native_experiment_real_mount_count": 26,
+  "smoke_real_mount_count": 31,
+  "native_images": [
+    {
+      "app": "Fedow",
+      "tag": "tibillet/fedow:latest",
+      "id": "sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "digests": [
+        "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83"
+      ],
+      "labels": null,
+      "env_keys": [
+        "GPG_KEY",
+        "LANG",
+        "PATH",
+        "POETRY_NO_INTERACTION",
+        "PYTHON_SHA256",
+        "PYTHON_VERSION"
+      ],
+      "cmd": [
+        "bash",
+        "start.sh"
+      ],
+      "entrypoint": null,
+      "user": "fedow",
+      "volumes": null
+    },
+    {
+      "app": "Lespass",
+      "tag": "tibillet/lespass:latest",
+      "id": "sha256:e8833982b64c245fb71704c53ea3eb3cfe12d1564c740f481e1423b56a8cdee0",
+      "digests": [
+        "tibillet/lespass@sha256:e8833982b64c245fb71704c53ea3eb3cfe12d1564c740f481e1423b56a8cdee0"
+      ],
+      "labels": null,
+      "env_keys": [
+        "GPG_KEY",
+        "LANG",
+        "PATH",
+        "POETRY_NO_INTERACTION",
+        "PYTHON_SHA256",
+        "PYTHON_VERSION"
+      ],
+      "cmd": [
+        "bash",
+        "/DjangoFiles/start.sh"
+      ],
+      "entrypoint": null,
+      "user": "tibillet",
+      "volumes": null
+    },
+    {
+      "app": "Laboutik",
+      "tag": "tibillet/laboutik:latest",
+      "id": "sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "digests": [
+        "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9"
+      ],
+      "labels": null,
+      "env_keys": [
+        "GPG_KEY",
+        "LANG",
+        "PATH",
+        "POETRY_NO_INTERACTION",
+        "PYTHON_VERSION"
+      ],
+      "cmd": [
+        "bash",
+        "start_services.sh"
+      ],
+      "entrypoint": null,
+      "user": "tibillet",
+      "volumes": null
+    }
+  ],
+  "native_configs": [
+    {
+      "path": "Fedow/docker-compose.yml",
+      "sha256": "f184849570a061cea4a4b6fdcb63b9e4738355f88fbc2ed890bdd06e5840d310"
+    },
+    {
+      "path": "Fedow/nginx/django.conf",
+      "sha256": "44f131efd6cff08d2d87fe1e3b1ac00f30c097772d431c087c82086ae7bc6b43"
+    },
+    {
+      "path": "Lespass/docker-compose.yml",
+      "sha256": "0ccb5b611af041711657ab70e3a927a47bbc37f4b59ade710362327b130c2166"
+    },
+    {
+      "path": "Lespass/nginx/lespass.conf",
+      "sha256": "eb2271e30ab1459080e9bed485a7f21059f86e6b93e807ab6adc1d61b923b6b5"
+    },
+    {
+      "path": "Laboutik/docker-compose.yml",
+      "sha256": "d767f0c306300e3f2419dcdd4a39f8684faba484ef09eecfdc5b8a986c8855af"
+    },
+    {
+      "path": "Laboutik/nginx/laboutik.conf",
+      "sha256": "7a9f6c87849e9a0b3149f0e0932eaba54aab9bfe94ee6669c079d5a64b5c9a6d"
+    },
+    {
+      "path": "traefik/docker-compose.yml",
+      "sha256": "e6dab9a554922447333efd67da847676aa0c08d26e049dff2c90410c6c79bda1"
+    }
+  ],
+  "file_summary": {
+    "Fedow": {
+      "native_files": 179,
+      "smoke_files": 180,
+      "identical": 178,
+      "differences": {
+        "modified": 1,
+        "added_in_smoke": 1
+      }
+    },
+    "Lespass": {
+      "native_files": 1478,
+      "smoke_files": 1790,
+      "identical": 1437,
+      "differences": {
+        "added_in_smoke": 323,
+        "modified": 30,
+        "absent_in_smoke": 11
+      }
+    },
+    "Laboutik": {
+      "native_files": 702,
+      "smoke_files": 704,
+      "identical": 695,
+      "differences": {
+        "modified": 7,
+        "added_in_smoke": 2
+      }
+    }
+  },
+  "native_lespass_diff_from_fixed_origin_count": 13,
+  "config_comparison": {
+    "exact_guide_files": [
+      {
+        "path": "Fedow/docker-compose.yml",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "Fedow/nginx/django.conf",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "Lespass/docker-compose.yml",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "Lespass/nginx/lespass.conf",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "Laboutik/docker-compose.yml",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "Laboutik/nginx/laboutik.conf",
+        "matches_exact_local_guide_extract": true
+      },
+      {
+        "path": "traefik/docker-compose.yml",
+        "matches_exact_local_guide_extract": true
+      }
+    ],
+    "environment_keys": [
+      {
+        "app": "Fedow",
+        "only_in_smoke": [
+          "ACTIVE_GALA_API_TOKEN",
+          "POSTGRES_DB",
+          "POSTGRES_PASSWORD",
+          "POSTGRES_USER",
+          "STRIPE_ENDPOINT_SECRET_TEST",
+          "STRIPE_KEY_PUBLIC",
+          "STRIPE_KEY_TEST",
+          "STRIPE_TEST",
+          "TIME_ZONE",
+          "TZ"
+        ],
+        "only_in_native": [
+          "STRIPE_KEY"
+        ]
+      },
+      {
+        "app": "Lespass",
+        "only_in_smoke": [
+          "ACTIVE_GALA_API_TOKEN",
+          "DEFAULT_FROM_EMAIL",
+          "EMAIL_BACKEND",
+          "EMAIL_USE_SSL",
+          "EMAIL_USE_TLS",
+          "GALA_APEX_TENANT",
+          "GALA_LOCAL_FEDOW",
+          "STRIPE_ENDPOINT_SECRET_TEST",
+          "STRIPE_KEY_PUBLIC",
+          "TZ"
+        ],
+        "only_in_native": [
+          "STRIPE_KEY"
+        ]
+      },
+      {
+        "app": "Laboutik",
+        "only_in_smoke": [
+          "DEFAULT_FROM_EMAIL",
+          "EMAIL_BACKEND",
+          "EMAIL_USE_SSL",
+          "EMAIL_USE_TLS",
+          "TZ"
+        ],
+        "only_in_native": [
+          "BORG_PASSPHRASE",
+          "BORG_REPO"
+        ]
+      }
+    ]
+  },
+  "functional_validation": "Partial native functional proof: pairing, synthetic card QR, real Stripe TEST UI checkout, webhook, credit and callback replay, native SMTP acceptance; manual button-setting persistence unverified due to invalid probe; remaining functions listed separately",
+  "parallel_model_agent": "not started - CLI rejected configured and default models; alternate model question pending",
+  "cleanup": {
+    "started_at": "2026-10-09T19:55:52.350994+00:00",
+    "operations": [
+      {
+        "action": "terminate_owned_instance_requested",
+        "result": "i-02df1631672881103"
+      },
+      {
+        "action": "instance_terminated",
+        "result": "i-02df1631672881103"
+      },
+      {
+        "action": "root_volume_deleted_on_termination",
+        "result": "vol-03eb2ad057389c91f"
+      },
+      {
+        "action": "security_group_deleted",
+        "result": "sg-030a5e91c9ea503be"
+      },
+      {
+        "action": "instance_profile_deleted",
+        "result": "tibillet-gala-paris-vanilla-audit-20261009-ssm"
+      },
+      {
+        "action": "role_deleted",
+        "result": "tibillet-gala-paris-vanilla-audit-20261009-ssm"
+      }
+    ],
+    "completed_at": "2026-10-09T19:56:31.762609+00:00",
+    "status": "complete"
+  },
+  "private_evidence_sha256": {
+    "native-full-inventory.json": "66f99d16cac3ef423db7431ccd9d3521c502bc9f35b482a972f480acb86394f3",
+    "smoke-full-inventory.json": "104f0af03abd350d1cc62ffccc527ddcdec848bc6801f7e9e94b5e463cf41619",
+    "file-comparison.json": "1a3d9872f0bf25cb5d543e63146ad641eb40f7dca81bebb877596bf5469da822",
+    "mount-comparison.json": "b9d69d0271731f8b7376fa94fea330de1b9342bc2599637224df9d6de0e57616",
+    "native-http.json": "52748595edc1078a96c1f0cb921aa1576b4cbbfea7d9d5985d08db41fc627092"
+  },
+  "phase1_functional_validation": "incomplete - valid Stripe Connect and SMTP not provided; native first-launch gaps recorded",
+  "phase2_integrations_evidence": "2026-10-09-installation-native-integrations-preuves.json",
+  "phase2_cleanup_status": "complete",
+  "native_button_probe_correction": {
+    "recorded_at": "2026-10-09T20:51:47.987282+00:00",
+    "evidence": "2026-10-09-domaine-racine-et-nginx-preuves.json",
+    "native_method": "Configuration.show_refill_button()",
+    "persistent_fields": [
+      "hide_refill_button",
+      "force_show_refill_button"
+    ],
+    "basebillet_models_sha256": "bf42afe43738180371a23d2b0a77de1c9b496c866f3543cc24576ea47f0dda32",
+    "matches_inspected_checkout": true,
+    "historical_probe_valid_for_persistent_database_setting": false,
+    "historical_probe_error_does_not_establish_native_save_failure": true,
+    "historical_payment_callback_credit_and_replay_observations_valid": true,
+    "manual_witness_persistent_button_retest_required": true,
+    "pipeline_uses_correct_persistent_field": true,
+    "smoke_current_button_flags_and_checks": {
+      "primary_domain": "galas-am-aix.rezal.fr",
+      "cached_primary_domain": "galas-am-aix.rezal.fr",
+      "hide_refill_button": false,
+      "force_show_refill_button": true,
+      "computed_show_refill_button": true,
+      "show_refill_is_method": true,
+      "configure_gala_apex_check": true,
+      "configure_gala_refill_check": true
+    }
+  },
+  "routing_followup_evidence": "2026-10-09-domaine-racine-et-nginx-preuves.json"
+}

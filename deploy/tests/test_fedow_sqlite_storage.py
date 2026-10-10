@@ -34,6 +34,40 @@ def database(path):
 
 
 class FedowSQLiteStorageTests(unittest.TestCase):
+    def test_interrupted_first_boot_resumes_without_adopting_unknown_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, runtime = Path(tmp) / "repo", Path(tmp) / "runtime"
+            sqlite, _pg, marker = storage.storage_paths(repo, runtime)
+            storage.begin_initialization(repo, runtime)
+            self.assertEqual(json.loads(marker.read_text())["state"], "initializing")
+            db = database(sqlite)
+            db.close()
+            before = sqlite.read_bytes()
+            storage.begin_initialization(repo, runtime)
+            self.assertEqual(sqlite.read_bytes(), before)
+            storage.initialize(repo, runtime)
+            storage.begin_initialization(repo, runtime)
+            self.assertEqual(json.loads(marker.read_text())["state"], "ready")
+            self.assertEqual(sqlite.read_bytes(), before)
+
+    def test_first_boot_marker_refuses_untracked_sqlite_and_postgres(self):
+        for existing in ("sqlite", "postgres", "release"):
+            with self.subTest(existing=existing), tempfile.TemporaryDirectory() as tmp:
+                repo, runtime = Path(tmp) / "repo", Path(tmp) / "runtime"
+                sqlite, pg, marker = storage.storage_paths(repo, runtime)
+                if existing == "sqlite":
+                    db = database(sqlite)
+                    db.close()
+                elif existing == "postgres":
+                    pg.mkdir(parents=True)
+                    (pg / "PG_VERSION").write_text("13")
+                else:
+                    (runtime / "releases").mkdir(parents=True)
+                    (runtime / "releases/deployed-manifest.json").write_text("{}")
+                with self.assertRaisesRegex(ValueError, "explicit"):
+                    storage.begin_initialization(repo, runtime)
+                self.assertFalse(marker.exists())
+
     def test_snapshot_contains_committed_wal_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             source, saved = Path(tmp) / "live.sqlite3", Path(tmp) / "saved.sqlite3"
@@ -111,6 +145,7 @@ class FedowSQLiteStorageTests(unittest.TestCase):
         script = (RUNTIME / "start-stacks.sh").read_text()
         self.assertLess(script.index("check_fedow_storage"), script.index("up -d"))
         release = (RUNTIME / "deploy-release.sh").read_text()
+        self.assertLess(release.index("begin-initialization"), release.index("up -d"))
         prepare = release.index("--check-only")
         upload = release.index('"$SCRIPT_DIR/backup-postgres.sh"', prepare)
         seal = release.index('"$SCRIPT_DIR/fedow-sqlite.py" initialize-storage', upload)

@@ -1,0 +1,32 @@
+service	type	source_smoke	destination	lecture_seule	origine	ligne_guide
+lespass_django	bind	/opt/tibillet-gala/repository/deploy/Lespass/backup	/Backup	False	guide	430
+lespass_django	bind	/opt/tibillet-gala/repository/deploy/Lespass/ssh	/home/tibillet/.ssh	False	guide	431
+lespass_django	bind	/opt/tibillet-gala/repository/deploy/Lespass/www	/DjangoFiles/www	False	guide	428
+lespass_django	bind	/opt/tibillet-gala/repository/deploy/Lespass/logs	/DjangoFiles/logs	False	guide	429
+lespass_celery	bind	/opt/tibillet-gala/repository/deploy/Lespass/www	/DjangoFiles/www	False	added_celery	
+lespass_celery	bind	/opt/tibillet-gala/repository/deploy/Lespass/logs	/DjangoFiles/logs	False	added_celery	
+laboutik_django	bind	/opt/tibillet-gala/repository/deploy/Laboutik/www	/DjangoFiles/www	False	guide	695
+laboutik_django	bind	/opt/tibillet-gala/repository/deploy/Laboutik/logs	/DjangoFiles/logs	False	guide	696
+laboutik_django	bind	/opt/tibillet-gala/repository/deploy/Laboutik/backup	/Backup	False	guide	697
+laboutik_django	bind	/opt/tibillet-gala/repository/deploy/Laboutik/ssh	/home/tibillet/.ssh	False	guide	698
+fedow_django	bind	/opt/tibillet-gala/repository/deploy/Fedow/logs	/home/fedow/Fedow/logs	False	guide	214
+fedow_django	bind	/opt/tibillet-gala/repository/deploy/Fedow/sqlite-database	/home/fedow/Fedow/database	False	guide	212
+fedow_django	bind	/opt/tibillet-gala/repository/deploy/Fedow/www	/home/fedow/Fedow/www	False	guide	213
+lespass_nginx	bind	/opt/tibillet-gala/repository/deploy/Lespass/logs	/logs	False	guide	477
+lespass_nginx	bind	/opt/tibillet-gala/repository/deploy/Lespass/nginx	/etc/nginx/conf.d	False	guide	478
+lespass_nginx	bind	/opt/tibillet-gala/repository/deploy/source/public	/source	True	added_source	
+lespass_nginx	bind	/opt/tibillet-gala/repository/deploy/Lespass/www	/www	False	guide	476
+laboutik_nginx	bind	/opt/tibillet-gala/repository/deploy/Laboutik/www	/DjangoFiles/www	False	guide	726
+laboutik_nginx	bind	/opt/tibillet-gala/repository/deploy/Laboutik/logs	/DjangoFiles/logs	False	guide	727
+laboutik_nginx	bind	/opt/tibillet-gala/repository/deploy/Laboutik/nginx	/etc/nginx/conf.d	False	guide	728
+laboutik_nginx	bind	/opt/tibillet-gala/repository/deploy/source/public	/source	True	added_source	
+fedow_nginx	bind	/opt/tibillet-gala/repository/deploy/Fedow/www	/www	False	guide	231
+fedow_nginx	bind	/opt/tibillet-gala/repository/deploy/Fedow/logs	/logs	False	guide	232
+fedow_nginx	bind	/opt/tibillet-gala/repository/deploy/Fedow/nginx	/etc/nginx/conf.d	False	guide	233
+fedow_nginx	bind	/opt/tibillet-gala/repository/deploy/source/public	/source	True	added_source	
+lespass_postgres	bind	/opt/tibillet-gala/repository/deploy/Lespass/database	/var/lib/postgresql/data	False	guide	399
+lespass_redis	volume	/var/lib/docker/volumes/1688dba06146ca7c44a75d210eaebb8befa75a91ce0ae337f82b3c04fc8224ea/_data	/data	False	image_redis	
+laboutik_redis	volume	/var/lib/docker/volumes/5e6afcd60f27eea4ce75c57cd7e55928792fd449182c01cdbabe1e5cf380c7c7/_data	/data	False	image_redis	
+laboutik_postgres	bind	/opt/tibillet-gala/repository/deploy/Laboutik/database/data	/var/lib/postgresql/data	False	guide	667
+traefik	bind	/opt/tibillet-gala/repository/deploy/traefik/acme.json	/acme.json	False	proxy_implementation	
+traefik	bind	/var/run/docker.sock	/var/run/docker.sock	True	proxy_implementation	

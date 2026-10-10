@@ -17,8 +17,10 @@ services:
     # inter-service HTTPS through this host's Traefik instead of the active EIP.
     extra_hosts:
       - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
+      - "${LABOUTIK_PUBLIC_DOMAIN}:host-gateway"
   lespass_celery:
     image: ${LESPASS_IMAGE}
     build: !reset null
     extra_hosts:
       - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
+      - "${LABOUTIK_PUBLIC_DOMAIN}:host-gateway"

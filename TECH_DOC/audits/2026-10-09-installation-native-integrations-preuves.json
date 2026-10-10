@@ -1,0 +1,409 @@
+{
+  "generated_at": "2026-10-09T20:30:49.494883+00:00",
+  "scope": "Disposable manual native installation, authorized Gala Stripe TEST and SMTP; existing instances and pipelines unchanged",
+  "instance_id": "i-073379a9933c3ea11",
+  "guide_commit": "1dc42966228e535a1a5a4f4a7a373323b6234a7c",
+  "authorized_integrations": {
+    "stripe": "Gala TEST only",
+    "smtp": "existing Gala mail, approved test_recipient",
+    "keys_fetched_on_ec2": true,
+    "live_keys_used": false,
+    "existing_gala_pairing_reused": false
+  },
+  "native_images": [
+    {
+      "app": "Fedow",
+      "tag": "tibillet/fedow:latest",
+      "id": "sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "digests": [
+        "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83"
+      ]
+    },
+    {
+      "app": "Lespass",
+      "tag": "tibillet/lespass:latest",
+      "id": "sha256:e8833982b64c245fb71704c53ea3eb3cfe12d1564c740f481e1423b56a8cdee0",
+      "digests": [
+        "tibillet/lespass@sha256:e8833982b64c245fb71704c53ea3eb3cfe12d1564c740f481e1423b56a8cdee0"
+      ]
+    },
+    {
+      "app": "Laboutik",
+      "tag": "tibillet/laboutik:latest",
+      "id": "sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "digests": [
+        "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9"
+      ]
+    }
+  ],
+  "guide_configs": [
+    {
+      "path": "Fedow/docker-compose.yml",
+      "sha256": "f184849570a061cea4a4b6fdcb63b9e4738355f88fbc2ed890bdd06e5840d310"
+    },
+    {
+      "path": "Fedow/nginx/django.conf",
+      "sha256": "44f131efd6cff08d2d87fe1e3b1ac00f30c097772d431c087c82086ae7bc6b43"
+    },
+    {
+      "path": "Lespass/docker-compose.yml",
+      "sha256": "0ccb5b611af041711657ab70e3a927a47bbc37f4b59ade710362327b130c2166"
+    },
+    {
+      "path": "Lespass/nginx/lespass.conf",
+      "sha256": "eb2271e30ab1459080e9bed485a7f21059f86e6b93e807ab6adc1d61b923b6b5"
+    },
+    {
+      "path": "Laboutik/docker-compose.yml",
+      "sha256": "d767f0c306300e3f2419dcdd4a39f8684faba484ef09eecfdc5b8a986c8855af"
+    },
+    {
+      "path": "Laboutik/nginx/laboutik.conf",
+      "sha256": "7a9f6c87849e9a0b3149f0e0932eaba54aab9bfe94ee6669c079d5a64b5c9a6d"
+    },
+    {
+      "path": "traefik/docker-compose.yml",
+      "sha256": "e6dab9a554922447333efd67da847676aa0c08d26e049dff2c90410c6c79bda1"
+    }
+  ],
+  "image_source_counts": {
+    "Fedow": 179,
+    "Lespass": 1478,
+    "Laboutik": 702
+  },
+  "runtime_source_verification": {
+    "Fedow": {
+      "image_source_count": 179,
+      "modified": [],
+      "missing": [],
+      "added": []
+    },
+    "Lespass": {
+      "image_source_count": 1478,
+      "modified": [],
+      "missing": [],
+      "added": []
+    },
+    "Laboutik": {
+      "image_source_count": 702,
+      "modified": [],
+      "missing": [],
+      "added": [
+        "celerybeat-schedule"
+      ]
+    },
+    "guide_configs": [
+      {
+        "path": "Fedow/docker-compose.yml",
+        "unchanged": true
+      },
+      {
+        "path": "Fedow/nginx/django.conf",
+        "unchanged": true
+      },
+      {
+        "path": "Lespass/docker-compose.yml",
+        "unchanged": true
+      },
+      {
+        "path": "Lespass/nginx/lespass.conf",
+        "unchanged": true
+      },
+      {
+        "path": "Laboutik/docker-compose.yml",
+        "unchanged": true
+      },
+      {
+        "path": "Laboutik/nginx/laboutik.conf",
+        "unchanged": true
+      },
+      {
+        "path": "traefik/docker-compose.yml",
+        "unchanged": true
+      }
+    ],
+    "container_statuses": [
+      {
+        "name": "fedow_django",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "laboutik_nginx",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "laboutik_django",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "laboutik_memcached",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "laboutik_redis",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "laboutik_postgres",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_nginx",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_django",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_celery",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_postgres",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_redis",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "lespass_memcached",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "fedow_nginx",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "fedow_memcached",
+        "status": "running",
+        "restarts": 0
+      },
+      {
+        "name": "traefik",
+        "status": "running",
+        "restarts": 0
+      }
+    ],
+    "mount_count": 26
+  },
+  "appairage_and_worker": {
+    "fedow_django": {
+      "stripe_test": true,
+      "primary_wallet": true,
+      "places_count": 1,
+      "assets_categories": [
+        "FED"
+      ],
+      "sqlite": true
+    },
+    "lespass_django": {
+      "domain_count": 5,
+      "tenant_schemas": [
+        "public",
+        "meta",
+        "festival"
+      ],
+      "settings_are_native": true,
+      "stripe_test": true,
+      "can_fedow": true,
+      "staff_count": 1,
+      "celery_pings": 1
+    },
+    "laboutik_django": {
+      "lespass_pairing": true,
+      "fedow_pairing": true,
+      "staff_count": 1,
+      "admin_count": 1
+    }
+  },
+  "synthetic_card_fixture": {
+    "import": {
+      "native_importer_synthetic_card": true,
+      "imported_card_count": 1,
+      "origin_domain_is_native_tenant": true
+    },
+    "link": {
+      "native_card_linked": true,
+      "user_has_wallet": true,
+      "is_wallet_ephemere": false
+    }
+  },
+  "native_smtp": {
+    "native_django_smtp": true,
+    "starttls": true,
+    "ssl": false,
+    "smtp_messages_accepted": 1,
+    "recipient_is_native_test_admin": true
+  },
+  "native_show_refill_button": {
+    "status": "invalid_probe_for_persistent_button_setting",
+    "historical_invalid_probe": {
+      "show_refill_button": true,
+      "saved": true,
+      "show_refill_button_current": true,
+      "error_message": ""
+    },
+    "persistent_setting_validated": false,
+    "correction": {
+      "recorded_at": "2026-10-09T20:51:47.987282+00:00",
+      "evidence": "2026-10-09-domaine-racine-et-nginx-preuves.json",
+      "native_method": "Configuration.show_refill_button()",
+      "persistent_fields": [
+        "hide_refill_button",
+        "force_show_refill_button"
+      ],
+      "basebillet_models_sha256": "bf42afe43738180371a23d2b0a77de1c9b496c866f3543cc24576ea47f0dda32",
+      "matches_inspected_checkout": true,
+      "historical_probe_valid_for_persistent_database_setting": false,
+      "historical_probe_error_does_not_establish_native_save_failure": true,
+      "historical_payment_callback_credit_and_replay_observations_valid": true,
+      "manual_witness_persistent_button_retest_required": true,
+      "pipeline_uses_correct_persistent_field": true,
+      "smoke_current_button_flags_and_checks": {
+        "primary_domain": "galas-am-aix.rezal.fr",
+        "cached_primary_domain": "galas-am-aix.rezal.fr",
+        "hide_refill_button": false,
+        "force_show_refill_button": true,
+        "computed_show_refill_button": true,
+        "show_refill_is_method": true,
+        "configure_gala_apex_check": true,
+        "configure_gala_refill_check": true
+      }
+    }
+  },
+  "stripe_test_payment": {
+    "before_replay": {
+      "stripe_livemode": false,
+      "stripe_payment_status": "paid",
+      "stripe_session_status": "complete",
+      "amount_total_cents": 100,
+      "currency": "eur",
+      "native_checkout_status": "P",
+      "checkout_transactions": 2,
+      "credited_to_wallet_transactions": 1,
+      "credited_to_wallet_amounts": [
+        100
+      ],
+      "wallet_tokens": [
+        100
+      ]
+    },
+    "replay": {
+      "native_callback_replays": [
+        {
+          "status": 302,
+          "location": "/my_account/"
+        },
+        {
+          "status": 302,
+          "location": "/my_account/"
+        }
+      ]
+    },
+    "after_replay": {
+      "stripe_livemode": false,
+      "stripe_payment_status": "paid",
+      "stripe_session_status": "complete",
+      "amount_total_cents": 100,
+      "currency": "eur",
+      "native_checkout_status": "P",
+      "checkout_transactions": 2,
+      "credited_to_wallet_transactions": 1,
+      "credited_to_wallet_amounts": [
+        100
+      ],
+      "wallet_tokens": [
+        100
+      ]
+    },
+    "native_nginx_webhook_http_statuses": [
+      200
+    ],
+    "replay_did_not_double_credit": true
+  },
+  "browser": {
+    "native_qr_opens_associated_account": true,
+    "refill_started_from_native_button": true,
+    "test_only_card_used": true,
+    "returned_to": "/my_account/",
+    "success_message": "Tirelire rechargée",
+    "displayed_balance": "1,00 TiBillets",
+    "lazy_tokens_trigger": "revealed",
+    "screenshot": "../../.context/vanilla-integrations-20261009/native-balance-proof.png"
+  },
+  "limitations": [
+    "SMTP acceptance proven; inbox receipt and email-link validation not verified",
+    "No physical NFC sale tested",
+    "Card linking fixture prepared with native API; new-holder registration not verified",
+    "Interactive admin logins not verified",
+    "No full tickets, memberships, refunds, load, reboot or S3 pipeline import proof",
+    "Manual button persistence not validated: prior probe shadowed native show_refill_button method; use force_show_refill_button and retest. Payment, credit and replay proof remain valid."
+  ],
+  "stripe_cleanup": {
+    "stripe_mode": "test",
+    "expired_owned_open_sessions": 1,
+    "owned_webhook_deleted": true,
+    "owned_price_archived": true,
+    "owned_product_archived": true,
+    "sandbox_paid_history_retained": true
+  },
+  "aws_cleanup": {
+    "started_at": "2026-10-09T20:28:29.510669+00:00",
+    "operations": [
+      {
+        "action": "terminate_owned_instance_requested",
+        "result": "i-073379a9933c3ea11"
+      },
+      {
+        "action": "instance_terminated",
+        "result": "i-073379a9933c3ea11"
+      },
+      {
+        "action": "root_volume_deleted_on_termination",
+        "result": "vol-06b555cd2e33753a2"
+      },
+      {
+        "action": "security_group_deleted",
+        "result": "sg-0b9231ef3fadb0846"
+      },
+      {
+        "action": "instance_profile_deleted",
+        "result": "tibillet-gala-paris-vanilla-test-20261009-ssm"
+      },
+      {
+        "action": "role_deleted",
+        "result": "tibillet-gala-paris-vanilla-test-20261009-ssm"
+      }
+    ],
+    "completed_at": "2026-10-09T20:29:12.364317+00:00",
+    "status": "complete"
+  },
+  "private_evidence_sha256": {
+    "native-full-inventory.json": "fdcadbc340f44963ab3f6324dee3cc019219605901cc888927dad0e7ede77aab",
+    "start-native-result.json": "6dc8db3703ac66d5f07db78959e19858f3354109cb3e5b7b05e3ec2d8f7cb55d",
+    "app-readiness-result.json": "c0e4d6ce8683c02493427e81dbb4c102c496f430c2819eba14263b5f8085b6fb",
+    "smtp-test-result.json": "be58ff865b0aa47e221e20b1ffaa991190aa1f41251139d59fa243750daff56f",
+    "native-card-result.json": "9643d8a776be3735dda373becd2e0bd5672d1ac9276e4ab7eec01d54efd8edbb",
+    "payment-verify-final-result.json": "8480ddcf49a25f3dcb470105928ff1f79774f0a4779081bfe2a9bf2f0e05882e",
+    "live-sources-result.json": "f96d035bb1dcdf76b121e81e31babc46891ed5c6bab93d823705cf07d17850ac",
+    "cleanup-stripe-result.json": "8b64928a5595547698ccaecd601e93c6a926eaa92e79e7582cc1dfada4b31e2a",
+    "cleanup-receipt.json": "38dea5fddf4e0fb05d1ac69837543c086b790603110d96332078f1f43ef783f7",
+    "native-balance-proof.png": "90a4e2f7dcb97d32cfd7247a3c35c8ebc1df6fe5a1ef98865f4e5c2dda8f6ad7"
+  },
+  "routing_followup_evidence": "2026-10-09-domaine-racine-et-nginx-preuves.json"
+}
