@@ -145,3 +145,19 @@ PostgreSQL a aussi été restauré sans conteneur source. Ces essais ne valident
 pas la charge du gala, les images déployées, un paiement externe, l'appairage ou
 le parcours complet QR/recharge/caisse des trois services. Ce contrôle complet
 sur une instance neuve reste à réaliser avant le gala.
+
+
+### Décision Aix du 10 octobre 2026
+
+L'utilisateur autorise l'archivage des **trois bases historiques** et la création
+native de Fedow SQLite, Lespass PostgreSQL et LaBoutik PostgreSQL neuves. Le
+script ponctuel `deploy/tools/archive-aix-before-native-rebuild.sh` ne vise que
+l'ancienne Aix inactive et le checkout historique observé. Avant déplacement,
+il gèle les applications, sauvegarde et restaure les trois dumps isolément,
+puis téléverse et relit une archive privée des paramètres, environnements,
+clés et files Redis. Les dossiers PostgreSQL restent conservés sur le disque.
+Les anciens volumes Redis sont conservés et de nouveaux caches/files sont
+créés pour éviter d'exécuter des tâches référençant les anciennes identités.
+La préparation refuse une autre version, des montages inattendus ou une
+préparation déjà présente. La release suivante appelle les installateurs natifs
+et l'importeur natif de cartes ; aucun appairage ni solde n'est réécrit à la main.
