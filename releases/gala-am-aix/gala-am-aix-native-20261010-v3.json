@@ -1,0 +1,46 @@
+{
+  "application_repository": "Rezal-KIN/Tibillet",
+  "card_stock": {
+    "lots": [
+      {
+        "generation": 1,
+        "key": "card-stock/de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567.csv",
+        "rows": 3510,
+        "sha256": "de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567"
+      },
+      {
+        "generation": 2,
+        "key": "card-stock/bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab.csv",
+        "rows": 1755,
+        "sha256": "bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab"
+      },
+      {
+        "generation": 3,
+        "key": "card-stock/7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461.csv",
+        "rows": 1755,
+        "sha256": "7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461"
+      }
+    ],
+    "schema_version": 1
+  },
+  "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:7c5da7306e8bed45262a6091d6c9e791a7a26a50bc2ee31b1be2a74fe936fcb1",
+  "fork_commit": "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea",
+  "gala_slug": "gala-am-aix",
+  "image_builds": {
+    "fedow": {
+      "base_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "source_commit": "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea"
+    },
+    "laboutik": {
+      "base_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "source_commit": "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea"
+    }
+  },
+  "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:2264a9160369d7fb382adc54a84c479b14a3859a35f26f151220b1e63316ce32",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ca184ad160d6b4b9d669fdd9142bbbfd3cde25a28150b2be1d53a1081e8b4aec",
+  "platform": "v1",
+  "release_id": "gala-am-aix-native-20261010-v3",
+  "schema_generation": "v1",
+  "tibillet_upstream_commit": "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea",
+  "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+}

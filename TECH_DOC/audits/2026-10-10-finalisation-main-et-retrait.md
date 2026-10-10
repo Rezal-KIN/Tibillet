@@ -51,8 +51,22 @@ deux mises à jour EC2 en place, sans création ni suppression. Le premier plan 
 retrait `bb55bc03-7392-4245-b03c-e3589a69e07f` a été refusé avant application,
 car les journaux CloudWatch et les rôles IAM auraient aussi été supprimés.
 Les deux essais sont ajoutés à la liste existante de conservation des journaux
-et rôles. Le garde-fou continue de refuser leur suppression. Le résultat du
-nouveau plan et du retrait doit être consigné après vérification.
+et rôles. Le garde-fou continue de refuser leur suppression. Le second plan
+`82968173-7f03-4164-b849-6a4688303b66` a été refusé avant application, car Terraform
+diffère aussi le calcul des politiques de livraison de trois autres galas.
+La correction accepte uniquement les valeurs calculées par le provider, pour
+les trois identités existantes exactes, sans changer rôle, identité ou autre champ.
+Les modifications explicites de droits restent interdites.
+
+Le retrait Foundation `96f1d983-efa7-43da-91df-e6e5244abb6d` a ensuite réussi.
+Le plan revu contient 16 suppressions : les deux EC2 et sept ressources de livraison
+pour chaque essai. Les neuf politiques de livraison recalculées sont identiques
+aux politiques précédentes après application ; la dixième politique est celle
+de bascule active, dont seuls les droits des hôtes retirés ont disparu comme prévu.
+Les deux EC2 sont `terminated` et les deux disques sont absents. Snapshots privés
+chiffrés, sauvegardes S3, journaux, rôles sans droits et entrées de catalogue restent
+conservés. Aucun hôte Aix ou Smoke n'a été remplacé. Validation locale finale :
+149 tests, dont 3 ignorés.
 
 ## Recette effectuée
 
@@ -69,9 +83,20 @@ le crédit ni les transactions. Le webhook natif a répondu HTTP 200 le
 
 Le backend SMTP natif a accepté un message adressé exclusivement à la boîte de
 test configurée (`sent_count=1`, TLS actif), depuis Aix qui autorise cette sortie.
-Sujet : `TiBillet - recette Gala 10 octobre - 87d53e94`. La réception reste à
-confirmer par l'utilisateur. Smoke conserve son backend email dummy.
+Sujet : `TiBillet - recette Gala 10 octobre - 87d53e94`. L'utilisateur a confirmé
+la réception dans `kin.rezal@gmail.com`. Smoke conserve son backend email dummy.
+
+Le test QR existant a été exécuté sur les services réels de Smoke : création
+signée par LaBoutik, liaison à un portefeuille, page de recharge et création de
+Checkout TEST. Résultat : `1 passed`, sans paiement supplémentaire. La vérification
+TLS a été conservée. Le lanceur de recette reprend le script du dépôt et indique
+le chemin absolu de Poetry utilisé par les images ; il ne monte aucun fichier.
+La carte synthétique est déclarée perdue par le nettoyage natif du test.
+
+Le rendu natif `/my_account/tokens_table/` renvoie HTTP 200 et affiche le crédit
+de 1 euro ; le portefeuille et les transactions de recette sont conservés.
 
 Un scan physique nécessite une carte et un lecteur : il ne peut pas être prouvé
-par un appel HTTP seul. La comparaison finale des images Aix/Smoke et le retrait
-effectif des essais restent à vérifier et à consigner.
+par un appel HTTP seul. La promotion `gala-am-aix-native-20261010-v3` doit reprendre
+exactement les quatre images et les trois lots du dernier Test main réussi.
+Son déploiement et la comparaison finale des images Aix/Smoke restent à consigner.
