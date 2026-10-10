@@ -16,9 +16,9 @@
     },
     "test-final": {
       "name": "tibillet-gala-paris-production-test",
-      "execution_id": "4007cced-c46e-463b-b93b-e9b3f08672f6",
+      "execution_id": "cc69c084-ae14-4438-b558-24d0827807ae",
       "status": "Succeeded",
-      "source_commit": "8269c9d98738f5b90783a7d4f2c846661c616ae3"
+      "source_commit": "60147839fd529828b00948b1179e0fa4924ac3d1"
     },
     "final-production": {
       "name": "tibillet-gala-paris-production-production-gala-alignement-final-2026-10-10",
