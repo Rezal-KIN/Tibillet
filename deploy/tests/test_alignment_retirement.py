@@ -111,3 +111,19 @@ class AlignmentRetirementTests(unittest.TestCase):
     def test_active_trial_is_never_retired(self):
         with patch.object(bootstrap, 'aws', return_value={'Parameter': {'Value': TARGETS[0]}}), self.assertRaises(RuntimeError):
             bootstrap.verify_validation_retirement(trial_changes('retire'), 'retire', 'tibillet-gala-paris', targets=TARGETS)
+
+    def test_existing_delivery_policy_refresh_cannot_change_role_or_permissions(self):
+        plan = trial_changes('retire')
+        before = {'id': 'existing', 'name': 'existing', 'role': 'same-role', 'policy': '{}'}
+        refresh = {'address': 'aws_iam_role_policy.production_build["gala-images-csv-2026-10-08"]',
+                   'change': {'actions': ['update'], 'before': before,
+                              'after': {**before, 'policy': None}, 'after_unknown': {'policy': True}}}
+        plan['resource_changes'].append(refresh)
+        self.assertEqual(len(plans.verify_verification_retirement_plan(plan, 'retire', targets=TARGETS)), 3)
+        for mutation in [lambda c: c['after'].update(role='different-role'),
+                         lambda c: c['after'].update(policy='{"Statement": []}'),
+                         lambda c: c.update(after_unknown={'policy': True, 'role': True})]:
+            bad = copy.deepcopy(plan)
+            mutation(bad['resource_changes'][-1]['change'])
+            with self.assertRaises(ValueError):
+                plans.verify_verification_retirement_plan(bad, 'retire', targets=TARGETS)
