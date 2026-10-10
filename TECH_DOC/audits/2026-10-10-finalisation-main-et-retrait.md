@@ -18,6 +18,11 @@ Le doublon manuel `06c9b842-2b48-4e2f-bf17-0b2c039ab11c` a été arrêté avant
 DeploySmoke. La PR #107 est également fusionnée, commit
 `2832050a1e1a2553e38f699393b6086bb7425bc9`.
 
+La PR #108 est fusionnée dans `main`, commit
+`a3d9e82d40c76c2034a8e4eb238737b9aabb9eea`. Son Test automatique
+`bc4be719-bed4-45af-8c90-fb2a8d92d413` a réussi, DeploySmoke compris.
+Ce commit constitue la référence applicative commune à Smoke et Aix ci-dessous.
+
 ## Retrait précis des deux essais
 
 | Gala | EC2 | Disque original | Snapshot privé conservé |
@@ -96,7 +101,66 @@ La carte synthétique est déclarée perdue par le nettoyage natif du test.
 Le rendu natif `/my_account/tokens_table/` renvoie HTTP 200 et affiche le crédit
 de 1 euro ; le portefeuille et les transactions de recette sont conservés.
 
-Un scan physique nécessite une carte et un lecteur : il ne peut pas être prouvé
-par un appel HTTP seul. La promotion `gala-am-aix-native-20261010-v3` doit reprendre
-exactement les quatre images et les trois lots du dernier Test main réussi.
-Son déploiement et la comparaison finale des images Aix/Smoke restent à consigner.
+Un scan physique avec une carte et un lecteur n'a pas été refait pendant cette
+recette. Le test HTTP seul ne constitue pas cette preuve.
+
+## Livraison finale Aix et comparaison à Smoke
+
+Le [manifeste Aix v3](../../releases/gala-am-aix/gala-am-aix-native-20261010-v3.json)
+reprend exactement les quatre images et les trois lots du dernier Test main
+réussi. Son empreinte SHA-256 est
+`f6fbf34ceff5cf74b3b8781def5fa76764addcb2f28df358c28eff659b68223a`.
+Production Aix `f99cd6b5-55f7-436e-89d6-0dc39d27f2c9` a réussi avec la source
+de manifeste `0262560bdd6eb22dd6c310e29ade7c019c965253`.
+
+La première tentative s'est arrêtée avant redémarrage parce que l'offre de sources
+de cette release n'était pas encore publiée. Après publication et vérification
+des huit empreintes, seul le stage `DeployExactManifest` de la même exécution
+a été repris, avec le même manifeste. L'[offre de sources Aix v3](https://github.com/Rezal-KIN/Tibillet/releases/tag/sources-gala-am-aix-native-20261010-v3-a3d9e82d40c7)
+correspond donc aux images effectivement livrées.
+
+La commande SSM `65c1a840-85d1-4de3-a64d-1aeddd47486f` sur
+`i-0801aa8a2273838aa` est en succès, terminée à 15:20:24 UTC. La comparaison
+des sorties complètes de contrôle Aix/Smoke confirme :
+
+- les mêmes quatre images, le même commit applicatif `a3d9e82d40c7` et les mêmes
+  références d'images de tous les conteneurs inspectés ;
+- les mêmes destinations/types/droits des montages, sans montage applicatif ni CSV ;
+- 7 020 cartes du catalogue présentes sur chaque hôte en trois générations,
+  `created=0`, `existing=7020`, `lots=3` lors du contrôle ;
+- HTTP 200 pour les trois applications et réponse du worker Celery ;
+- les archives historiques Fedow, LaBoutik et Lespass conservées sur Aix sous
+  `/var/lib/tibillet-gala/gala-am-aix/legacy-databases/20261010T115551Z`.
+
+Les bases, clés et modes Stripe restent propres à chaque gala : la comparaison
+porte sur le déploiement logiciel et ses montages, pas sur l'identité des données.
+Fedow utilise SQLite natif ; Lespass et LaBoutik utilisent leurs PostgreSQL natifs.
+Il reste les montages natifs, deux montages de média/logs Celery et trois montages
+`/source` en lecture seule, détaillés dans l'[audit précédent](2026-10-10-realignement-deploiement.md#montages-réellement-conservés).
+
+L'EIP `51.44.90.200` est toujours attachée à Smoke `i-0037b98572fccdff2` ; le
+paramètre `active-gala` vaut `gala-smoke`. Les domaines publics servent donc
+**Smoke Stripe TEST**. Aix est prêt mais inactif, configuré Stripe LIVE ; aucun
+paiement LIVE n'a été effectué. La transition Foundation `ApplyCheckedPlan`
+est réactivée et vérifiée.
+
+Les [preuves finales assainies](2026-10-10-finalisation-preuves.json) regroupent
+la comparaison, les références des pipelines et la recette. Les sorties privées,
+secrets et correspondances des cartes restent hors Git.
+
+## Clôture de l'intégration et travail restant
+
+La PR #109 regroupe le garde-fou Foundation déjà appliqué, son test, le manifeste
+Aix v3 et ces preuves. Elle ne change aucun code applicatif ni script runtime.
+Une exécution Test automatiquement déclenchée par cette seule clôture doit être
+arrêtée avant DeploySmoke pour conserver les images déjà validées identiques
+sur Aix et Smoke. Cette décision est limitée à ce commit ; le déclencheur V2
+reste actif pour les futurs changements. Le Test applicatif de référence
+`bc4be719-bed4-45af-8c90-fb2a8d92d413` reste en succès.
+
+**Reste, par priorité :**
+
+1. Recette physique avec carte et lecteur, si une nouvelle vérification complète
+   est souhaitée après cette livraison.
+2. Activation d'Aix LIVE lorsqu'elle sera demandée, puis recette de son exposition
+   publique. Les essais actuels restent sur Smoke TEST.
