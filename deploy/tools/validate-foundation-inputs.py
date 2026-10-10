@@ -31,6 +31,11 @@ RETIRE_VERIFICATION_REQUEST = "Retire Gala Verification"
 FIRST_RUN_SLUG = "gala-first-run-20260926"
 PREPARE_FIRST_RUN_RETIREMENT_REQUEST = "Prepare Gala First Run Retirement"
 RETIRE_FIRST_RUN_REQUEST = "Retire Gala First Run"
+ALIGNMENT_SLUGS = ("gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10")
+ALIGNMENT_RETIREMENT_OPERATIONS = {
+    "Prepare Gala Alignment Retirement": "prepare",
+    "Retire Gala Alignment": "retire",
+}
 
 
 def validation_retirement_phase(name: str) -> str | None:
@@ -70,6 +75,8 @@ def value(name: str) -> str:
 
 
 def gala_slug(name: str) -> str:
+    if name in ALIGNMENT_RETIREMENT_OPERATIONS:
+        return ALIGNMENT_SLUGS[0]
     if name == RETIRE_SMOKE_PIPELINE_REQUEST:
         return "gala-smoke"
     if validation_retirement_phase(name):
@@ -114,6 +121,7 @@ def main() -> None:
     validation_retirement = validation_retirement_phase(gala_name)
     verification_retirement = verification_retirement_phase(gala_name)
     first_run_retirement = first_run_retirement_phase(gala_name)
+    alignment_retirement = ALIGNMENT_RETIREMENT_OPERATIONS.get(gala_name)
     domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
         fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
@@ -181,6 +189,10 @@ def main() -> None:
         temporary = galas.get(FIRST_RUN_SLUG)
         if isinstance(temporary, dict) and temporary.get("create_instance") is True:
             fail("finish Gala First Run Retirement before other Foundation operations")
+    if not alignment_retirement:
+        if any(isinstance(galas.get(s), dict) and galas[s].get("create_instance") is True
+               for s in ALIGNMENT_SLUGS):
+            fail("finish Gala Alignment Retirement before other Foundation operations")
 
     new_gala = {
         "platform": "v1",
@@ -194,7 +206,20 @@ def main() -> None:
         "create_instance": True,
         "protect_from_destruction": True,
     }
-    if validation_retirement:
+    if alignment_retirement:
+        for target in ALIGNMENT_SLUGS:
+            existing = galas.get(target)
+            if not isinstance(existing, dict) or existing.get("create_instance") is not True:
+                fail(f"alignment trial {target} is absent from the active catalog")
+            if alignment_retirement == "prepare":
+                if existing.get("protect_from_destruction") is not True:
+                    fail(f"alignment trial {target} already prepared or has unexpected protection")
+                existing["protect_from_destruction"] = False
+            else:
+                if existing.get("protect_from_destruction") is not False:
+                    fail(f"prepare alignment trial {target} before retirement")
+                existing["create_instance"] = False
+    elif validation_retirement:
         for validation_slug in VALIDATION_SLUGS:
             existing = galas.get(validation_slug)
             if not isinstance(existing, dict):

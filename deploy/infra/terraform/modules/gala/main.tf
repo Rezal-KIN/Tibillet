@@ -4,7 +4,7 @@ locals {
   release_prefix = "releases/${var.gala_slug}/"
   # One allowlist powers both count and the lifecycle precondition, so a
   # newly approved disposable host cannot pass one gate and fail the other.
-  retirable_gala_slugs = ["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926"]
+  retirable_gala_slugs = ["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"]
 
   tags = merge({
     Project       = var.project_name

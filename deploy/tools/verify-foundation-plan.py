@@ -32,6 +32,13 @@ FIRST_RUN_RETIREMENT_OPERATIONS = {
 TEMPORARY_IDENTITIES = {
     VERIFICATION_SLUG: (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
     FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
+    "gala-alignement-vanilla-2026-10-10": ("i-0fb1dd7f460d6d88d", "vol-029ab722ab927334d"),
+    "gala-alignement-final-2026-10-10": ("i-03a85efbda0291201", "vol-0ea485dd48a918a26"),
+}
+ALIGNMENT_SLUGS = ("gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10")
+ALIGNMENT_RETIREMENT_OPERATIONS = {
+    "Prepare Gala Alignment Retirement": "prepare",
+    "Retire Gala Alignment": "retire",
 }
 
 
@@ -130,16 +137,18 @@ def verify_validation_retirement_plan(
 
 def verify_verification_retirement_plan(
     plan: dict[str, object], phase: str, slug: str = VERIFICATION_SLUG,
+    *, targets: tuple[str, ...] | None = None,
 ) -> list[str]:
-    if slug not in TEMPORARY_IDENTITIES:
+    targets = (slug,) if targets is None else targets
+    if not targets or len(set(targets)) != len(targets) or any(s not in TEMPORARY_IDENTITIES for s in targets):
         raise ValueError("unknown temporary Gala retirement target")
     changes = plan.get("resource_changes")
     if not isinstance(changes, list):
         raise ValueError("Terraform plan has no resource_changes array")
-    instance_address = f'module.gala["{slug}"].aws_instance.retirable[0]'
+    instance_addresses = {f'module.gala["{target}"].aws_instance.retirable[0]' for target in targets}
     switch_policy = 'aws_iam_role_policy.active_switch_build["apply"]'
     allowed_delivery_deletions = {
-        f'{kind}["{slug}"]' for kind in (
+        f'{kind}["{target}"]' for target in targets for kind in (
             "aws_ssm_document.production_deploy",
             "aws_iam_role_policy.production_build",
             "aws_codebuild_project.production",
@@ -169,7 +178,7 @@ def verify_verification_retirement_plan(
         actions = change.get("actions")
         if actions == ["no-op"] or (item.get("mode") == "data" and actions == ["read"]):
             continue
-        if address in {instance_address, switch_policy}:
+        if address in instance_addresses or address == switch_policy:
             core.append(item)
         elif (phase == "retire" and address in allowed_policy_refreshes
               and actions == ["update"] and safe_computed_policy_refresh(change)):
@@ -181,7 +190,7 @@ def verify_verification_retirement_plan(
         else:
             raise ValueError(f"temporary Gala retirement refuses {actions} on {address}")
     accepted.extend(verify_validation_retirement_plan(
-        {"resource_changes": core}, phase, targets=(slug,),
+        {"resource_changes": core}, phase, targets=targets,
     ))
     return accepted
 
@@ -574,7 +583,12 @@ def main() -> None:
     phase = RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     verification_phase = VERIFICATION_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
-    if phase:
+    alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    if alignment_phase:
+        if args.slug != ALIGNMENT_SLUGS[0]:
+            raise ValueError("alignment retirement requires the exact trial slug")
+        changed = verify_verification_retirement_plan(plan, alignment_phase, targets=ALIGNMENT_SLUGS)
+    elif phase:
         if args.slug != "gala-validation":
             raise ValueError("validation retirement requires the exact validation slug")
         changed = verify_validation_retirement_plan(plan, phase)
