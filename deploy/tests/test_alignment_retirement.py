@@ -65,6 +65,9 @@ class AlignmentRetirementTests(unittest.TestCase):
                 {'resource_changes': plan['resource_changes'] + [{
                     'address': 'module.gala["gala-am-aix"].aws_instance.runtime[0]',
                     'change': {'actions': ['delete'], 'before': {}, 'after': None}}]},
+                {'resource_changes': plan['resource_changes'] + [{
+                    'address': f'aws_cloudwatch_log_group.production_deploy["{TARGETS[0]}"]',
+                    'change': {'actions': ['delete'], 'before': {}, 'after': None}}]},
             ]:
                 with self.assertRaises(ValueError):
                     plans.verify_verification_retirement_plan(bad, phase, targets=TARGETS)
