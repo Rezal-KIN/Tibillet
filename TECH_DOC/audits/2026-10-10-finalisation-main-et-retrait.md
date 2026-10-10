@@ -11,9 +11,12 @@ La PR #106 est fusionnée dans `main`, commit
 a été corrigée avant fusion : le test exact du code `60147839` est
 `cc69c084-ae14-4438-b558-24d0827807ae`, vérifié en succès dans AWS.
 
-La pipeline Test du commit de main est lancée manuellement, son déclenchement
-automatique étant désactivé. Son exécution est
-`06c9b842-2b48-4e2f-bf17-0b2c039ab11c` ; son résultat sera consigné après contrôle.
+Le déclencheur V2 lance automatiquement Test lors des pushes de `main`, même si
+l'action Source indique `DetectChanges=false`. L'exécution automatique
+`eaba99ea-0a21-428b-a68e-a7b31a299e23` a réussi, déploiement Smoke compris.
+Le doublon manuel `06c9b842-2b48-4e2f-bf17-0b2c039ab11c` a été arrêté avant
+DeploySmoke. La PR #107 est également fusionnée, commit
+`2832050a1e1a2553e38f699393b6086bb7425bc9`.
 
 ## Retrait précis des deux essais
 
@@ -22,9 +25,9 @@ automatique étant désactivé. Son exécution est
 | Premier démarrage interrompu | `i-0fb1dd7f460d6d88d` | `vol-029ab722ab927334d` | `snap-0b451152f049f9908` |
 | Démarrage corrigé et reboot | `i-03a85efbda0291201` | `vol-0ea485dd48a918a26` | `snap-095d819c58f31b22a` |
 
-Les snapshots sont demandés sur les disques arrêtés avant toute suppression.
-Leur état `completed`, leur propriétaire, leur chiffrement et leur disque source
-doivent être vérifiés. Les sauvegardes S3 et offres de sources restent conservées.
+Les snapshots ont été effectués sur les disques arrêtés avant toute suppression.
+Leur état `completed`, leur propriétaire `318629836660`, leur chiffrement et leur
+disque source sont vérifiés. Les sauvegardes S3 et offres de sources sont conservées.
 
 Le mécanisme de retrait Foundation existant est étendu aux deux identités exactes :
 
@@ -43,9 +46,32 @@ Les hôtes d'essai peuvent rester arrêtés pendant la préparation.
 Validation locale : 148 tests exécutés, 3 ignorés ; vérification Terraform du
 format et contrôle du diff. Aucun code métier TiBillet n'est changé pour ce retrait.
 
-## Recette et résultats restant à consigner
+La préparation Foundation `155f879f-f54f-4be4-bb4c-3b82ccc0f91d` est réussie :
+deux mises à jour EC2 en place, sans création ni suppression. Le premier plan de
+retrait `bb55bc03-7392-4245-b03c-e3589a69e07f` a été refusé avant application,
+car les journaux CloudWatch et les rôles IAM auraient aussi été supprimés.
+Les deux essais sont ajoutés à la liste existante de conservation des journaux
+et rôles. Le garde-fou continue de refuser leur suppression. Le résultat du
+nouveau plan et du retrait doit être consigné après vérification.
 
-La recette se fait sur Smoke en Stripe TEST. Elle distingue connexion admin,
-recharge payée en mode test, validation du retour/webhook et réception d'un email
-adressé uniquement à la boîte de test configurée. Un scan physique nécessite une
-carte et un lecteur : il ne peut pas être prouvé par un appel HTTP seul.
+## Recette effectuée
+
+Les trois formulaires publics ont été soumis avec les accès communs autorisés :
+Lespass `/admin/`, Fedow `/admin/` et LaBoutik `/adminstaff/` affichent chacun le
+dashboard authentifié. Fedow s'affiche correctement en navigation privée.
+
+La recharge du portefeuille natif sur Smoke a ouvert un Checkout Stripe TEST.
+La session est vérifiée `livemode=false`, `paid`, `complete`, montant 100 centimes.
+Fedow contient une seule transaction créditant 100 centimes au portefeuille.
+Deux relectures du retour renvoient HTTP 302 vers `/my_account/` sans modifier
+le crédit ni les transactions. Le webhook natif a répondu HTTP 200 le
+10 octobre à 14:45:15 UTC. Aucun paiement LIVE n'a été effectué.
+
+Le backend SMTP natif a accepté un message adressé exclusivement à la boîte de
+test configurée (`sent_count=1`, TLS actif), depuis Aix qui autorise cette sortie.
+Sujet : `TiBillet - recette Gala 10 octobre - 87d53e94`. La réception reste à
+confirmer par l'utilisateur. Smoke conserve son backend email dummy.
+
+Un scan physique nécessite une carte et un lecteur : il ne peut pas être prouvé
+par un appel HTTP seul. La comparaison finale des images Aix/Smoke et le retrait
+effectif des essais restent à vérifier et à consigner.

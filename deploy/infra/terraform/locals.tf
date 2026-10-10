@@ -19,7 +19,7 @@ locals {
   } : {}
   production_log_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
-    if gala.create_instance || contains(["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926"], slug)
+    if gala.create_instance || contains(["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"], slug)
   } : {}
   # Keep retired validation IAM roles without permissions until a separately
   # reviewed IAM-deletion migration is available in Foundation.
