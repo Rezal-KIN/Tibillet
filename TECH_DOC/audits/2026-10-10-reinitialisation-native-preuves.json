@@ -1,0 +1,134 @@
+{
+  "verified_at": "2026-10-10T16:25:40.539105+00:00",
+  "application_commit": "64044190b7ea780a0270a1c231468252897e5cc2",
+  "scope": "Smoke and Aix native database reset after user authorization",
+  "test_pipeline": {
+    "name": "tibillet-gala-paris-production-test",
+    "execution_id": "f814bb89-f156-44ed-b30e-df8de3636f28",
+    "status": "Succeeded"
+  },
+  "aix_pipeline": {
+    "name": "tibillet-gala-paris-production-production-gala-am-aix",
+    "execution_id": "97022329-aaf3-4b0b-b8f0-d87e2c504c62",
+    "status": "Succeeded"
+  },
+  "instances": {
+    "gala-smoke": {
+      "gala": "gala-smoke",
+      "release": "smoke-64044190b7ea780a0270a1c231468252897e5cc2-5f79087e43596adbe7a9fcc8b4617a2f045595edeedf42c234c481585ab32546",
+      "commit": "64044190b7ea780a0270a1c231468252897e5cc2",
+      "images": {
+        "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:89a78829b1cf8dbf2ce52a5ed3dec335d148b6d77f830aa05a6d68c54276e005",
+        "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:6024f99786cbaa416b4418a271fde02f78b01c078d0f1e3d8bd0a2faba7601f0",
+        "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:fef3885221a1216647a3dbef8e2b8389aff7e8892b06ebef8dec30063e9ce996",
+        "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+      },
+      "fedow_postgres_removed": true,
+      "native_postgres_preserved": true,
+      "stripe_mode": "TEST",
+      "baseline": {
+        "stock_cards": 7020,
+        "assigned_cards": 0,
+        "stripe_checkouts": 0,
+        "positive_token_balances": 0,
+        "payment_transactions": 0
+      },
+      "archive_directory": "/var/lib/tibillet-gala/gala-smoke/native-reset-archives/20261010T160013Z",
+      "last_successful_backup": "20261010T160949Z",
+      "instance_id": "i-0037b98572fccdff2",
+      "readiness_command_id": "357420d7-e4d5-4730-93a3-eab691878a0f",
+      "readiness_status": "Success",
+      "new_backup_restore_command_id": "90dfaa40-88b2-4e36-9792-e9ba1f329931",
+      "new_backup_restore_status": "Success",
+      "reset_completion_command_id": "152fa2b4-d5ee-4320-af53-41b1b14774c6",
+      "reset_completion_status": "Success",
+      "old_backup_id": "20261010T160013Z",
+      "archive_command_id": "dae0463f-8287-4455-a09c-2c7d73a3b5e7",
+      "archive_status": "Success",
+      "admin_services_ready": [
+        "fedow",
+        "laboutik",
+        "lespass"
+      ],
+      "laboutik_sales": 0,
+      "local_http_200": 3,
+      "celery_responsive": true,
+      "import_idempotent": true,
+      "application_or_csv_mounts": 0
+    },
+    "gala-am-aix": {
+      "gala": "gala-am-aix",
+      "release": "gala-am-aix-native-20261010-v4",
+      "commit": "64044190b7ea780a0270a1c231468252897e5cc2",
+      "images": {
+        "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:89a78829b1cf8dbf2ce52a5ed3dec335d148b6d77f830aa05a6d68c54276e005",
+        "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:6024f99786cbaa416b4418a271fde02f78b01c078d0f1e3d8bd0a2faba7601f0",
+        "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:fef3885221a1216647a3dbef8e2b8389aff7e8892b06ebef8dec30063e9ce996",
+        "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+      },
+      "fedow_postgres_removed": true,
+      "native_postgres_preserved": true,
+      "stripe_mode": "LIVE",
+      "baseline": {
+        "stock_cards": 7020,
+        "assigned_cards": 0,
+        "stripe_checkouts": 0,
+        "positive_token_balances": 0,
+        "payment_transactions": 0
+      },
+      "archive_directory": "/var/lib/tibillet-gala/gala-am-aix/native-reset-archives/20261010T155817Z",
+      "last_successful_backup": "20261010T162151Z",
+      "instance_id": "i-0801aa8a2273838aa",
+      "readiness_command_id": "394fac02-dd7f-4ee8-b1fb-c269ec9727a1",
+      "readiness_status": "Success",
+      "new_backup_restore_command_id": "3f39c22e-7ced-4da2-9b1c-caf863602953",
+      "new_backup_restore_status": "Success",
+      "reset_completion_command_id": "f60ee8b9-d4dc-47c5-8551-72dfefdeeacf",
+      "reset_completion_status": "Success",
+      "old_backup_id": "20261010T155817Z",
+      "archive_command_id": "c57039d2-ec0c-447f-80bf-74787f699484",
+      "archive_status": "Success",
+      "admin_services_ready": [
+        "fedow",
+        "laboutik",
+        "lespass"
+      ],
+      "laboutik_sales": 0,
+      "local_http_200": 3,
+      "celery_responsive": true,
+      "import_idempotent": true,
+      "application_or_csv_mounts": 0
+    }
+  },
+  "synthetic_card_or_payment_created_after_reset": false,
+  "common_images": {
+    "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:89a78829b1cf8dbf2ce52a5ed3dec335d148b6d77f830aa05a6d68c54276e005",
+    "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:6024f99786cbaa416b4418a271fde02f78b01c078d0f1e3d8bd0a2faba7601f0",
+    "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:fef3885221a1216647a3dbef8e2b8389aff7e8892b06ebef8dec30063e9ce996",
+    "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+  },
+  "control_plane": {
+    "public_ip": "51.44.90.200",
+    "public_instance": "i-0037b98572fccdff2",
+    "active_gala": "gala-smoke",
+    "deploy_smoke_transition_enabled": true,
+    "test_trigger_count": 1
+  },
+  "public_http_checks": [
+    {
+      "url": "https://galas-am-aix.rezal.fr/",
+      "http": 200,
+      "tls_verified": true
+    },
+    {
+      "url": "https://cashless.galas-am-aix.rezal.fr/",
+      "http": 200,
+      "tls_verified": true
+    },
+    {
+      "url": "https://fedow.galas-am-aix.rezal.fr/",
+      "http": 200,
+      "tls_verified": true
+    }
+  ]
+}
