@@ -166,6 +166,20 @@ def verify_verification_retirement_plan(
         'aws_iam_role_policy.production_pipeline["gala-am-aix"]',
         'aws_iam_role_policy.test_deploy[0]',
     }
+    if set(targets) == set(ALIGNMENT_SLUGS):
+        # Existing delivery policy documents are deferred by Terraform while
+        # the two trials disappear. Accept only provider recomputation; the
+        # identity and every other field must remain byte-for-byte unchanged.
+        allowed_policy_refreshes.update(
+            f'{kind}["{existing}"]'
+            for existing in (
+                'gala-images-csv-2026-10-08',
+                'gala-import-cartes-2026-10-07',
+                'gala-premier-lancement-2026-10-05',
+            )
+            for kind in ('aws_iam_role_policy.production_build',
+                         'aws_iam_role_policy.production_pipeline')
+        )
     core: list[dict[str, object]] = []
     accepted: list[str] = []
     for item in changes:

@@ -1,0 +1,399 @@
+{
+  "date": "2026-10-10",
+  "aws_account": "318629836660",
+  "region": "eu-west-3",
+  "comparison": {
+    "observed_at_utc": "2026-10-10T15:20:24.550Z",
+    "application_commit": "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea",
+    "images": {
+      "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:7c5da7306e8bed45262a6091d6c9e791a7a26a50bc2ee31b1be2a74fe936fcb1",
+      "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ca184ad160d6b4b9d669fdd9142bbbfd3cde25a28150b2be1d53a1081e8b4aec",
+      "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:2264a9160369d7fb382adc54a84c479b14a3859a35f26f151220b1e63316ce32",
+      "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+    },
+    "same_running_container_images_and_mounts": true,
+    "running_container_mounts": [
+      {
+        "service": "fedow_django",
+        "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:7c5da7306e8bed45262a6091d6c9e791a7a26a50bc2ee31b1be2a74fe936fcb1",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/home/fedow/Fedow/database",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/home/fedow/Fedow/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/home/fedow/Fedow/www",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "fedow_memcached",
+        "image": "memcached:1.6",
+        "mounts": []
+      },
+      {
+        "service": "fedow_nginx",
+        "image": "nginx:latest",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/etc/nginx/conf.d",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/source",
+            "read_only": true
+          },
+          {
+            "type": "bind",
+            "destination": "/www",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "laboutik_django",
+        "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:2264a9160369d7fb382adc54a84c479b14a3859a35f26f151220b1e63316ce32",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/Backup",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/www",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/home/tibillet/.ssh",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "laboutik_memcached",
+        "image": "memcached:1.6",
+        "mounts": []
+      },
+      {
+        "service": "laboutik_nginx",
+        "image": "nginx",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/www",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/etc/nginx/conf.d",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/source",
+            "read_only": true
+          }
+        ]
+      },
+      {
+        "service": "laboutik_postgres",
+        "image": "postgres:11.5-alpine",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/var/lib/postgresql/data",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "laboutik_redis",
+        "image": "redis:6-alpine",
+        "mounts": [
+          {
+            "type": "volume",
+            "destination": "/data",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "lespass_celery",
+        "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ca184ad160d6b4b9d669fdd9142bbbfd3cde25a28150b2be1d53a1081e8b4aec",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/www",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "lespass_django",
+        "image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:ca184ad160d6b4b9d669fdd9142bbbfd3cde25a28150b2be1d53a1081e8b4aec",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/Backup",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/DjangoFiles/www",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/home/tibillet/.ssh",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "lespass_memcached",
+        "image": "memcached:1.6",
+        "mounts": []
+      },
+      {
+        "service": "lespass_nginx",
+        "image": "nginx:latest",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/etc/nginx/conf.d",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/logs",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/source",
+            "read_only": true
+          },
+          {
+            "type": "bind",
+            "destination": "/www",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "lespass_postgres",
+        "image": "postgres:13-bookworm",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/var/lib/postgresql/data",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "lespass_redis",
+        "image": "redis:7.2.3-bookworm",
+        "mounts": [
+          {
+            "type": "volume",
+            "destination": "/data",
+            "read_only": false
+          }
+        ]
+      },
+      {
+        "service": "traefik",
+        "image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+        "mounts": [
+          {
+            "type": "bind",
+            "destination": "/acme.json",
+            "read_only": false
+          },
+          {
+            "type": "bind",
+            "destination": "/var/run/docker.sock",
+            "read_only": true
+          }
+        ]
+      }
+    ],
+    "card_stock_generations": [
+      {
+        "generation": 1,
+        "rows": 3510
+      },
+      {
+        "generation": 2,
+        "rows": 1755
+      },
+      {
+        "generation": 3,
+        "rows": 1755
+      }
+    ],
+    "stock_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    },
+    "aix_archive_retained": true,
+    "aix_archive_directory": "/var/lib/tibillet-gala/gala-am-aix/legacy-databases/20261010T115551Z",
+    "aix_archive_components": [
+      "Fedow",
+      "Laboutik",
+      "Lespass"
+    ],
+    "native_healthcheck": {
+      "healthcheck_exit": 0,
+      "native_healthcheck_summary": [
+        "local healthy url=https://fedow.galas-am-aix.rezal.fr/ status=200",
+        "local healthy url=https://cashless.galas-am-aix.rezal.fr/ status=200",
+        "local healthy url=https://galas-am-aix.rezal.fr/ status=200",
+        "local healthy service=lespass_celery status=responsive"
+      ]
+    },
+    "public_ip_instance": "i-0037b98572fccdff2",
+    "active_gala": "gala-smoke",
+    "foundation_apply_transition_enabled": true
+  },
+  "pipelines": {
+    "application_test": {
+      "pipeline": "tibillet-gala-paris-production-test",
+      "execution_id": "bc4be719-bed4-45af-8c90-fb2a8d92d413",
+      "status": "Succeeded",
+      "source_commits": [
+        "a3d9e82d40c76c2034a8e4eb238737b9aabb9eea"
+      ]
+    },
+    "aix_delivery": {
+      "pipeline": "tibillet-gala-paris-production-production-gala-am-aix",
+      "execution_id": "f99cd6b5-55f7-436e-89d6-0dc39d27f2c9",
+      "status": "Succeeded",
+      "source_commits": [
+        "0262560bdd6eb22dd6c310e29ade7c019c965253"
+      ]
+    },
+    "trial_retirement": {
+      "pipeline": "tibillet-gala-paris-production-foundation",
+      "execution_id": "96f1d983-efa7-43da-91df-e6e5244abb6d",
+      "status": "Succeeded",
+      "source_commits": [
+        "7f3bffe7abf9ab3706456229c933cda0d8c40df6"
+      ]
+    }
+  },
+  "retirement": {
+    "instances": [
+      {
+        "id": "i-0fb1dd7f460d6d88d",
+        "state": "terminated"
+      },
+      {
+        "id": "i-03a85efbda0291201",
+        "state": "terminated"
+      }
+    ],
+    "remaining_disks": 0,
+    "policies_verified": 10,
+    "all_policies_match": true
+  },
+  "retained_snapshots": [
+    "snap-0b451152f049f9908",
+    "snap-095d819c58f31b22a"
+  ],
+  "aix_manifest_sha256": "f6fbf34ceff5cf74b3b8781def5fa76764addcb2f28df358c28eff659b68223a",
+  "aix_source_offer": "https://github.com/Rezal-KIN/Tibillet/releases/tag/sources-gala-am-aix-native-20261010-v3-a3d9e82d40c7",
+  "qa": {
+    "authenticated_admin_forms": [
+      "Lespass /admin/",
+      "Fedow /admin/",
+      "LaBoutik /adminstaff/"
+    ],
+    "stripe": {
+      "mode": "TEST",
+      "paid_amount_cents": 100,
+      "fedow_credit_cents": 100,
+      "replay_did_not_double_credit": true,
+      "webhook_http": 200,
+      "webhook_observed_at_utc": "2026-10-10T14:45:15Z"
+    },
+    "wallet_render": {
+      "wallet_table_http": 200,
+      "rendered_credit_one_euro": true,
+      "duration_seconds": 3.21
+    },
+    "qr_automated_http": {
+      "qr_e2e_exit": 0,
+      "pytest_summary": [
+        "1 passed, 3 warnings in 6.76s"
+      ],
+      "signed_card_created": true,
+      "no_payment_made": true,
+      "tls_verification_retained": true
+    },
+    "email": {
+      "recipient": "kin.rezal@gmail.com",
+      "subject": "TiBillet - recette Gala 10 octobre - 87d53e94",
+      "user_confirmed_received": true,
+      "sent_from": "gala-am-aix",
+      "smoke_backend": "dummy"
+    },
+    "local_tests": {
+      "ran": 149,
+      "skipped": 3,
+      "result": "OK"
+    },
+    "physical_scan_retested": false,
+    "live_payment_made": false
+  },
+  "closure_only_commit_policy": {
+    "preserve_verified_images": true,
+    "stop_only_closure_test_execution_before_deploysmoke": true,
+    "global_trigger_stays_enabled": true
+  },
+  "remaining": [
+    "Physical card and reader recipe, if requested",
+    "Explicit activation of Aix LIVE and public exposure verification"
+  ]
+}
