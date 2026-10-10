@@ -96,6 +96,21 @@ class GeneratedGalaSecretTests(unittest.TestCase):
             generator.initialize("example/generated", "gala-example")
         aws.assert_not_called()
 
+    def test_sqlite_fedow_omits_postgres_and_accepts_existing_secrets(self) -> None:
+        generated = generator.generated_payload()
+        self.assertNotIn("fedow_postgres_password", generated)
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        files = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True)
+        legacy_files = renderer.assemble(
+            {**generated, "fedow_postgres_password": "unused-legacy-password"},
+            STRIPE_TEST, SHARED_MAIL, *domains, True,
+        )
+        self.assertEqual(legacy_files, files)
+        self.assertNotIn("POSTGRES_", files["fedow.env"])
+        for application in ("lespass", "laboutik"):
+            self.assertIn(f"POSTGRES_DB='{application}'", files[f"{application}.env"])
+            self.assertIn(f"POSTGRES_PASSWORD='{generated[f'{application}_postgres_password']}'", files[f"{application}.env"])
+
     def test_shared_credentials_and_domains_are_assembled_without_overwriting_gala_keys(self) -> None:
         generated = generator.generated_payload()
         files = renderer.assemble(
