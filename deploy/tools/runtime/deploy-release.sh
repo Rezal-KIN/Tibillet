@@ -68,6 +68,13 @@ prepare_writable_mounts() {
     # may have left root-owned children. Stay within these application-only
     # mounts; -h does not follow symlinks into unrelated host paths.
     chown -hR "$uid:$gid" "$path"
+    # Tracked static placeholders may have been restored with a private umask.
+    # Django skips unchanged files, and Nginx runs as a different user. Only
+    # public static assets need shared read/traverse permissions.
+    if [[ "$path" == */www && -d "$path/static" && ! -L "$path/static" ]]; then
+      find "$path/static" -type d -exec chmod 0755 {} +
+      find "$path/static" -type f -exec chmod 0644 {} +
+    fi
   done
 }
 
