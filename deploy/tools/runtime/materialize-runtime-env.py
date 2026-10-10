@@ -15,7 +15,7 @@ from pathlib import Path
 
 GENERATED_FIELDS = {
     "schema_version",
-    "fedow_secret_key", "fedow_fernet_key", "fedow_postgres_password",
+    "fedow_secret_key", "fedow_fernet_key",
     "laboutik_django_secret", "laboutik_fernet_key", "laboutik_postgres_password",
     "lespass_django_secret", "lespass_fernet_key", "lespass_postgres_password",
     "active_gala_api_token",
@@ -78,7 +78,9 @@ def assemble(
     laboutik_domain: str, lespass_domain: str, smoke: bool,
     admin_secret: dict[str, object] | None = None, require_admin: bool = False,
 ) -> dict[str, str]:
-    if set(generated) != GENERATED_FIELDS or generated.get("schema_version") != 1:
+    # Older secrets may retain this unused field. Accept them without rotating
+    # existing Gala keys, but never write PostgreSQL settings into Fedow's env.
+    if set(generated) - {"fedow_postgres_password"} != GENERATED_FIELDS or generated.get("schema_version") != 1:
         raise ValueError("generated secret schema is invalid")
     if set(stripe_secret) != {"schema_version", "stripe"} or stripe_secret.get("schema_version") != 1:
         raise ValueError("shared Stripe schema is invalid")
@@ -135,7 +137,7 @@ def assemble(
             raise ValueError(f"invalid generated key length: {name}")
     for name in ("fedow_fernet_key", "laboutik_fernet_key", "lespass_fernet_key"):
         fernet_field(generated, name)
-    for name in ("fedow_postgres_password", "laboutik_postgres_password", "lespass_postgres_password", "active_gala_api_token"):
+    for name in ("laboutik_postgres_password", "lespass_postgres_password", "active_gala_api_token"):
         text_field(generated, name)
 
     stripe_lines = {
@@ -164,8 +166,6 @@ def assemble(
     fedow = {
         "SECRET_KEY": text_field(generated, "fedow_secret_key"),
         "FERNET_KEY": fernet_field(generated, "fedow_fernet_key"),
-        "POSTGRES_DB": "fedow", "POSTGRES_USER": "fedow_user",
-        "POSTGRES_PASSWORD": text_field(generated, "fedow_postgres_password"),
         "DOMAIN": fedow_domain,
         "ACTIVE_GALA_API_TOKEN": text_field(generated, "active_gala_api_token"),
         **common, **stripe_lines,

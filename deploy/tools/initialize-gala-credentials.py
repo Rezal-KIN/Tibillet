@@ -46,7 +46,6 @@ def generated_payload() -> dict[str, str | int]:
         "schema_version": 1,
         "fedow_secret_key": secrets.token_hex(25),
         "fedow_fernet_key": fernet_key(),
-        "fedow_postgres_password": secrets.token_urlsafe(36),
         "laboutik_django_secret": secrets.token_hex(25),
         "laboutik_fernet_key": fernet_key(),
         "laboutik_postgres_password": secrets.token_urlsafe(36),
