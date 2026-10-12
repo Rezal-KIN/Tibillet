@@ -1,0 +1,364 @@
+{
+  "date": "2026-10-12",
+  "account": "318629836660",
+  "region": "eu-west-3",
+  "old_aix": {
+    "instance": "i-0801aa8a2273838aa",
+    "state": "terminated",
+    "root_volume_absent": true,
+    "encrypted_root_snapshot": "snap-00476ed7f724a5d4d",
+    "snapshot_state": "completed",
+    "native_backup": "20261012T143451Z",
+    "isolated_restore": {
+      "laboutik_tables": 59,
+      "lespass_tables": 1620,
+      "fedow_sqlite_verified": true
+    },
+    "catalog_create_instance": false
+  },
+  "new_gala": {
+    "name": "BalduBapts2026",
+    "slug": "baldubapts2026",
+    "instance": "i-0b1c966b50fd97f80",
+    "root_volume": "vol-0d7ded144bdc952e8",
+    "root_volume_gib": 40,
+    "root_volume_encrypted": true,
+    "manual_guest_repairs": false,
+    "manifest": "releases/baldubapts2026/production.json",
+    "release": "baldubapts2026-native-20261012-v1",
+    "application_commit": "f8e4db76b39c88e4123d9020f1c07e07b91cfdbc",
+    "manifest_sha256": "0f5065a6a31f4354aebe7fd5c5bde5b9c696061939c617ecde8b04003a09bede",
+    "baseline": {
+      "stock_cards": 7020,
+      "assigned_cards": 0,
+      "stripe_checkouts": 0,
+      "positive_token_balances": 0,
+      "payment_transactions": 0
+    },
+    "laboutik_sales": 0,
+    "admin_accounts_ready": 3,
+    "stripe_mode": "LIVE",
+    "fedow_storage": "sqlite",
+    "fedow_postgres_variables_absent": true,
+    "code_and_csv_bind_mounts": 0,
+    "stock_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    },
+    "backup": {
+      "id": "20261012T203440Z",
+      "isolated_restore": {
+        "laboutik_tables": 59,
+        "lespass_tables": 180,
+        "fedow_sqlite_verified": true
+      }
+    },
+    "deployment_ssm_command": "7e7d3b2c-1f50-4faf-9adb-288597635368",
+    "readiness_ssm_command": "23fcf269-626b-4e44-87a9-5465a6bc127b"
+  },
+  "pipelines": {
+    "test": {
+      "name": "tibillet-gala-paris-production-test",
+      "execution": "ebfa6837-c142-4bfc-882c-ca5cd13b508d",
+      "source_commit": "f8e4db76b39c88e4123d9020f1c07e07b91cfdbc",
+      "status": "Succeeded"
+    },
+    "create": {
+      "name": "tibillet-gala-paris-production-foundation",
+      "execution": "61c79d54-d7cd-41f4-bb88-c3bd5dd87330",
+      "source_commit": "f8e4db76b39c88e4123d9020f1c07e07b91cfdbc",
+      "status": "Succeeded"
+    },
+    "production": {
+      "name": "tibillet-gala-paris-production-production-baldubapts2026",
+      "execution": "b20c6229-6794-4a76-b57c-322f3290659d",
+      "source_commit": "d15cae85698626290233a56f539c60cf9fa10202",
+      "status": "Succeeded"
+    },
+    "switch-baldu": {
+      "name": "tibillet-gala-paris-production-active-gala",
+      "execution": "0ba8de93-5479-4a14-85e6-ef3f4db5860d",
+      "source_commit": "f8e4db76b39c88e4123d9020f1c07e07b91cfdbc",
+      "status": "Succeeded"
+    },
+    "switch-smoke": {
+      "name": "tibillet-gala-paris-production-active-gala",
+      "execution": "028d1f2f-7f44-4076-bb0a-f714c2546ab5",
+      "source_commit": "f8e4db76b39c88e4123d9020f1c07e07b91cfdbc",
+      "status": "Succeeded"
+    }
+  },
+  "runtime_parity": {
+    "application_commit_identical": true,
+    "four_image_digests_identical": true,
+    "card_stock_identical": true,
+    "mount_destinations_identical": true
+  },
+  "images": {
+    "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/fedow@sha256:8fc958243dde0d5af0506d5d0055fe34ddf77b9ec41e7518080f6ab09153de0e",
+    "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:65bfe4f489c45a75c3113fe2fc53a8bd15f00f1eb22e7d54b1505da0fe9fb394",
+    "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/laboutik@sha256:bc423b35b21870c981e3490547a2ab0b566bae277ff0b92fcca697dfa0cdc2bc",
+    "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+  },
+  "mounts_by_service": {
+    "fedow_django": [
+      {
+        "destination": "/home/fedow/Fedow/database",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/home/fedow/Fedow/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/home/fedow/Fedow/www",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "fedow_nginx": [
+      {
+        "destination": "/etc/nginx/conf.d",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/source",
+        "type": "bind",
+        "read_only": true
+      },
+      {
+        "destination": "/www",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "laboutik_django": [
+      {
+        "destination": "/Backup",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/www",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/home/tibillet/.ssh",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "laboutik_nginx": [
+      {
+        "destination": "/DjangoFiles/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/www",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/etc/nginx/conf.d",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/source",
+        "type": "bind",
+        "read_only": true
+      }
+    ],
+    "laboutik_postgres": [
+      {
+        "destination": "/var/lib/postgresql/data",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "laboutik_redis": [
+      {
+        "destination": "/data",
+        "type": "volume",
+        "read_only": false
+      }
+    ],
+    "lespass_celery": [
+      {
+        "destination": "/DjangoFiles/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/www",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "lespass_django": [
+      {
+        "destination": "/Backup",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/DjangoFiles/www",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/home/tibillet/.ssh",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "lespass_nginx": [
+      {
+        "destination": "/etc/nginx/conf.d",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/logs",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/source",
+        "type": "bind",
+        "read_only": true
+      },
+      {
+        "destination": "/www",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "lespass_postgres": [
+      {
+        "destination": "/var/lib/postgresql/data",
+        "type": "bind",
+        "read_only": false
+      }
+    ],
+    "lespass_redis": [
+      {
+        "destination": "/data",
+        "type": "volume",
+        "read_only": false
+      }
+    ],
+    "traefik": [
+      {
+        "destination": "/acme.json",
+        "type": "bind",
+        "read_only": false
+      },
+      {
+        "destination": "/var/run/docker.sock",
+        "type": "bind",
+        "read_only": true
+      }
+    ]
+  },
+  "sources": {
+    "url": "https://github.com/Rezal-KIN/Tibillet/releases/tag/sources-baldubapts2026-native-20261012-v1-f8e4db76b39c",
+    "release_id": 410957931,
+    "public": true,
+    "uploaded_assets": 8
+  },
+  "public_http": {
+    "baldu": {
+      "checks": 11,
+      "tls_verified": true,
+      "status": 200,
+      "stylesheets": 5,
+      "source_pages": 3,
+      "homepages": 3
+    },
+    "smoke-final": {
+      "checks": 11,
+      "tls_verified": true,
+      "status": 200,
+      "stylesheets": 5,
+      "source_pages": 3,
+      "homepages": 3
+    }
+  },
+  "native_peer_https": {
+    "baldu-peers": {
+      "ssm_command": "906a4d6a-5add-4a90-aa82-71e8b0ba3ca6",
+      "native_https_checks": 7,
+      "tls_verified": true,
+      "status": 200
+    },
+    "smoke-peers": {
+      "ssm_command": "ae92ac17-4ba5-41c9-940c-6f3b4788a313",
+      "native_https_checks": 7,
+      "tls_verified": true,
+      "status": 200
+    }
+  },
+  "final": {
+    "active": "gala-smoke",
+    "public_ip": "51.44.90.200",
+    "public_instance": "i-0037b98572fccdff2",
+    "instances": [
+      {
+        "instance": "i-0037b98572fccdff2",
+        "state": "running",
+        "gala": "gala-smoke",
+        "public_ingress": true
+      },
+      {
+        "instance": "i-0b1c966b50fd97f80",
+        "state": "running",
+        "gala": "baldubapts2026",
+        "public_ingress": false
+      }
+    ],
+    "stripe_mode": "TEST",
+    "smoke_readiness_ssm_command": "76f2be79-e444-4c4e-b12b-4e4e6a777c55",
+    "smoke_stock_check": {
+      "status": "ready",
+      "expected": 7020,
+      "created": 0,
+      "existing": 7020,
+      "lots": 3
+    }
+  },
+  "local_validation": {
+    "runtime_scope_and_release_tests": 10,
+    "passed": true
+  },
+  "limits": [
+    "No real payment performed",
+    "Physical card and terminal journey to repeat on Smoke",
+    "Stripe TEST recharge and return page to test by user",
+    "No visual browser verification",
+    "Smoke outbound email is disabled; new Gala invitation receipt is not confirmed"
+  ]
+}
