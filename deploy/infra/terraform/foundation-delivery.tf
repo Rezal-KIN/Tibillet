@@ -76,10 +76,10 @@ data "aws_iam_policy_document" "foundation_build" {
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-p-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${local.name_prefix}-*",
-      # Gala EC2 roles deliberately omit the environment segment (for example
-      # tibillet-gala-paris-gala-smoke-ec2), but remain confined to this project.
-      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-gala-*-*",
-      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-gala-*-*",
+      # Every validated Gala slug is allowed, including names without "gala-".
+      # EC2 roles and profiles remain confined to this project and suffix.
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*-ec2",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.project_name}-*-ec2",
     ]
   }
 
@@ -89,7 +89,7 @@ data "aws_iam_policy_document" "foundation_build" {
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${local.name_prefix}-*",
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-p-*",
-      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-gala-*-*",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*-ec2",
     ]
     condition {
       test     = "StringEquals"
