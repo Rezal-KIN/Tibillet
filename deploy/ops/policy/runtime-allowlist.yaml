@@ -1,8 +1,8 @@
 aws_account_id: "318629836660"
 runtime_region: eu-west-3
 instances:
-  - id: i-0801aa8a2273838aa
-    name: tibillet-gala-paris-gala-am-aix
+  - id: i-0b1c966b50fd97f80
+    name: tibillet-gala-paris-baldubapts2026
   - id: i-0037b98572fccdff2
     name: tibillet-gala-paris-gala-smoke
   - id: i-00cb72994b875e92d
