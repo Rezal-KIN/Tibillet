@@ -37,7 +37,7 @@ load_release_images "$MANIFEST_PATH"
 source_hosting=()
 # Smoke can validate a candidate before its public Release is prepared. Every
 # production release requires its exact source assets on GitHub first.
-if [[ "$GALA_SLUG" != "gala-smoke" ]]; then
+if [[ "$GALA_SLUG" != "gala-smoke" && "$GALA_SLUG" != "gala-smoke-cawl" ]]; then
   source_hosting+=(--github-release)
 fi
 python3 "$REPO_ROOT/deploy/tools/build-source-offer.py" \

@@ -174,7 +174,8 @@ resource "aws_security_group" "runtime" {
   ]
 
   dynamic "egress" {
-    for_each = var.gala_slug == "gala-smoke" ? [
+    # Both Smoke hosts (Stripe and CAWL) keep the same restricted egress.
+    for_each = contains(["gala-smoke", "gala-smoke-cawl"], var.gala_slug) ? [
       { port = 53, protocol = "tcp" },
       { port = 53, protocol = "udp" },
       { port = 80, protocol = "tcp" },

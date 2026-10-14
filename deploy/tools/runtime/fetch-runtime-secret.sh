@@ -57,7 +57,7 @@ python3 "$SCRIPT_DIR/materialize-runtime-env.py" \
   --generated "$generated_file" \
   --stripe "$stripe_file" \
   --mail "$mail_file" \
-  --smoke "$([[ "$GALA_SLUG" == "gala-smoke" ]] && printf true || printf false)" \
+  --smoke "$([[ "$GALA_SLUG" == "gala-smoke" || "$GALA_SLUG" == "gala-smoke-cawl" ]] && printf true || printf false)" \
   --admin "$admin_file" \
   --fedow-domain "$FEDOW_PUBLIC_DOMAIN" \
   --laboutik-domain "$LABOUTIK_PUBLIC_DOMAIN" \

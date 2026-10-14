@@ -19,6 +19,11 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
     Stripe live et SMTP, sans valeur dans Terraform.
   - `delivery.tf` : pipeline CodeBuild/CodePipeline Test et ECR ; la promotion immutable est
     définie dans `production-delivery.tf`.
+  - `cawl-delivery.tf` : chaîne **CAWL** parallèle et indépendante de Stripe. Elle comprend
+    ses secrets, ses ECR `cawl/*`, une pipeline Test CAWL sur la branche
+    `var.cawl_source_branch` qui déploie `gala-smoke-cawl`, et une pipeline
+    Foundation CAWL. Voir
+    `docs/operations/new-gala-deployment-and-development-workflow.md`, section D.
   - `storage.tf` : bucket de backups chiffré (SSE-S3), qui conserve aussi les manifestes de
     release promus, et bucket d'artefacts à rétention courte.
   - `modules/gala/bootstrap-runtime.sh.tftpl` : bootstrap idempotent de l'EC2 Paris.

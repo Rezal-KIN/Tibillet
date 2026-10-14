@@ -36,6 +36,10 @@ ALIGNMENT_RETIREMENT_OPERATIONS = {
     "Prepare Gala Alignment Retirement": "prepare",
     "Retire Gala Alignment": "retire",
 }
+# One-time operation creating the parallel CAWL chain and its Smoke host.
+ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
+CAWL_SMOKE_SLUG = "gala-smoke-cawl"
+PAYMENT_PROVIDERS = ("stripe", "cawl")
 
 
 def validation_retirement_phase(name: str) -> str | None:
@@ -85,10 +89,12 @@ def gala_slug(name: str) -> str:
         return VERIFICATION_SLUG
     if first_run_retirement_phase(name):
         return FIRST_RUN_SLUG
+    if name == ENABLE_CAWL_PLATFORM_REQUEST:
+        return CAWL_SMOKE_SLUG
     normalized = unicodedata.normalize("NFKD", name)
     ascii_name = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
-    if not SLUG.fullmatch(slug) or slug in {"bapts", "gala-smoke"}:
+    if not SLUG.fullmatch(slug) or slug in {"bapts", "gala-smoke", CAWL_SMOKE_SLUG}:
         fail("GALA_NAME must produce a safe, unique non-Smoke Gala identifier")
     return slug
 
@@ -122,6 +128,13 @@ def main() -> None:
     verification_retirement = verification_retirement_phase(gala_name)
     first_run_retirement = first_run_retirement_phase(gala_name)
     alignment_retirement = ALIGNMENT_RETIREMENT_OPERATIONS.get(gala_name)
+    enable_cawl_platform = gala_name == ENABLE_CAWL_PLATFORM_REQUEST
+    # Set only by the Foundation CAWL pipeline; Foundation keeps Stripe.
+    payment_provider = os.environ.get("PAYMENT_PROVIDER", "").strip() or "stripe"
+    if payment_provider not in PAYMENT_PROVIDERS:
+        fail("PAYMENT_PROVIDER must be stripe or cawl")
+    if enable_cawl_platform and payment_provider != "stripe":
+        fail("Enable CAWL Platform runs from the standard Foundation pipeline")
     domain = value("SHARED_GALA_DOMAIN")
     if domain != domain.lower() or not DOMAIN.fullmatch(domain):
         fail("SHARED_GALA_DOMAIN must be a lowercase public hostname")
@@ -206,6 +219,11 @@ def main() -> None:
         "create_instance": True,
         "protect_from_destruction": True,
     }
+    if enable_cawl_platform or payment_provider == "cawl":
+        # Stripe entries keep their exact historical shape (no new key).
+        new_gala["payment_provider"] = "cawl"
+    if payment_provider == "cawl" and CAWL_SMOKE_SLUG not in galas:
+        fail("run Enable CAWL Platform before creating a CAWL Gala")
     if alignment_retirement:
         for target in ALIGNMENT_SLUGS:
             existing = galas.get(target)
@@ -292,10 +310,13 @@ def main() -> None:
         "subnet_id": catalog["subnet_id"],
         "ec2_ami_id": catalog["ec2_ami_id"],
         "galas": galas,
+        # Derived from the catalogue so that every later Foundation run keeps
+        # the CAWL chain once gala-smoke-cawl exists.
+        "enable_cawl_platform": CAWL_SMOKE_SLUG in galas,
     }
     args.catalog_output.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.output_tfvars.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"Foundation inputs valid: operation={slug} total_galas={len(galas)} region={REGION}")
+    print(f"Foundation inputs valid: operation={slug} provider={payment_provider} total_galas={len(galas)} region={REGION}")
 
 
 if __name__ == "__main__":

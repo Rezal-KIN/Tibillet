@@ -33,7 +33,7 @@ resource "aws_ssm_document" "production_deploy" {
           "repo=/opt/tibillet-gala/repository",
           "git -C \"$repo\" fetch --depth 1 origin \"$commit\"",
           "git -C \"$repo\" checkout --detach FETCH_HEAD",
-          "python3 \"$repo/deploy/tools/runtime/reconcile-runtime.py\" /etc/tibillet-gala/${each.key}.conf ${each.key} '${module.gala[each.key].generated_secret_arn}' '${each.key == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn}' '${aws_secretsmanager_secret.shared_mail[0].arn}'",
+          "python3 \"$repo/deploy/tools/runtime/reconcile-runtime.py\" /etc/tibillet-gala/${each.key}.conf ${each.key} '${module.gala[each.key].generated_secret_arn}' '${local.gala_payment_secret_arn[each.key]}' '${aws_secretsmanager_secret.shared_mail[0].arn}'",
           "bash \"$repo/deploy/tools/runtime/install-runtime-contract.sh\" /etc/tibillet-gala/${each.key}.conf",
           "/usr/local/lib/tibillet-gala/deploy-release-from-s3.sh /etc/tibillet-gala/${each.key}.conf '{{ ReleaseManifestUri }}'",
         ]
@@ -45,6 +45,10 @@ resource "aws_ssm_document" "production_deploy" {
     precondition {
       condition     = module.gala[each.key].instance_id != null
       error_message = "A production pipeline may only be created for a Gala with an EC2 instance created by Terraform."
+    }
+    precondition {
+      condition     = local.gala_payment_secret_arn[each.key] != null
+      error_message = "A CAWL Gala requires enable_cawl_platform (its CAWL payment secret)."
     }
   }
 }
@@ -226,9 +230,10 @@ resource "aws_codepipeline" "production" {
       output_artifacts = ["SourceOutput"]
 
       configuration = {
-        ConnectionArn        = var.github_connection_arn
-        FullRepositoryId     = "${var.github_owner}/${var.github_repository}"
-        BranchName           = var.production_source_branch
+        ConnectionArn    = var.github_connection_arn
+        FullRepositoryId = "${var.github_owner}/${var.github_repository}"
+        # CAWL Gala manifests live next to the CAWL application code.
+        BranchName           = each.value.payment_provider == "cawl" ? var.cawl_source_branch : var.production_source_branch
         DetectChanges        = "false"
         OutputArtifactFormat = "CODEBUILD_CLONE_REF"
       }

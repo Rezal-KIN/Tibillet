@@ -12,6 +12,8 @@ from pathlib import Path
 DOMAIN = "galas-am-aix.rezal.fr"
 ARN = re.compile(r"^arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/shared/integrations-[a-z-]+-[A-Za-z0-9]{6}$")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
+# Smoke hosts use test credentials; gala-smoke-cawl is the CAWL Smoke.
+SMOKE_SLUGS = {"gala-smoke", "gala-smoke-cawl"}
 
 
 def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: str) -> str:
@@ -19,9 +21,13 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
         raise ValueError("invalid Gala slug")
     if not re.fullmatch(rf"arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/galas/{slug}/generated-[A-Za-z0-9]{{6}}", generated_arn):
         raise ValueError("Gala requires its own generated secret")
-    mode = "test" if slug == "gala-smoke" else "live"
-    if not ARN.fullmatch(stripe_arn) or f"integrations-stripe-{mode}-" not in stripe_arn:
-        raise ValueError(f"Gala requires the shared Stripe {mode} secret")
+    mode = "test" if slug in SMOKE_SLUGS else "live"
+    # The secret's own schema selects the provider (materialize-runtime-env.py);
+    # the ARN must at least be the shared payment secret of the right mode.
+    provider = "cawl" if slug == "gala-smoke-cawl" else None
+    accepted = [provider] if provider else ["stripe", "cawl"]
+    if not ARN.fullmatch(stripe_arn) or not any(f"integrations-{name}-{mode}-" in stripe_arn for name in accepted):
+        raise ValueError(f"Gala requires the shared payment {mode} secret")
     if not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn:
         raise ValueError("Smoke requires the shared mail secret")
     if not re.search(rf'^GALA_SLUG=["\']?{slug}["\']?$', text, re.MULTILINE):

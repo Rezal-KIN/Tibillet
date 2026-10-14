@@ -119,7 +119,7 @@ class PromotionContractTests(unittest.TestCase):
         once = preparer.update(original, "gala-smoke", generated, stripe, mail)
         self.assertEqual(preparer.update(once, "gala-smoke", generated, stripe, mail), once)
         self.assertIn('DEPLOYMENT_LOCKED="false"', once)
-        with self.assertRaisesRegex(ValueError, "Stripe test"):
+        with self.assertRaisesRegex(ValueError, "payment test"):
             preparer.update(original, "gala-smoke", generated, mail, mail)
 
 
