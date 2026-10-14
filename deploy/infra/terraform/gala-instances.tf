@@ -79,3 +79,20 @@ moved {
   from = module.gala["baldubapts2026"].aws_instance.runtime[0]
   to   = module.gala["baldubapts2026"].aws_instance.retirable[0]
 }
+
+# The user requested complete removal of these three historical test reserves.
+# First prepare their exact EC2s, then remove their catalog entries and resources.
+moved {
+  from = module.gala["gala-premier-lancement-2026-10-05"].aws_instance.runtime[0]
+  to   = module.gala["gala-premier-lancement-2026-10-05"].aws_instance.retirable[0]
+}
+
+moved {
+  from = module.gala["gala-import-cartes-2026-10-07"].aws_instance.runtime[0]
+  to   = module.gala["gala-import-cartes-2026-10-07"].aws_instance.retirable[0]
+}
+
+moved {
+  from = module.gala["gala-images-csv-2026-10-08"].aws_instance.runtime[0]
+  to   = module.gala["gala-images-csv-2026-10-08"].aws_instance.retirable[0]
+}
