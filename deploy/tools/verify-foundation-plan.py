@@ -205,6 +205,10 @@ def verify_verification_retirement_plan(
             for kind in ('aws_iam_role_policy.production_build',
                          'aws_iam_role_policy.production_pipeline')
         )
+    if targets == (BAPTS_SLUG,):
+        # Removing a Production SSM document defers both Smoke policy
+        # documents, even though the CAWL Smoke permission stays identical.
+        allowed_policy_refreshes.add('aws_iam_role_policy.test_cawl_deploy[0]')
     core: list[dict[str, object]] = []
     accepted: list[str] = []
     for item in changes:
