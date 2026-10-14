@@ -16,6 +16,15 @@ class CawlError(Exception):
     """Erreur publique sans données de carte ni secrets. / Safe public error."""
 
 
+# FR : Durée de vie d'une page de paiement CAWL. Passé ce délai (plus une marge),
+# une commande sans paiement créé est expirée et ne bloque plus un nouvel achat.
+# EN: Hosted checkout lifetime; past it (plus a margin) an unpaid order expires.
+HOSTED_CHECKOUT_TIMEOUT_MINUTES = 60
+HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES = 15
+# FR : Statuts HCP définitifs sans paiement. / Final hosted checkout states without payment.
+HOSTED_CHECKOUT_ABANDONED = {"CANCELLED_BY_CONSUMER", "CLIENT_NOT_ELIGIBLE_FOR_SELECTED_PAYMENT_PRODUCT"}
+
+
 @dataclass(frozen=True)
 class CawlConfiguration:
     merchant_id: str
@@ -145,6 +154,7 @@ class CawlGateway:
             "hostedCheckoutSpecificInput": {
                 "returnUrl": https_url(return_url),
                 "locale": "fr_FR",
+                "sessionTimeout": HOSTED_CHECKOUT_TIMEOUT_MINUTES,
             },
             "feedbacks": {"webhooksUrls": [https_url(webhook_url)]},
         })
@@ -163,13 +173,23 @@ class CawlGateway:
         except (KeyError, TypeError) as error:
             raise CawlError("Réponse de création CAWL incomplète.") from error
 
-    def get_checkout_payment(self, hosted_checkout_id):
-        with self.merchant() as merchant:
-            response = merchant.hosted_checkout().get_hosted_checkout(hosted_checkout_id).to_dictionary()
+    def get_checkout(self, hosted_checkout_id):
+        """Statut HCP et paiement créé éventuel. / Hosted checkout status and payment, if any."""
+        from onlinepayments.sdk.reference_exception import ReferenceException
+
+        try:
+            with self.merchant() as merchant:
+                response = merchant.hosted_checkout().get_hosted_checkout(hosted_checkout_id).to_dictionary()
+        except ReferenceException:
+            # FR : Session purgée côté CAWL ; l'expiration se décide sur l'horloge locale.
+            # EN: Purged session; expiry is decided from the local clock.
+            return "NOT_FOUND", None
         payment = response.get("createdPaymentOutput", {}).get("payment")
-        if payment is None:
-            return None
-        return PaymentSnapshot.from_dictionary(payment)
+        snapshot = None if payment is None else PaymentSnapshot.from_dictionary(payment)
+        return response.get("status", ""), snapshot
+
+    def get_checkout_payment(self, hosted_checkout_id):
+        return self.get_checkout(hosted_checkout_id)[1]
 
     def get_payment(self, payment_id):
         with self.merchant() as merchant:

@@ -5,11 +5,11 @@ Helper pour decider si une reponse doit etre marquee `noindex, nofollow`.
 LOCALISATION : TiBillet/seo_indexing.py
 
 Une reponse HTTP est marquee non-indexable quand AU MOINS UN flag
-d'environnement est a "1" : DEBUG, TEST, DEMO, STRIPE_TEST.
+d'environnement est a "1" : DEBUG, TEST, DEMO, STRIPE_TEST, CAWL_TEST.
 Les instances de prod ont ces 4 flags a "0" dans leur .env.
 
 / A response is marked non-indexable when AT LEAST ONE env flag is
-set to "1": DEBUG, TEST, DEMO, STRIPE_TEST.
+set to "1": DEBUG, TEST, DEMO, STRIPE_TEST, CAWL_TEST.
 
 Voir TECH_DOC/SESSIONS/SEO/CHANTIER-01-noindex-dev.md pour la
 justification de cette regle (et pour les regles ecartees, comme
@@ -31,7 +31,7 @@ import os
 # "1" dans os.environ, l'instance est non-indexable.
 # / The 4 env flags that trigger noindex. If AT LEAST ONE equals "1"
 # in os.environ, the instance is non-indexable.
-_NOINDEX_FLAGS = ("DEBUG", "TEST", "DEMO", "STRIPE_TEST")
+_NOINDEX_FLAGS = ("DEBUG", "TEST", "DEMO", "STRIPE_TEST", "CAWL_TEST")
 
 
 def should_noindex():

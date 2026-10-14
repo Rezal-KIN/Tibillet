@@ -1,4 +1,5 @@
 import logging
+import time
 from uuid import UUID
 
 from django.db import transaction
@@ -37,10 +38,20 @@ class CawlWalletAPI(WalletAPI):
 
     def retrieve_from_refill_checkout(self, request, pk=None):
         checkout = get_object_or_404(Checkout, pk=pk, wallet=request.wallet, place=request.place)
-        try:
-            credited = credit_checkout(checkout, request)
-        except CawlError:
-            return Response("Vérification CAWL impossible.", status=503)
+        # FR : Le retour navigateur précède souvent la capture ; on attend un peu,
+        # comme le parcours Stripe natif, avant de répondre « en attente ».
+        # EN: The browser often returns before capture; wait briefly like native Stripe.
+        credited = False
+        for attempt in range(4):
+            if attempt:
+                time.sleep(2)
+            try:
+                credited = credit_checkout(checkout, request)
+            except CawlError:
+                return Response("Vérification CAWL impossible.", status=503)
+            if credited:
+                break
+            checkout.refresh_from_db()
         if not credited:
             return Response("Paiement en attente de confirmation.", status=402)
         return Response(WalletSerializer(request.wallet, context={"request": request}).data)

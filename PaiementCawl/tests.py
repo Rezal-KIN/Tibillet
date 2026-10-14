@@ -134,3 +134,40 @@ class PaymentTests(FastTenantTestCase):
         self.reservation.refresh_from_db()
         self.assertNotEqual(self.reservation.status, Reservation.CANCELED)
         self.assertFalse(LigneArticle.objects.filter(qty__lt=0).exists())
+
+    def test_failed_checkout_creation_releases_the_order(self):
+        self.gateway.create_checkout.side_effect = [RuntimeError('network'), self.gateway.create_checkout.return_value]
+        with self.assertRaises(ValidationError):
+            self.create()
+        self.assertEqual(Paiement_stripe.objects.get(reservation=self.reservation).status, Paiement_stripe.CANCELED)
+        # FR : La commande libérée n'empêche pas un nouvel essai. / Retry is possible.
+        self.create()
+        self.assertEqual(self.gateway.create_checkout.call_count, 2)
+
+    def test_abandoned_checkout_expires_and_allows_a_new_attempt(self):
+        from datetime import timedelta
+        from PaiementCawl.models import CawlPayment
+
+        payment = self.create().paiement_stripe_db
+        self.gateway.get_checkout = lambda checkout_id: ('IN_PROGRESS', None)
+        self.assertEqual(update_payment(payment), Paiement_stripe.PENDING)
+        CawlPayment.objects.filter(pk=payment.pk).update(created_at=timezone.now() - timedelta(hours=2))
+        payment.refresh_from_db()
+        self.assertEqual(update_payment(payment), Paiement_stripe.EXPIRE)
+        self.create()
+        self.assertEqual(self.gateway.create_checkout.call_count, 2)
+
+    def test_refund_cap_includes_previous_refunds(self):
+        payment = self.create().paiement_stripe_db
+        Paiement_stripe.objects.filter(pk=payment.pk).update(status=Paiement_stripe.VALID)
+        payment.cawl_payment.provider_payment_id = 'captured-1'
+        payment.cawl_payment.save(update_fields=['provider_payment_id'])
+        LigneArticle.objects.filter(pk=self.line.pk).update(status=LigneArticle.VALID)
+        CawlRefund.objects.create(operation_id=uuid4(), payment=payment.cawl_payment, amount=500,
+            provider_refund_id='refund-earlier', status='REFUND_REQUESTED', allocations=[])
+        from unittest.mock import Mock
+        self.gateway.refund = Mock()
+        with patch('PaiementCawl.refunds.gateway', return_value=self.gateway):
+            with self.assertRaises(CawlError):
+                cancel_reservation(self.reservation)
+        self.gateway.refund.assert_not_called()

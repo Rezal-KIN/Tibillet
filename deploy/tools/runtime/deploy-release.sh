@@ -181,8 +181,11 @@ timeout 120s docker exec -i fedow_django sh -lc \
   'cd /home/fedow/Fedow && poetry run python manage.py shell' \
   < "$SCRIPT_DIR/reconcile-fedow-webhook.py"
 
-timeout 120s docker exec -w /DjangoFiles laboutik_django \
-  /home/tibillet/.local/bin/poetry run python manage.py configure_cawl
+# Only CAWL images ship this command; Stripe releases keep their native setup.
+if [[ "$(docker exec laboutik_django printenv PAYMENT_PROVIDER 2>/dev/null || true)" == "cawl" ]]; then
+  timeout 120s docker exec -w /DjangoFiles laboutik_django \
+    /home/tibillet/.local/bin/poetry run python manage.py configure_cawl
+fi
 
 # Fedow's cashless checkout is separate from Lespass ticket payouts. Without
 # this explicit, idempotent setting, a Gala without Stripe Connect has a

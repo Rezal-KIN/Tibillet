@@ -9,7 +9,9 @@ from uuid import uuid4
 
 import pytest
 
-from payment_providers.cawl import CawlConfiguration, CawlError, CawlGateway, PaymentSnapshot
+from payment_providers.cawl import (
+    HOSTED_CHECKOUT_TIMEOUT_MINUTES, CawlConfiguration, CawlError, CawlGateway, PaymentSnapshot,
+)
 
 
 @pytest.fixture
@@ -122,6 +124,7 @@ def test_hosted_checkout_serializes_official_sdk_objects(config):
     assert sent[0]["order"]["amountOfMoney"] == {"amount": 2000, "currencyCode": "EUR"}
     assert sent[0]["cardPaymentMethodSpecificInput"]["authorizationMode"] == "SALE"
     assert sent[0]["feedbacks"]["webhooksUrls"] == ["https://fedow.example/webhook_cawl/"]
+    assert sent[0]["hostedCheckoutSpecificInput"]["sessionTimeout"] == HOSTED_CHECKOUT_TIMEOUT_MINUTES
 
 
 def test_refund_has_stable_idempotence_key_and_amount(config):
@@ -144,3 +147,24 @@ def test_no_payment_created_is_pending(config):
     merchant = SimpleNamespace(hosted_checkout=lambda: SimpleNamespace(
         get_hosted_checkout=lambda checkout_id: GetHostedCheckoutResponse().from_dictionary({"status": "IN_PROGRESS"})))
     assert CawlGateway(config, merchant).get_checkout_payment("hosted-001") is None
+
+
+def test_checkout_status_is_returned_with_created_payment(config):
+    from onlinepayments.sdk.domain.get_hosted_checkout_response import GetHostedCheckoutResponse
+
+    reference = uuid4()
+    response = GetHostedCheckoutResponse().from_dictionary({
+        "status": "PAYMENT_CREATED", "createdPaymentOutput": {"payment": payment(reference)}})
+    merchant = SimpleNamespace(hosted_checkout=lambda: SimpleNamespace(get_hosted_checkout=lambda checkout_id: response))
+    status, snapshot = CawlGateway(config, merchant).get_checkout("hosted-001")
+    assert status == "PAYMENT_CREATED"
+    assert snapshot.reference == str(reference)
+
+
+def test_purged_checkout_is_reported_without_payment(config):
+    from onlinepayments.sdk.reference_exception import ReferenceException
+
+    def missing(checkout_id):
+        raise ReferenceException(404, "{}", None, [])
+    merchant = SimpleNamespace(hosted_checkout=lambda: SimpleNamespace(get_hosted_checkout=missing))
+    assert CawlGateway(config, merchant).get_checkout("hosted-001") == ("NOT_FOUND", None)

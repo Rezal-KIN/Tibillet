@@ -27,11 +27,12 @@ def env_clean(monkeypatch):
     monkeypatch.setenv("TEST", "0")
     monkeypatch.setenv("DEMO", "0")
     monkeypatch.setenv("STRIPE_TEST", "0")
+    monkeypatch.setenv("CAWL_TEST", "0")
 
 
 @pytest.mark.parametrize(
     "flag_a_activer",
-    ["DEBUG", "TEST", "DEMO", "STRIPE_TEST"],
+    ["DEBUG", "TEST", "DEMO", "STRIPE_TEST", "CAWL_TEST"],
 )
 def test_should_noindex_quand_un_flag_est_a_1(env_clean, monkeypatch, flag_a_activer):
     """
