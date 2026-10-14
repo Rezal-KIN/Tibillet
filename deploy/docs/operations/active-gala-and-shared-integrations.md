@@ -25,21 +25,28 @@ live.
   Les autres EC2 gardent leur accès sortant et SSM, avec une adresse publique
   temporaire attribuée par AWS après la perte de leur EIP.
 
-## Secrets Manager : deux secrets au total
+## Secrets Manager : un secret par gala et deux secrets communs
 
-Tous les identifiants sont regroupés par environnement dans deux objets. Les
-noms historiques sont conservés pour garder les mêmes ARN :
+Chaque gala conserve son propre objet
+`tibillet-gala-paris/galas/<slug>/generated` : clés Django et Fernet,
+mots de passe PostgreSQL et token interne Fedow/Lespass. Ces valeurs sont
+différentes pour chaque gala. Foundation les initialise une seule fois et
+préserve les versions existantes.
+
+Les identifiants communs sont regroupés par environnement dans deux objets.
+Les noms historiques sont conservés pour garder les mêmes ARN :
 
 - **dev** : `tibillet-gala-paris/shared/integrations-stripe-test` ;
 - **prod** : `tibillet-gala-paris/shared/integrations-stripe-live`.
 
-Chaque objet contient Stripe, CAWL, le courrier, les domaines, l'administration
-et une entrée de clés stables par gala. Les deux Smoke lisent uniquement dev.
-Les galas réels et l'archive de l'ancien Aix utilisent prod. Les clés de chaque
-gala restent différentes ; leur regroupement ne les régénère jamais.
+Chaque objet commun contient Stripe, CAWL, le courrier, les domaines et
+l'administration. Il ne contient aucune clé propre à un gala. Les deux Smoke
+lisent uniquement dev ; les galas réels utilisent prod. Chaque rôle EC2 peut
+lire uniquement son propre secret généré et le secret commun de son
+environnement. Il ne peut lire ni les secrets propres aux autres galas ni
+les intégrations de l'autre environnement.
 
-Exemple de structure dev, avec des valeurs fictives et une table de galas vide
-avant sa première initialisation :
+Exemple de structure commune dev, avec des valeurs fictives :
 
 ```json
 {
@@ -79,8 +86,7 @@ avant sa première initialisation :
   "admin": {
     "username": "admin",
     "password_hash": "EMPREINTE_DJANGO_PBKDF2_SHA256"
-  },
-  "galas": {}
+  }
 }
 ```
 
@@ -90,26 +96,31 @@ Les identifiants sont saisis directement dans Secrets Manager, jamais dans Git.
 uniquement le démarrage CAWL. Smoke désactive les envois aux participants avec
 le backend mail dummy et ses restrictions réseau.
 
-Foundation ajoute une seule fois `galas.<slug>` : clés Django et Fernet,
-mots de passe PostgreSQL et token interne Fedow/Lespass. Elle préserve une
-entrée déjà présente. Une écriture concurrente du secret est détectée avec le
-numéro de version `AWSCURRENT` : une autre entrée ou une modification des
-identifiants externes ne peut pas être écrasée par le finaliseur.
-Foundation peut lire et mettre à jour uniquement ces deux secrets pour cela.
+Foundation initialise uniquement les objets `galas/<slug>/generated`.
+Elle ne reçoit ni `GetSecretValue` ni le droit d'écrire les valeurs des
+intégrations communes. Aucun identifiant externe n'est nécessaire pour
+initialiser les clés d'un nouveau gala.
 
-Le runtime fait une seule lecture du secret de son environnement. Il sélectionne
-les clés de son gala et produit `fedow.env`, `laboutik.env`, `lespass.env` et
+Le runtime fait deux lectures : son secret propre et le secret commun de son
+environnement. Il produit `fedow.env`, `laboutik.env`, `lespass.env` et
 `admin.json` en mode `0600`. Le courrier et l'empreinte administrateur sont dans
 le même JSON ; la version séparée `GALA_ADMIN` n'est plus nécessaire. Les trois
 variables de configuration historiques `GENERATED_SECRET_ARN`,
-`SHARED_STRIPE_SECRET_ARN` et `SHARED_MAIL_SECRET_ARN` pointent toutes vers cet
-unique ARN. Le lecteur reste compatible avec l'ancien format pendant la migration.
+`SHARED_STRIPE_SECRET_ARN` et `SHARED_MAIL_SECRET_ARN` sont conservées : la
+première pointe vers le secret propre au gala ; les deux autres vers le secret
+commun dev ou prod. Le lecteur reste compatible avec l'ancien format pendant
+la migration.
 
-Avant de retirer les anciens objets, installer le nouveau lecteur sur les deux
-Smoke, copier les valeurs et clés existantes dans les deux objets, puis vérifier
-l'identité des fichiers Stripe et la sélection CAWL. Aucun mot de passe ou clé de
-chiffrement n'est changé. La restauration de l'ancienne archive Aix utilise les
-clés `galas.gala-am-aix` du secret prod et le runtime versionné actuel.
+Avant de retirer le seul ancien objet commun `integrations-mail`, installer le
+nouveau lecteur sur les deux Smoke, copier le courrier et l'administration dans
+les deux objets communs, puis vérifier l'identité des fichiers Stripe et la
+sélection CAWL. Les objets propres aux galas restent en place ; aucun mot de
+passe ou clé de chiffrement n'est changé. La restauration de l'ancienne archive
+Aix utilise toujours son secret `galas/gala-am-aix/generated`.
+
+Après migration, les trois galas conservés correspondent donc à cinq objets
+AWS : trois secrets propres et deux secrets communs. Cette migration reste
+suspendue tant que la reprise des opérations AWS n'est pas demandée.
 
 ## Déploiement et bascule du trafic
 

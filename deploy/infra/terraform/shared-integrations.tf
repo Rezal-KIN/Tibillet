@@ -1,10 +1,10 @@
-# Two complete environment secrets. Historical payment names stay stable.
-# Values contain payments, mail, admin and a map of stable keys by Gala.
+# Two shared environment secrets. Historical payment names stay stable.
+# Gala-specific application keys remain in each Gala generated secret.
 resource "aws_secretsmanager_secret" "stripe_test" {
   count                   = local.gala_resources_enabled ? 1 : 0
   depends_on              = [aws_iam_role_policy.foundation_build]
   name                    = "${var.project_name}/shared/integrations-stripe-test"
-  description             = "Complete dev configuration: Stripe, CAWL, mail, admin and stable keys for the Smoke environments."
+  description             = "Shared dev configuration: Stripe, CAWL, mail, site settings and admin. Gala-specific keys stay separate."
   recovery_window_in_days = 7
   tags                    = local.common_tags
   lifecycle { prevent_destroy = true }
@@ -14,7 +14,7 @@ resource "aws_secretsmanager_secret" "stripe_live" {
   count                   = local.gala_resources_enabled ? 1 : 0
   depends_on              = [aws_iam_role_policy.foundation_build]
   name                    = "${var.project_name}/shared/integrations-stripe-live"
-  description             = "Complete production configuration: Stripe, CAWL, mail, admin and stable keys by Gala."
+  description             = "Shared production configuration: Stripe, CAWL, mail, site settings and admin. Gala-specific keys stay separate."
   recovery_window_in_days = 7
   tags                    = local.common_tags
   lifecycle { prevent_destroy = true }

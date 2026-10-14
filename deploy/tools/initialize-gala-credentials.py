@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Initialize stable Gala entries inside the two environment secrets.
+"""Create the first generated-credential version for each Gala, exactly once.
 
-Existing entries are never regenerated. Compare-and-swap of AWSCURRENT
-keeps concurrent finalizers from overwriting another Gala entry.
+Foundation runs this after Terraform has created the secret containers. No
+generated value is written to Terraform state, a pipeline artifact, or logs.
 """
 from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import re
@@ -16,7 +17,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import uuid
 from pathlib import Path
 
 
@@ -34,7 +34,7 @@ def aws(*arguments: str) -> str:
         check=False,
     )
     if result.returncode:
-        raise RuntimeError(f"AWS {arguments[0]} {arguments[1]} failed")
+        raise RuntimeError(f"AWS {arguments[0]} failed: {result.stderr.strip()}")
     return result.stdout.strip()
 
 
@@ -56,67 +56,57 @@ def generated_payload() -> dict[str, str | int]:
     }
 
 
-def read_environment(secret_id: str) -> tuple[dict, str]:
-    response = json.loads(aws("secretsmanager", "get-secret-value", "--secret-id", secret_id, "--output", "json"))
-    payload = json.loads(response["SecretString"])
-    if (not isinstance(payload, dict) or payload.get("schema_version") != 2
-            or payload.get("environment") not in {"dev", "prod"}
-            or not isinstance(payload.get("galas"), dict)):
-        raise RuntimeError("environment secret must be populated before Foundation initializes Gala keys")
-    return payload, response["VersionId"]
-
-
-def publish_environment(secret_id: str, prior_version: str, payload: dict) -> bool:
-    encoded = json.dumps(payload, separators=(",", ":"))
-    if len(encoded.encode("utf-8")) > 65536:
-        raise RuntimeError("environment secret exceeds the AWS size limit")
-    token = str(uuid.uuid4())
-    pending = "GALA_INIT_" + token
-    descriptor, filename = tempfile.mkstemp(prefix="gala-environment-", suffix=".json")
-    written = False
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
-            destination.write(encoded)
-        os.chmod(filename, 0o600)
-        aws("secretsmanager", "put-secret-value", "--secret-id", secret_id,
-            "--client-request-token", token, "--version-stages", pending,
-            "--secret-string", f"file://{filename}", "--query", "VersionId", "--output", "text")
-        written = True
-        try:
-            aws("secretsmanager", "update-secret-version-stage", "--secret-id", secret_id,
-                "--version-stage", "AWSCURRENT", "--remove-from-version-id", prior_version,
-                "--move-to-version-id", token)
-        except RuntimeError:
-            current, version = read_environment(secret_id)
-            if version == token:
-                return True
-            if version != prior_version:
-                return False
-            raise
+def current_version_exists(secret_id: str) -> bool:
+    versions = json.loads(
+        aws(
+            "secretsmanager", "describe-secret", "--secret-id", secret_id,
+            "--query", "VersionIdsToStages", "--output", "json",
+        )
+    )
+    if versions is None:
+        return False
+    if not isinstance(versions, dict):
+        raise RuntimeError(f"unexpected version metadata for {secret_id}")
+    if any("AWSCURRENT" in stages for stages in versions.values()):
         return True
-    finally:
-        Path(filename).unlink(missing_ok=True)
-        if written:
-            aws("secretsmanager", "update-secret-version-stage", "--secret-id", secret_id,
-                "--version-stage", pending, "--remove-from-version-id", token)
+    if versions:
+        raise RuntimeError(f"{secret_id} has versions but no AWSCURRENT; manual inspection required")
+    return False
 
 
 def initialize(secret_id: str, slug: str) -> None:
-    expected_environment = "dev" if slug in {"gala-smoke", "gala-smoke-cawl"} else "prod"
-    for _ in range(5):
-        payload, version = read_environment(secret_id)
-        if payload["environment"] != expected_environment:
-            raise RuntimeError("Gala keys target the wrong environment")
-        if slug in payload["galas"]:
-            if not isinstance(payload["galas"][slug], dict) or payload["galas"][slug].get("schema_version") != 1:
-                raise RuntimeError("existing Gala keys have an invalid schema")
-            print(f"Generated credentials preserved: {slug}")
-            return
-        payload["galas"][slug] = generated_payload()
-        if publish_environment(secret_id, version, payload):
-            print(f"Generated credentials initialized: {slug}")
-            return
-    raise RuntimeError("environment secret changed repeatedly; retry Foundation finalization")
+    if current_version_exists(secret_id):
+        print(f"Generated credentials preserved: {slug}")
+        return
+
+    # A stable client token makes concurrent/retried Foundation finalizers
+    # unable to replace the first successfully written version.
+    token = hashlib.sha256(f"tibillet-gala-generated-v1:{secret_id}".encode()).hexdigest()
+    descriptor, filename = tempfile.mkstemp(prefix="gala-generated-", suffix=".json")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+            json.dump(generated_payload(), destination, separators=(",", ":"))
+        os.chmod(filename, 0o600)
+        for attempt in range(5):
+            try:
+                aws(
+                    "secretsmanager", "put-secret-value", "--secret-id", secret_id,
+                    "--client-request-token", token,
+                    "--secret-string", f"file://{filename}",
+                    "--query", "VersionId", "--output", "text",
+                )
+                break
+            except RuntimeError as error:
+                if "ResourceExistsException" in str(error) and current_version_exists(secret_id):
+                    break
+                if "AccessDeniedException" not in str(error) or attempt == 4:
+                    raise
+                time.sleep(3)
+        if not current_version_exists(secret_id):
+            raise RuntimeError(f"generated secret has no AWSCURRENT version: {slug}")
+        print(f"Generated credentials initialized: {slug}")
+    finally:
+        Path(filename).unlink(missing_ok=True)
 
 
 def main() -> None:
@@ -138,8 +128,7 @@ def main() -> None:
     for slug in sorted(catalog["galas"]):
         if not SLUG.fullmatch(slug) or slug == "bapts":
             raise SystemExit("invalid Gala slug in Foundation catalog")
-        mode = "test" if slug in {"gala-smoke", "gala-smoke-cawl"} else "live"
-        initialize(f"{args.project_name}/shared/integrations-stripe-{mode}", slug)
+        initialize(f"{args.project_name}/galas/{slug}/generated", slug)
 
 
 if __name__ == "__main__":
