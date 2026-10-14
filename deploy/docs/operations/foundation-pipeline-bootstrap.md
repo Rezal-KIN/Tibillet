@@ -114,3 +114,25 @@ Attendre le statut final `Succeeded` des deux exécutions, puis confirmer la
 terminaison de l'EC2, la disparition du volume et de la pipeline, ainsi que la
 santé publique d'Aix. Ne pas utiliser `terraform destroy` ni modifier l'EC2
 manuellement pour contourner un échec de Foundation.
+
+## Retrait du gala de test BalduBapts2026
+
+Retrait explicitement demandé par l'utilisateur le 14 octobre 2026. Il cible
+uniquement l'EC2 Paris `i-0b1c966b50fd97f80` et son volume
+`vol-0d7ded144bdc952e8` ; l'ancienne instance Stockholm TibilletBapts reste hors périmètre.
+
+1. EC2 arrêtée et snapshot chiffré `snap-02ac5a5b7fb219952` terminé.
+2. Exécuter `deploy/tools/park-bapts-retirement.py` pour revoir le plan, puis
+   avec `--apply` pour détacher l'EIP Paris conservée et mettre le marqueur actif
+   à `none`. Le script refuse si un des trois DNS publics pointe vers cette EIP,
+   si l'identité de l'EC2 ou du volume change, ou si un autre gala est actif.
+3. Foundation `GalaName=Prepare BalduBapts2026 Retirement` : seulement désactiver
+   la protection de terminaison et autoriser la suppression du volume racine.
+4. Après réussite complète, Foundation `GalaName=Retire BalduBapts2026` : retirer
+   cette EC2, son volume, sa pipeline et ses permissions de livraison. Les clés
+   générées, sauvegardes, snapshot, journaux et l'EIP partagée restent conservés.
+
+Le contrôle de plan vérifie aussi les prérequis de retrait sur AWS. Tant que ce
+retrait en deux phases n'est pas terminé, les autres opérations Foundation sont
+refusées pour éviter une recréation involontaire liée au déplacement Terraform.
+Le DNS public et l'infrastructure Stockholm restent inchangés.

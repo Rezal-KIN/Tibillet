@@ -7,6 +7,8 @@ import copy
 import json
 import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -29,7 +31,13 @@ FIRST_RUN_RETIREMENT_OPERATIONS = {
     "Prepare Gala First Run Retirement": "prepare",
     "Retire Gala First Run": "retire",
 }
+BAPTS_SLUG = "baldubapts2026"
+BAPTS_RETIREMENT_OPERATIONS = {
+    "Prepare BalduBapts2026 Retirement": "prepare",
+    "Retire BalduBapts2026": "retire",
+}
 TEMPORARY_IDENTITIES = {
+    BAPTS_SLUG: ("i-0b1c966b50fd97f80", "vol-0d7ded144bdc952e8"),
     VERIFICATION_SLUG: (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
     FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
     "gala-alignement-vanilla-2026-10-10": ("i-0fb1dd7f460d6d88d", "vol-029ab722ab927334d"),
@@ -183,7 +191,7 @@ def verify_verification_retirement_plan(
         'aws_iam_role_policy.production_pipeline["gala-am-aix"]',
         'aws_iam_role_policy.test_deploy[0]',
     }
-    if set(targets) == set(ALIGNMENT_SLUGS):
+    if set(targets) == set(ALIGNMENT_SLUGS) or targets == (BAPTS_SLUG,):
         # Existing delivery policy documents are deferred by Terraform while
         # the two trials disappear. Accept only provider recomputation; the
         # identity and every other field must remain byte-for-byte unchanged.
@@ -616,7 +624,14 @@ def main() -> None:
     verification_phase = VERIFICATION_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
-    if os.environ.get("GALA_NAME", "") == ENABLE_CAWL_PLATFORM_REQUEST:
+    bapts_phase = BAPTS_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    if bapts_phase:
+        if args.slug != BAPTS_SLUG:
+            raise ValueError("BalduBapts2026 retirement requires the exact slug")
+        changed = verify_verification_retirement_plan(plan, bapts_phase, slug=BAPTS_SLUG)
+        subprocess.run([sys.executable, str(Path(__file__).with_name("park-bapts-retirement.py")),
+                        "--check-retirement"], check=True)
+    elif os.environ.get("GALA_NAME", "") == ENABLE_CAWL_PLATFORM_REQUEST:
         if args.slug != CAWL_SMOKE_SLUG:
             raise ValueError("Enable CAWL Platform requires the exact CAWL Smoke slug")
         changed = verify(plan, args.slug, extra_new=CAWL_PLATFORM_ADDRESSES)
