@@ -53,9 +53,30 @@ et `pk_live_`) :
     "secret_key": "sk_test_EXAMPLE",
     "publishable_key": "pk_test_EXAMPLE",
     "fedow_webhook_secret": "whsec_EXAMPLE"
+  },
+  "cawl": {
+    "mode": "test",
+    "merchant_id": "",
+    "api_key_id": "",
+    "api_secret": "",
+    "webhook_key_id": "",
+    "webhook_secret": ""
   }
 }
 ```
+
+Les noms historiques `integrations-stripe-test/live` sont conservés : il y a
+un seul secret de paiement par environnement. La configuration versionnée du
+gala (`PAYMENT_PROVIDER`, défaut `stripe`) choisit la section à matérialiser.
+Les champs CAWL vides sont acceptés par un gala Stripe, et bloquent un gala
+CAWL tant qu'ils ne sont pas renseignés. Le secret production a `mode: live`
+dans les deux sections. Le runtime n'écrit jamais les deux fournisseurs dans
+les fichiers applicatifs.
+
+**Migration des EC2 existantes :** installer et vérifier le nouveau lecteur
+runtime sur toutes les EC2 conservées avant d'ajouter la section `cawl` à
+`AWSCURRENT`. Les anciens lecteurs refusaient une section supplémentaire.
+Les clés Stripe, les clés générées et le secret mail restent identiques.
 
 Le secret mail commun a le schéma suivant (valeurs fictives) :
 

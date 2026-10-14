@@ -210,6 +210,7 @@ resource "aws_instance" "runtime" {
     domain                   = var.domain
     gala_slug                = var.gala_slug
     platform                 = var.platform
+    payment_provider         = var.payment_provider
     repository_ref           = var.repository_ref
     repository_url           = var.repository_url
     generated_secret_arn     = aws_secretsmanager_secret.generated.arn
@@ -279,6 +280,7 @@ resource "aws_instance" "retirable" {
     domain                   = var.domain
     gala_slug                = var.gala_slug
     platform                 = var.platform
+    payment_provider         = var.payment_provider
     repository_ref           = var.repository_ref
     repository_url           = var.repository_url
     generated_secret_arn     = aws_secretsmanager_secret.generated.arn

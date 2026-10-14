@@ -155,15 +155,18 @@ class SmokeAndPromotionTests(unittest.TestCase):
 
 
 class RuntimeSecretTests(unittest.TestCase):
-    def test_cawl_smoke_requires_the_cawl_test_secret(self) -> None:
+    def test_cawl_smoke_requires_the_shared_test_secret_and_explicit_provider(self) -> None:
         generated = PREFIX + f"galas/{CAWL}/generated-AbC123"
         mail = PREFIX + "shared/integrations-mail-AbC123"
         original = f'GALA_SLUG="{CAWL}"\nDEPLOYMENT_LOCKED=true\n'
-        result = preparer.update(original, CAWL, generated, PREFIX + "shared/integrations-cawl-test-AbC123", mail)
-        self.assertIn("integrations-cawl-test", result)
-        for wrong in ("integrations-stripe-test", "integrations-cawl-live"):
+        shared = PREFIX + "shared/integrations-stripe-test-AbC123"
+        result = preparer.update(original, CAWL, generated, shared, mail, "cawl")
+        self.assertIn('PAYMENT_PROVIDER="cawl"', result)
+        for wrong in ("integrations-stripe-live", "integrations-cawl-test"):
             with self.assertRaises(ValueError):
-                preparer.update(original, CAWL, generated, PREFIX + f"shared/{wrong}-AbC123", mail)
+                preparer.update(original, CAWL, generated, PREFIX + f"shared/{wrong}-AbC123", mail, "cawl")
+        with self.assertRaises(ValueError):
+            preparer.update(original, CAWL, generated, shared, mail)
 
 
 class TerraformWiringTests(unittest.TestCase):

@@ -339,7 +339,7 @@ La chaîne CAWL duplique l'architecture Stripe sans la modifier. Un gala est
 | Preuve Smoke | `test-validated/smoke-*.json` | `test-validated-cawl/smoke-*.json` |
 | Création d'un gala | Pipeline `…-foundation` | Pipeline `…-foundation-cawl` (même code, `PAYMENT_PROVIDER=cawl`) |
 | Production du gala | Manifeste sur `main` | Manifeste sur la branche CAWL |
-| Secrets de paiement | `integrations-stripe-test/live` | `integrations-cawl-test/live` |
+| Secrets de paiement | Section `stripe` de `integrations-stripe-test/live` | Section `cawl` des mêmes secrets test/live |
 
 Un gala Stripe ne peut pas être promu avec une preuve CAWL, ni l'inverse.
 Les préfixes de preuve sont distincts et la politique IAM de chaque
@@ -354,11 +354,11 @@ validation ne lit que celui de son fournisseur.
    `Enable CAWL Platform`. Le contrôle du plan n'accepte que la création des
    ressources de `cawl-delivery.tf`, de l'EC2 `gala-smoke-cawl` et de son
    document SSM. Les galas existants ne sont pas modifiés.
-3. Renseigner les secrets `integrations-cawl-test` et `integrations-cawl-live`
-   au format décrit dans
-   `TECH_DOC/audits/2026-10-13-stripe-cawl/04-deploiement.md` (branche CAWL).
-   **Tant que `integrations-cawl-test` est vide, le déploiement sur
-   `gala-smoke-cawl` échoue à la lecture du secret.**
+3. Mettre à jour le lecteur runtime sur chaque EC2 Stripe conservée avant
+   d’ajouter la section `cawl` aux secrets existants `integrations-stripe-test`
+   et `integrations-stripe-live` (format dans `active-gala-and-shared-integrations.md`).
+   **Tant que les cinq identifiants CAWL test sont vides, le déploiement sur
+   `gala-smoke-cawl` est bloqué avant le démarrage des applications.**
 4. Pousser sur `migration/cawl-payments` : la pipeline Test CAWL construit et
    déploie `gala-smoke-cawl`.
 

@@ -44,8 +44,6 @@ ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
 CAWL_SMOKE_SLUG = "gala-smoke-cawl"
 # Exactly the shared resources of the parallel CAWL chain (cawl-delivery.tf).
 CAWL_PLATFORM_ADDRESSES = frozenset({
-    'aws_secretsmanager_secret.cawl_test[0]',
-    'aws_secretsmanager_secret.cawl_live[0]',
     *(f'aws_ecr_repository.cawl["{component}"]' for component in ('lespass', 'fedow', 'laboutik')),
     *(f'aws_ecr_lifecycle_policy.cawl["{component}"]' for component in ('lespass', 'fedow', 'laboutik')),
     *(f'{kind}[0]' for kind in (

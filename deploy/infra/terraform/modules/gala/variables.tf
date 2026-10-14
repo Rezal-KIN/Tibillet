@@ -41,3 +41,12 @@ variable "associate_public_ip_address" { type = bool }
 variable "create_instance" { type = bool }
 variable "protect_from_destruction" { type = bool }
 variable "extra_tags" { type = map(string) }
+
+variable "payment_provider" {
+  type    = string
+  default = "stripe"
+  validation {
+    condition     = contains(["stripe", "cawl"], var.payment_provider)
+    error_message = "payment_provider must be stripe or cawl."
+  }
+}

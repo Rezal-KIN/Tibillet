@@ -33,7 +33,7 @@ resource "aws_ssm_document" "production_deploy" {
           "repo=/opt/tibillet-gala/repository",
           "git -C \"$repo\" fetch --depth 1 origin \"$commit\"",
           "git -C \"$repo\" checkout --detach FETCH_HEAD",
-          "python3 \"$repo/deploy/tools/runtime/reconcile-runtime.py\" /etc/tibillet-gala/${each.key}.conf ${each.key} '${module.gala[each.key].generated_secret_arn}' '${local.gala_payment_secret_arn[each.key]}' '${aws_secretsmanager_secret.shared_mail[0].arn}'",
+          "python3 \"$repo/deploy/tools/runtime/reconcile-runtime.py\" /etc/tibillet-gala/${each.key}.conf ${each.key} '${module.gala[each.key].generated_secret_arn}' '${local.gala_payment_secret_arn[each.key]}' '${aws_secretsmanager_secret.shared_mail[0].arn}'${each.value.payment_provider == "cawl" ? " cawl" : ""}",
           "bash \"$repo/deploy/tools/runtime/install-runtime-contract.sh\" /etc/tibillet-gala/${each.key}.conf",
           "/usr/local/lib/tibillet-gala/deploy-release-from-s3.sh /etc/tibillet-gala/${each.key}.conf '{{ ReleaseManifestUri }}'",
         ]

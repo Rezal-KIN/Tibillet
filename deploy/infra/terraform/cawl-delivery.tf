@@ -1,6 +1,6 @@
 # Parallel CAWL delivery chain. It mirrors the Stripe chain (Test on Smoke,
 # Foundation, per-Gala Production) without touching it:
-#   - CAWL secrets and ECR repositories of their own;
+#   - CAWL ECR repositories of their own; shared test/live payment secrets;
 #   - Test CAWL builds var.cawl_source_branch and deploys gala-smoke-cawl only;
 #   - Foundation CAWL creates Galas whose Production pipeline promotes only
 #     images proven on gala-smoke-cawl (test-validated-cawl/ markers).
@@ -14,9 +14,9 @@ locals {
 
   gala_payment_secret_arn = local.gala_resources_enabled ? {
     for slug, gala in var.galas : slug => (
-      gala.payment_provider == "cawl"
-      ? (contains(local.smoke_gala_slugs, slug) ? try(aws_secretsmanager_secret.cawl_test[0].arn, null) : try(aws_secretsmanager_secret.cawl_live[0].arn, null))
-      : (slug == "gala-smoke" ? aws_secretsmanager_secret.stripe_test[0].arn : aws_secretsmanager_secret.stripe_live[0].arn)
+      contains(local.smoke_gala_slugs, slug)
+      ? aws_secretsmanager_secret.stripe_test[0].arn
+      : aws_secretsmanager_secret.stripe_live[0].arn
     )
   } : {}
   cawl_repository_arns = { for component, repo in aws_ecr_repository.cawl : component => repo.arn }
@@ -36,25 +36,8 @@ locals {
   }
 }
 
-# --- Secrets: containers only, values are entered by an administrator. -----
-
-resource "aws_secretsmanager_secret" "cawl_test" {
-  count                   = local.gala_resources_enabled && var.enable_cawl_platform ? 1 : 0
-  name                    = "${var.project_name}/shared/integrations-cawl-test"
-  description             = "CAWL sandbox (preprod) merchant credentials used only by gala-smoke-cawl."
-  recovery_window_in_days = 7
-  tags                    = local.common_tags
-  lifecycle { prevent_destroy = true }
-}
-
-resource "aws_secretsmanager_secret" "cawl_live" {
-  count                   = local.gala_resources_enabled && var.enable_cawl_platform ? 1 : 0
-  name                    = "${var.project_name}/shared/integrations-cawl-live"
-  description             = "CAWL production merchant credentials of the CAWL Galas."
-  recovery_window_in_days = 7
-  tags                    = local.common_tags
-  lifecycle { prevent_destroy = true }
-}
+# Payment credentials share the existing test/live containers, with separate
+# stripe and cawl sections. The versioned Gala configuration selects one.
 
 # --- Images: separate repositories, so CAWL pushes never shorten the
 # retention of digests pinned by Stripe Galas (and the reverse). ------------
@@ -606,12 +589,4 @@ resource "aws_codepipeline" "foundation_cawl" {
       }
     }
   }
-}
-
-output "shared_cawl_test_secret_arn" {
-  value = try(aws_secretsmanager_secret.cawl_test[0].arn, null)
-}
-
-output "shared_cawl_live_secret_arn" {
-  value = try(aws_secretsmanager_secret.cawl_live[0].arn, null)
 }
