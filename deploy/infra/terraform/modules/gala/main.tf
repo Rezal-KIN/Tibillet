@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "runtime" {
   statement {
     sid       = "ReadOnlyOwnRuntimeSecrets"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn])
+    resources = distinct(compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn]))
   }
 
   statement {

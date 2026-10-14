@@ -15,12 +15,14 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
   - `organization.tf`, `identity-center.tf` : Organization et IAM Identity Center Gala.
   - `gala-instances.tf`, `modules/gala/` : une EC2, des clés propres et un préfixe S3 par gala, `for_each var.galas`.
   - `active-gala.tf`, `active-gala-delivery.tf` : une IP élastique commune et une pipeline manuelle de bascule du gala actif.
-  - `shared-integrations.tf` : secrets Secrets Manager communs Stripe test,
-    Stripe live et SMTP, sans valeur dans Terraform.
+  - `shared-integrations.tf` : deux secrets Secrets Manager communs, test et
+    production, contenant Stripe, CAWL, SMTP et l'administration. Les clés
+    propres à chaque gala restent dans son secret `generated`. Aucune valeur
+    n'est stockée dans Terraform.
   - `delivery.tf` : pipeline CodeBuild/CodePipeline Test et ECR ; la promotion immutable est
     définie dans `production-delivery.tf`.
   - `cawl-delivery.tf` : chaîne **CAWL** parallèle et indépendante de Stripe. Elle comprend
-    ses secrets, ses ECR `cawl/*`, une pipeline Test CAWL sur la branche
+    ses ECR `cawl/*`, une pipeline Test CAWL sur la branche
     `var.cawl_source_branch` qui déploie `gala-smoke-cawl`, et une pipeline
     Foundation CAWL. Voir
     `docs/operations/new-gala-deployment-and-development-workflow.md`, section D.
@@ -84,7 +86,8 @@ plan d'implémentation ; ce fichier n'est qu'un point d'entrée.
    changements hors création du gala demandé, puis l'applique sans approbation
    manuelle du plan ;
    les clés propres aux galas sont générées une fois après l'apply, les identifiants
-   Stripe test/live et SMTP communs sont renseignés séparément. Son premier bootstrap et le seed du catalogue privé
+   les intégrations communes test/production sont renseignées dans deux autres
+   secrets. Son premier bootstrap et le seed du catalogue privé
    des galas sont des actions Terraform administrateur ponctuelles.
 5. `enable_delivery_platform = true` seulement après approbation de la connexion CodeStar
    GitHub vers `Rezal-KIN/Tibillet`, création du bucket de sauvegardes/releases et plan de

@@ -44,10 +44,12 @@ de connexion par mail à l'entrée de l'administration.
 
 La pipeline configure désormais ces accès après les installateurs TiBillet,
 avant de valider le healthcheck. Elle réutilise ce même script et les comptes
-existants. Le nom et l'empreinte Django du mot de passe sont lus dans la version
-marquée `GALA_ADMIN` du secret partagé `integrations-mail`, puis dans un `admin.json` privé
-en mode `0600` sur l'hôte. Aucun identifiant administrateur n'est ajouté aux
-variables des conteneurs. L'absence de cette version arrête le déploiement avant le
+existants. Le nom et l'empreinte Django du mot de passe sont lus dans la section
+`admin` du secret commun test ou production, puis dans un `admin.json` privé
+en mode `0600` sur l'hôte. Pendant la migration, le lecteur accepte aussi la
+version `GALA_ADMIN` du secret historique `integrations-mail`. Aucun identifiant
+administrateur n'est ajouté aux variables des conteneurs. L'absence de ces
+identifiants arrête le déploiement avant le
 démarrage des applications. Le healthcheck vérifie la disponibilité des trois comptes et un hash reconnu
 par Django. Il accepte la réécriture native du hash lors d'une connexion ;
 les connexions réelles avec le mot de passe demandé sont testées séparément.

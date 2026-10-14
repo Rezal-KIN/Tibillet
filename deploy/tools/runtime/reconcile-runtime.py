@@ -30,8 +30,10 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
         raise ValueError("Stripe Smoke requires the Stripe provider")
     if not ARN.fullmatch(stripe_arn) or f"integrations-stripe-{mode}-" not in stripe_arn:
         raise ValueError(f"Gala requires the shared payment {mode} secret")
-    if not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn:
-        raise ValueError("Smoke requires the shared mail secret")
+    # During migration the mail ARN can still be the legacy shared object.
+    # Afterward both integration selectors point to this environment's object.
+    if mail_arn != stripe_arn and (not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn):
+        raise ValueError("Gala requires its environment integrations or the legacy shared mail secret")
     if not re.search(rf'^GALA_SLUG=["\']?{slug}["\']?$', text, re.MULTILINE):
         raise ValueError("target config targets another Gala")
     replacements = {
