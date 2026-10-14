@@ -7,7 +7,10 @@ from rest_framework import serializers
 
 from fedow_core.models import Asset, Configuration, Token, Transaction, Wallet
 from fedow_core.serializers import TransactionW2W
-from payment_providers.cawl import CawlConfiguration, CawlError, CawlGateway
+from payment_providers.cawl import (
+    HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES, HOSTED_CHECKOUT_TIMEOUT_MINUTES,
+    CawlConfiguration, CawlError, CawlGateway,
+)
 from cawl_fedow.models import Checkout
 
 
@@ -45,7 +48,10 @@ def create_checkout(request, amount):
         Wallet.objects.select_for_update().get(pk=request.wallet.pk)
         existing = Checkout.objects.filter(
             wallet=request.wallet, place=request.place, amount=amount, refill__isnull=True,
-            created_at__gte=timezone.now() - timedelta(hours=3),
+            # FR : On ne réutilise qu'une page encore valide pendant toute la marge.
+            # EN: Only reuse a hosted page that stays valid for the whole margin.
+            created_at__gte=timezone.now() - timedelta(
+                minutes=HOSTED_CHECKOUT_TIMEOUT_MINUTES - HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES),
         ).exclude(provider_status__in=['REJECTED', 'REJECTED_CAPTURE', 'CANCELLED']).first()
         if existing:
             if (existing.merchant_id != client.configuration.merchant_id
@@ -58,12 +64,18 @@ def create_checkout(request, amount):
             wallet=request.wallet, place=request.place, asset=asset, amount=amount,
             merchant_id=client.configuration.merchant_id, test_mode=client.configuration.test_mode,
         )
-    result = client.create_checkout(
-        reference=checkout.uuid, amount=amount,
-        return_url=f"https://{domain}/my_account/{checkout.uuid}/return_refill_wallet/",
-        webhook_url=f"https://{os.environ['DOMAIN']}/webhook_cawl/",
-        email=request.wallet.user.email,
-    )
+    try:
+        result = client.create_checkout(
+            reference=checkout.uuid, amount=amount,
+            return_url=f"https://{domain}/my_account/{checkout.uuid}/return_refill_wallet/",
+            webhook_url=f"https://{os.environ['DOMAIN']}/webhook_cawl/",
+            email=request.wallet.user.email,
+        )
+    except Exception as error:
+        # FR : Aucune URL n'a été remise : la demande ne doit pas bloquer les essais suivants.
+        # EN: No URL was handed out; do not let this request block later attempts.
+        Checkout.objects.filter(pk=checkout.pk, refill__isnull=True, hosted_checkout_id__isnull=True).delete()
+        raise CawlError("Création du paiement CAWL impossible.") from error
     checkout.hosted_checkout_id = result.id
     checkout.checkout_url = result.url
     checkout.save(update_fields=["hosted_checkout_id", "checkout_url"])

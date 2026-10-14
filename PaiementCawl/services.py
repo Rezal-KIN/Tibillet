@@ -1,4 +1,6 @@
+import logging
 import os
+from datetime import timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -8,7 +10,15 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from payment_providers.cawl import CawlConfiguration, CawlError, CawlGateway
+from payment_providers.cawl import (
+    HOSTED_CHECKOUT_ABANDONED, HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES, HOSTED_CHECKOUT_TIMEOUT_MINUTES,
+    CawlConfiguration, CawlError, CawlGateway,
+)
+
+logger = logging.getLogger(__name__)
+
+# FR : Tentatives finies sans encaissement. / Attempts that ended without collection.
+FAILED_PAYMENT_STATES = {"REJECTED", "REJECTED_CAPTURE", "CANCELLED"}
 
 
 def enabled():
@@ -21,6 +31,15 @@ def gateway():
     if os.environ.get("CAWL_TENANT_SCHEMA") != connection.schema_name:
         raise CawlError("CAWL n'est pas configuré pour cette organisation.")
     return CawlGateway(CawlConfiguration.from_environment(os.environ))
+
+
+def checkout_expired(record, checkout_status):
+    # FR : Sans paiement créé, une session abandonnée ou trop ancienne est expirée.
+    # EN: Without a created payment, an abandoned or stale session is expired.
+    if not record.hosted_checkout_id or checkout_status in HOSTED_CHECKOUT_ABANDONED:
+        return True
+    lifetime = timedelta(minutes=HOSTED_CHECKOUT_TIMEOUT_MINUTES + HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES)
+    return timezone.now() > record.created_at + lifetime
 
 
 def check_account(record, client):
@@ -81,10 +100,19 @@ class CreationPaiementCawl:
             )
         return_url = f"{absolute_domain}{payment.uuid}/{success_url}"
         domain = connection.tenant.get_primary_domain().domain
-        checkout = client.create_checkout(
-            reference=payment.uuid, amount=record.amount, return_url=return_url,
-            webhook_url=f"https://{domain}/api/webhook_cawl/", email=user.email,
-        )
+        try:
+            checkout = client.create_checkout(
+                reference=payment.uuid, amount=record.amount, return_url=return_url,
+                webhook_url=f"https://{domain}/api/webhook_cawl/", email=user.email,
+            )
+        except Exception as error:
+            # FR : Sans URL de paiement, l'acheteur ne peut rien régler : on libère la
+            # commande pour qu'elle ne bloque pas un nouvel essai.
+            # EN: No URL was handed out, so release the order instead of leaving it pending.
+            logger.error("Création du paiement CAWL impossible pour %s : %s", payment.uuid, type(error).__name__)
+            Paiement_stripe.objects.filter(pk=payment.pk, status=Paiement_stripe.PENDING).update(
+                status=Paiement_stripe.CANCELED)
+            raise serializers.ValidationError(_("Le paiement en ligne est momentanément indisponible.")) from error
         record.hosted_checkout_id = checkout.id
         record.checkout_url = checkout.url
         record.save(update_fields=["hosted_checkout_id", "checkout_url"])
@@ -96,8 +124,14 @@ def checkout_session(payment):
     record = payment.cawl_payment
     client = gateway()
     check_account(record, client)
-    snapshot = client.get_checkout_payment(record.hosted_checkout_id)
-    status = "open" if snapshot is None else "complete"
+    checkout_status, snapshot = (client.get_checkout(record.hosted_checkout_id)
+                                 if record.hosted_checkout_id else ("", None))
+    if snapshot is not None and snapshot.status not in FAILED_PAYMENT_STATES:
+        status = "complete"
+    elif checkout_expired(record, checkout_status):
+        status = "expired"
+    else:
+        status = "open"
     return SimpleNamespace(
         id=record.hosted_checkout_id, url=record.checkout_url,
         status=status, payment_status="paid" if snapshot and snapshot.captured else "unpaid",
@@ -111,12 +145,20 @@ def update_payment(payment, snapshot=None):
     record = payment.cawl_payment
     client = gateway()
     check_account(record, client)
+    checkout_status = None
     if snapshot is None:
         if record.provider_payment_id:
             snapshot = client.get_payment(record.provider_payment_id)
-        else:
-            snapshot = client.get_checkout_payment(record.hosted_checkout_id)
+        elif record.hosted_checkout_id:
+            checkout_status, snapshot = client.get_checkout(record.hosted_checkout_id)
     if snapshot is None:
+        if checkout_expired(record, checkout_status):
+            # FR : Un paiement capturé plus tard reste accepté par update_payment.
+            # EN: A later capture is still honoured: EXPIRE is not a final paid state.
+            Paiement_stripe.objects.filter(
+                pk=payment.pk, status__in=[Paiement_stripe.PENDING, Paiement_stripe.OPEN],
+            ).update(status=Paiement_stripe.EXPIRE)
+            payment.refresh_from_db(fields=["status"])
         return payment.status
     snapshot.check_order(payment.uuid, record.amount)
     # FR : Webhook et retour navigateur peuvent arriver en même temps.

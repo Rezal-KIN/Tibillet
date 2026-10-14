@@ -60,3 +60,33 @@ class LedgerTests(TestCase):
         with self.assertRaises(CawlError):
             credit_checkout(self.checkout, self.request, self.snapshot())
         self.assertFalse(Transaction.objects.filter(action=Transaction.CREATION).exists())
+
+
+class CheckoutCreationTests(TestCase):
+    def setUp(self):
+        from unittest.mock import Mock
+        self.primary = Wallet.objects.create(name='QA Primary')
+        Configuration.objects.create(name='QA', domain='fedow.example', primary_wallet=self.primary)
+        asset_creator(name='QA euros', currency_code='FED', category=Asset.STRIPE_FED_FIAT, wallet_origin=self.primary)
+        self.wallet = Wallet.objects.create(name='QA user')
+        FedowUser.objects.create(username='qa', email='qa@example.test', wallet=self.wallet)
+        self.place = Place.objects.create(name='QA gala', wallet=Wallet.objects.create(), lespass_domain='gala.example')
+        self.request = SimpleNamespace(wallet=self.wallet, place=self.place)
+        config = CawlConfiguration('qa-merchant', 'key', 'secret', 'hook', 'hook-secret', True)
+        self.gateway = SimpleNamespace(configuration=config, create_checkout=Mock(side_effect=RuntimeError('network')))
+        self.client_patch = patch('cawl_fedow.services.gateway', return_value=self.gateway)
+        self.client_patch.start()
+        self.addCleanup(self.client_patch.stop)
+
+    def test_failed_creation_does_not_block_the_next_refill(self):
+        from cawl_fedow.services import create_checkout
+        from payment_providers.cawl import HostedCheckout
+        with patch.dict('os.environ', {'DOMAIN': 'fedow.example'}):
+            with self.assertRaises(CawlError):
+                create_checkout(self.request, 2000)
+            self.assertFalse(Checkout.objects.exists())
+            self.gateway.create_checkout.side_effect = None
+            self.gateway.create_checkout.return_value = HostedCheckout(
+                'qa-hosted-2', 'https://payment.preprod.cawl-solutions.fr/qa', 'mac')
+            checkout = create_checkout(self.request, 2000)
+        self.assertEqual(checkout.checkout_url, 'https://payment.preprod.cawl-solutions.fr/qa')

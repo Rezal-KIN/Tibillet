@@ -1142,17 +1142,30 @@ class MyAccount(viewsets.ViewSet):
         from PaiementCawl.services import enabled
         if enabled():
             if request.method == 'GET':
+                if request.htmx:
+                    # FR : Les boutons « Recharger » appellent cette route en htmx ; le
+                    # formulaire de montant est une page complète, on y navigue.
+                    # EN: Refill buttons call this route via htmx; navigate to the full form.
+                    return HttpResponseClientRedirect('/my_account/refill_wallet/')
                 return render(request, 'reunion/views/account/refill_cawl.html', get_context(request))
             from PaiementCawl.validators import RefillAmountInput
-            from rest_framework.exceptions import ValidationError
             validator = RefillAmountInput(data=request.data)
-            validator.is_valid(raise_exception=True)
-            checkout_url = FedowAPI().wallet.get_federated_token_refill_checkout(
-                request.user, amount=validator.validated_data['amount'],
-            )
+            if not validator.is_valid():
+                messages.add_message(request, messages.ERROR, _("Montant de recharge invalide."))
+                return redirect('/my_account/refill_wallet/')
+            try:
+                checkout_url = FedowAPI().wallet.get_federated_token_refill_checkout(
+                    request.user, amount=validator.validated_data['amount'],
+                )
+            except Exception as error:
+                logger.error(f"refill_wallet CAWL : {type(error).__name__}")
+                checkout_url = None
             if not checkout_url:
-                raise ValidationError(_("La recharge CAWL est indisponible."))
-            return HttpResponseClientRedirect(checkout_url)
+                messages.add_message(request, messages.ERROR, _("La recharge en ligne est momentanément indisponible."))
+                return redirect('/my_account/')
+            # FR : Formulaire HTML classique : redirection HTTP vers la page CAWL.
+            # EN: Plain HTML form, so use a regular HTTP redirect to CAWL.
+            return redirect(checkout_url)
         user = request.user
         fedowAPI = FedowAPI()
         # C'est fedow qui génère la demande de paiement à Stripe.
@@ -1176,8 +1189,14 @@ class MyAccount(viewsets.ViewSet):
 
         try:
             wallet = fedowAPI.wallet.retrieve_from_refill_checkout(user, pk)
+            from PaiementCawl.services import enabled
             if wallet:
                 messages.add_message(request, messages.SUCCESS, _("Refilled wallet"))
+            elif enabled():
+                # FR : 402 CAWL = capture pas encore confirmée ; le webhook créditera.
+                # EN: CAWL 402 means capture not confirmed yet; the webhook will credit.
+                messages.add_message(request, messages.WARNING, _(
+                    "Paiement en cours de confirmation : votre solde sera crédité dans quelques instants."))
             else:
                 messages.add_message(request, messages.ERROR, _("Payment verification error"))
         except Exception:

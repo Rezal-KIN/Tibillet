@@ -106,7 +106,10 @@ def cancel_reservation(reservation, ticket=None):
                             break
                 if total <= 0:
                     continue
-                if total != total.to_integral_value() or total > record.amount:
+                # FR : Le plafond inclut les remboursements déjà demandés ou confirmés.
+                # EN: The cap includes refunds already requested or confirmed.
+                already = sum(prior.amount for prior in previous if prior.status != "REJECTED")
+                if total != total.to_integral_value() or already + total > record.amount:
                     raise CawlError("Montant de remboursement invalide.")
                 refund = CawlRefund.objects.create(
                     operation_id=operation_id, payment=record, amount=int(total), allocations=allocations,
