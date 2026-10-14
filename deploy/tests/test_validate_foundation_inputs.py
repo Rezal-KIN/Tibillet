@@ -64,7 +64,9 @@ class FoundationInputTests(unittest.TestCase):
         module = (ROOT / "infra/terraform/modules/gala/main.tf").read_text(encoding="utf-8")
         self.assertIn('retirable_gala_slugs = ["baldubapts2026", "gala-validation", "gala-validation-2", '
                       '"gala-verification", "gala-first-run-20260926", '
-                      '"gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"]', module)
+                      '"gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10", '
+                      '"gala-premier-lancement-2026-10-05", "gala-import-cartes-2026-10-07", '
+                      '"gala-images-csv-2026-10-08"]', module)
         retirable = module.split('resource "aws_instance" "retirable" {', 1)[1]
         self.assertEqual(retirable.count("contains(local.retirable_gala_slugs, var.gala_slug)"), 2)
 
