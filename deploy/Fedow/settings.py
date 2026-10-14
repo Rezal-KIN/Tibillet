@@ -73,8 +73,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    'fedow_core',
+    # Django gives commands from earlier apps precedence over later apps.
     'cawl_fedow',
+    'fedow_core',
     'solo',
     'django_extensions',
     'rest_framework',

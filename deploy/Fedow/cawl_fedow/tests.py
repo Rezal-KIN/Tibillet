@@ -1,12 +1,39 @@
+import io
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import TestCase, RequestFactory
+from django.core.management import call_command, get_commands
+from django.test import TestCase, RequestFactory, override_settings
 
 from cawl_fedow.models import Checkout
 from cawl_fedow.services import credit_checkout
 from fedow_core.models import Asset, Configuration, FedowUser, Place, Token, Transaction, Wallet, asset_creator
 from payment_providers.cawl import CawlConfiguration, CawlError, PaymentSnapshot
+
+
+@override_settings(PAYMENT_PROVIDER='cawl')
+class InstallTests(TestCase):
+    def test_first_install_uses_cawl_and_reuses_its_primary_wallet(self):
+        from fedow_core.models import Federation
+
+        # Resolve the same command as the native container entrypoint, using
+        # the real app order rather than importing our Command directly.
+        self.assertEqual(get_commands()['install'], 'cawl_fedow')
+        environment = {
+            'DOMAIN': 'fedow.example.test', 'STRIPE_KEY': '', 'STRIPE_KEY_TEST': '',
+            'CAWL_MERCHANT_ID': 'qa-merchant', 'CAWL_API_KEY_ID': 'qa-key',
+            'CAWL_API_SECRET': 'qa-secret', 'CAWL_WEBHOOK_KEY_ID': 'qa-hook',
+            'CAWL_WEBHOOK_SECRET': 'qa-hook-secret', 'CAWL_TEST': '1',
+        }
+        with patch.dict('os.environ', environment):
+            call_command('install', stdout=io.StringIO())
+            primary_id = Configuration.get_solo().primary_wallet_id
+            call_command('install', stdout=io.StringIO())
+        self.assertEqual(Configuration.objects.count(), 1)
+        self.assertEqual(Configuration.get_solo().primary_wallet_id, primary_id)
+        self.assertEqual(Wallet.objects.count(), 1)
+        self.assertEqual(Federation.objects.count(), 1)
+        self.assertEqual(Asset.objects.get().wallet_origin_id, primary_id)
 
 
 class LedgerTests(TestCase):
