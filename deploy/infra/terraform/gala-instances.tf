@@ -73,3 +73,9 @@ moved {
   from = module.gala["gala-first-run-20260926"].aws_instance.runtime[0]
   to   = module.gala["gala-first-run-20260926"].aws_instance.retirable[0]
 }
+
+# User-approved disposable test Gala, retired through two exact Foundation operations.
+moved {
+  from = module.gala["baldubapts2026"].aws_instance.runtime[0]
+  to   = module.gala["baldubapts2026"].aws_instance.retirable[0]
+}

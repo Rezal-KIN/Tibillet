@@ -13,3 +13,7 @@ instances:
     name: tibillet-gala-paris-gala-alignement-vanilla-2026-10-10
   - id: i-03a85efbda0291201
     name: tibillet-gala-paris-gala-alignement-final-2026-10-10
+  - id: i-0824730d4d46b3673
+    name: tibillet-gala-paris-gala-images-csv-2026-10-08
+  - id: i-0ee4f5b43eed4cf8b
+    name: tibillet-gala-paris-gala-smoke-cawl

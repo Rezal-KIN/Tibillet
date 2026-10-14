@@ -36,6 +36,11 @@ ALIGNMENT_RETIREMENT_OPERATIONS = {
     "Prepare Gala Alignment Retirement": "prepare",
     "Retire Gala Alignment": "retire",
 }
+BAPTS_SLUG = "baldubapts2026"
+BAPTS_RETIREMENT_OPERATIONS = {
+    "Prepare BalduBapts2026 Retirement": "prepare",
+    "Retire BalduBapts2026": "retire",
+}
 # One-time operation creating the parallel CAWL chain and its Smoke host.
 ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
 CAWL_SMOKE_SLUG = "gala-smoke-cawl"
@@ -79,6 +84,8 @@ def value(name: str) -> str:
 
 
 def gala_slug(name: str) -> str:
+    if name in BAPTS_RETIREMENT_OPERATIONS:
+        return BAPTS_SLUG
     if name in ALIGNMENT_RETIREMENT_OPERATIONS:
         return ALIGNMENT_SLUGS[0]
     if name == RETIRE_SMOKE_PIPELINE_REQUEST:
@@ -128,6 +135,7 @@ def main() -> None:
     verification_retirement = verification_retirement_phase(gala_name)
     first_run_retirement = first_run_retirement_phase(gala_name)
     alignment_retirement = ALIGNMENT_RETIREMENT_OPERATIONS.get(gala_name)
+    bapts_retirement = BAPTS_RETIREMENT_OPERATIONS.get(gala_name)
     enable_cawl_platform = gala_name == ENABLE_CAWL_PLATFORM_REQUEST
     # Set only by the Foundation CAWL pipeline; Foundation keeps Stripe.
     payment_provider = os.environ.get("PAYMENT_PROVIDER", "").strip() or "stripe"
@@ -207,6 +215,10 @@ def main() -> None:
                for s in ALIGNMENT_SLUGS):
             fail("finish Gala Alignment Retirement before other Foundation operations")
 
+    bapts = galas.get(BAPTS_SLUG)
+    if not bapts_retirement and isinstance(bapts, dict) and bapts.get("create_instance") is True:
+        fail("finish BalduBapts2026 Retirement before other Foundation operations")
+
     new_gala = {
         "platform": "v1",
         "domain": domain,
@@ -224,7 +236,19 @@ def main() -> None:
         new_gala["payment_provider"] = "cawl"
     if payment_provider == "cawl" and CAWL_SMOKE_SLUG not in galas:
         fail("run Enable CAWL Platform before creating a CAWL Gala")
-    if alignment_retirement:
+    if bapts_retirement:
+        existing = galas.get(BAPTS_SLUG)
+        if not isinstance(existing, dict) or existing.get("create_instance") is not True:
+            fail("BalduBapts2026 EC2 is absent from the active catalog")
+        if bapts_retirement == "prepare":
+            if existing.get("protect_from_destruction") is not True:
+                fail("BalduBapts2026 is already prepared or has unexpected protection")
+            existing["protect_from_destruction"] = False
+        else:
+            if existing.get("protect_from_destruction") is not False:
+                fail("prepare BalduBapts2026 before retirement")
+            existing["create_instance"] = False
+    elif alignment_retirement:
         for target in ALIGNMENT_SLUGS:
             existing = galas.get(target)
             if not isinstance(existing, dict) or existing.get("create_instance") is not True:
