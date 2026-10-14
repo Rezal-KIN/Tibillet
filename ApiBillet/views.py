@@ -1087,6 +1087,9 @@ class Wallet(DeprecatedV1Mixin, viewsets.ViewSet):
 class Webhook_stripe(APIView):
 
     def post(self, request):
+        from PaiementCawl.services import enabled
+        if enabled():
+            return Response('Stripe désactivé pour cet environnement.', status=410)
         payload = request.data
         logger.info(f" ")
         # logger.info(f"Webhook_stripe --> {payload}")

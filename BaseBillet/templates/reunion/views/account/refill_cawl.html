@@ -1,0 +1,20 @@
+{% extends "reunion/base.html" %}
+{% load i18n %}
+{% block main %}
+<main class="container py-5">
+    <h1>{% translate "Recharger mon portefeuille" %}</h1>
+    <p>{% translate "Choisissez le montant à ajouter. Votre solde sera crédité après confirmation du paiement." %}</p>
+    <form method="post" action="/my_account/refill_wallet/">
+        {% csrf_token %}
+        <label for="refill-amount" class="form-label">{% translate "Montant" %}</label>
+        <select name="amount" id="refill-amount" class="form-select mb-3" required>
+            <option value="500">5 €</option>
+            <option value="1000">10 €</option>
+            <option value="2000" selected>20 €</option>
+            <option value="5000">50 €</option>
+            <option value="10000">100 €</option>
+        </select>
+        <button type="submit" class="btn btn-primary">{% translate "Continuer vers le paiement" %}</button>
+    </form>
+</main>
+{% endblock %}

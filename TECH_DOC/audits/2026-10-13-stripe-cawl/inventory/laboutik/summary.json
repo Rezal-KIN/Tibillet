@@ -1,0 +1,19 @@
+{
+  "source": "LaBoutik-3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+  "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+  "files_with_stripe": 74,
+  "matched_lines": 477,
+  "sdk_call_sites": 10,
+  "parse_errors": [],
+  "scope": "Tous les fichiers texte UTF-8 de l’archive épinglée ; les extensions de cette branche sont un périmètre supplémentaire.",
+  "limits": [
+    "Recherche de la chaîne stripe, incluant noms CSS tels que striped, documentation et historique.",
+    "Analyse syntaxique Python ; aucun graphe dynamique ni accès aux secrets du marchand."
+  ],
+  "sha256": {
+    "references.tsv": "3d016c7a123b67ae68ea503e8278a499438d157ca9cb368de706b1960a1ee3c4",
+    "sdk-calls.tsv": "8774944d774e781a78cafd616e7a82070fe8cf847b0d5c745dd21feb5dc8e3ff",
+    "files.tsv": "11410824b69203f4a85d64180381fbe6ed3dcd8025961496a70dc7f55028c039",
+    "symbols.tsv": "1fc043698ec078c0e21a4aa35c8c1963fd92c5bee782f847e571de90bd18aee0"
+  }
+}

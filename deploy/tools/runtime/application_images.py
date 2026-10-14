@@ -39,7 +39,10 @@ def image_files(component, snapshot):
         if not match:
             raise ValueError('unsupported application image COPY; explicit files required')
         origin, target = match.groups()
-        if (not origin.startswith(('deploy/' + folder + '/', 'deploy/source/admin-templates/'))
+        source_prefixes = ('deploy/' + folder + '/', 'deploy/source/admin-templates/')
+        if component == 'fedow':
+            source_prefixes += ('payment_providers/',)
+        if (not origin.startswith(source_prefixes)
                 or '..' in PurePosixPath(origin).parts
                 or not target.startswith(prefix) or '..' in PurePosixPath(target).parts):
             raise ValueError('application image COPY is outside its source scope')

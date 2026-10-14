@@ -72,6 +72,48 @@ def dotenv_line(name: str, value: str) -> str:
     return f"{name}='{escaped}'\n"
 
 
+def payment_environment(source, smoke, tenant_schema):
+    if source.get('schema_version') != 1:
+        raise ValueError('shared payment schema is invalid')
+    if set(source) == {'schema_version', 'cawl'}:
+        account = source['cawl']
+        fields = {'mode', 'merchant_id', 'api_key_id', 'api_secret', 'webhook_key_id', 'webhook_secret'}
+        if not isinstance(account, dict) or set(account) != fields:
+            raise ValueError('shared CAWL fields are invalid')
+        mode = account['mode']
+        if mode != ('test' if smoke else 'live'):
+            raise ValueError('CAWL mode does not match Gala environment')
+        result = {'PAYMENT_PROVIDER': 'cawl', 'CAWL_TEST': '1' if mode == 'test' else '0',
+                  'CAWL_TENANT_SCHEMA': tenant_schema}
+        for field in sorted(fields - {'mode'}):
+            value = text_field(account, field)
+            if value != value.strip():
+                raise ValueError('invalid CAWL field: ' + field)
+            result['CAWL_' + field.upper()] = value
+        return result
+    if set(source) != {'schema_version', 'stripe'}:
+        raise ValueError('shared Stripe schema is invalid')
+    stripe = source['stripe']
+    if not isinstance(stripe, dict) or set(stripe) != {'mode', 'secret_key', 'publishable_key', 'fedow_webhook_secret'}:
+        raise ValueError('shared Stripe fields are invalid')
+    mode = stripe.get('mode')
+    if mode not in {'test', 'live'}:
+        raise ValueError('shared Stripe mode must be test or live')
+    if mode != ('test' if smoke else 'live'):
+        raise ValueError('Stripe mode does not match Gala environment')
+    stripe_key = text_field(stripe, 'secret_key')
+    public_key = text_field(stripe, 'publishable_key')
+    webhook_key = text_field(stripe, 'fedow_webhook_secret')
+    if not stripe_key.startswith(f'sk_{mode}_') or not public_key.startswith(f'pk_{mode}_'):
+        raise ValueError('Stripe key prefixes do not match the selected mode')
+    if not webhook_key.startswith('whsec_'):
+        raise ValueError('invalid Stripe webhook secret prefix')
+    return {'PAYMENT_PROVIDER': 'stripe', 'STRIPE_TEST': '1' if mode == 'test' else '0',
+            'STRIPE_KEY_TEST' if mode == 'test' else 'STRIPE_KEY': stripe_key,
+            'STRIPE_KEY_PUBLIC': public_key,
+            'STRIPE_ENDPOINT_SECRET_TEST' if mode == 'test' else 'STRIPE_ENDPOINT_SECRET': webhook_key}
+
+
 def assemble(
     generated: dict[str, object], stripe_secret: dict[str, object],
     mail_secret: dict[str, object], fedow_domain: str,
@@ -82,8 +124,6 @@ def assemble(
     # existing Gala keys, but never write PostgreSQL settings into Fedow's env.
     if set(generated) - {"fedow_postgres_password"} != GENERATED_FIELDS or generated.get("schema_version") != 1:
         raise ValueError("generated secret schema is invalid")
-    if set(stripe_secret) != {"schema_version", "stripe"} or stripe_secret.get("schema_version") != 1:
-        raise ValueError("shared Stripe schema is invalid")
     if set(mail_secret) != {"schema_version", "mail", "site", "test_recipient"} or mail_secret.get("schema_version") != 1:
         raise ValueError("shared mail schema is invalid")
     admin = admin_credentials(admin_secret) if require_admin or admin_secret is not None else None
@@ -91,11 +131,8 @@ def assemble(
         if not DOMAIN.fullmatch(domain):
             raise ValueError("invalid configured Gala domain")
 
-    stripe = stripe_secret["stripe"]
     mail = mail_secret["mail"]
     site = mail_secret["site"]
-    if not isinstance(stripe, dict) or set(stripe) != {"mode", "secret_key", "publishable_key", "fedow_webhook_secret"}:
-        raise ValueError("shared Stripe fields are invalid")
     if not isinstance(mail, dict) or set(mail) != {"host", "port", "username", "password", "from", "admin_email"}:
         raise ValueError("shared mail fields are invalid")
     if not isinstance(site, dict) or set(site) != {
@@ -111,18 +148,7 @@ def assemble(
         if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", text_field(site, name)):
             raise ValueError(f"invalid site subdomain: {name}")
     text_field(site, "public_name")
-    mode = stripe.get("mode")
-    if mode not in {"test", "live"}:
-        raise ValueError("shared Stripe mode must be test or live")
-    if mode != ("test" if smoke else "live"):
-        raise ValueError("Stripe mode does not match Gala environment")
-    stripe_key = text_field(stripe, "secret_key")
-    public_key = text_field(stripe, "publishable_key")
-    webhook_key = text_field(stripe, "fedow_webhook_secret")
-    if not stripe_key.startswith(f"sk_{mode}_") or not public_key.startswith(f"pk_{mode}_"):
-        raise ValueError("Stripe key prefixes do not match the selected mode")
-    if not webhook_key.startswith("whsec_"):
-        raise ValueError("invalid Stripe webhook secret prefix")
+    stripe_lines = payment_environment(stripe_secret, smoke, text_field(site, 'tenant_subdomain'))
     for name in ("host", "username", "password", "from", "admin_email"):
         text_field(mail, name)
     port = mail["port"]
@@ -140,12 +166,6 @@ def assemble(
     for name in ("laboutik_postgres_password", "lespass_postgres_password", "active_gala_api_token"):
         text_field(generated, name)
 
-    stripe_lines = {
-        "STRIPE_TEST": "1" if mode == "test" else "0",
-        "STRIPE_KEY_TEST" if mode == "test" else "STRIPE_KEY": stripe_key,
-        "STRIPE_KEY_PUBLIC": public_key,
-        "STRIPE_ENDPOINT_SECRET_TEST" if mode == "test" else "STRIPE_ENDPOINT_SECRET": webhook_key,
-    }
     mail_lines = {
         "EMAIL_HOST": text_field(mail, "host"),
         "EMAIL_PORT": str(port),
@@ -184,7 +204,7 @@ def assemble(
         # environment value (for example FEDOW_URL + "helloworld/").
         "FEDOW_URL": f"https://{fedow_domain}/",
         "LESPASS_TENANT_URL": f"https://{lespass_domain}/",
-        "LANGUAGE_CODE": "fr", **common, **mail_lines,
+        "LANGUAGE_CODE": "fr", "PAYMENT_PROVIDER": stripe_lines['PAYMENT_PROVIDER'], **common, **mail_lines,
     }
     lespass = {
         "DJANGO_SECRET": text_field(generated, "lespass_django_secret"),
@@ -230,7 +250,7 @@ def write_files(output_dir: Path, contents: dict[str, str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--generated", required=True, type=Path)
-    parser.add_argument("--stripe", required=True, type=Path)
+    parser.add_argument("--stripe", "--payment", dest="stripe", required=True, type=Path)
     parser.add_argument("--mail", required=True, type=Path)
     parser.add_argument("--smoke", required=True, choices=["true", "false"])
     parser.add_argument("--fedow-domain", required=True)

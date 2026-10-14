@@ -89,6 +89,7 @@ class PaymentMethod(models.TextChoices):
     STRIPE_NOFED = "SN", _("Online: Stripe CC")
     STRIPE_SEPA_NOFED = "SP", _("Online: Stripe SEPA")
     STRIPE_RECURENT = "SR", _("Recurring: Stripe")
+    CAWL = "CW", _("En ligne : CAWL")
     LOCAL_EURO = 'LE', _("Asset local fiat")
     LOCAL_GIFT = 'LG', _("Asset local gift")
 
@@ -98,7 +99,7 @@ class PaymentMethod(models.TextChoices):
         """Renvoie uniquement les choix de type 'en ligne'"""
         return [
             (choice, label) for choice, label in cls.choices if
-            choice in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT]
+            choice in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT, cls.CAWL]
         ]
 
     @classmethod
@@ -106,7 +107,7 @@ class PaymentMethod(models.TextChoices):
         """Renvoie uniquement les choix de type 'en ligne'"""
         return [
             (choice, label) for choice, label in cls.choices if
-            choice not in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT]
+            choice not in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT, cls.CAWL]
         ]
 
     @classmethod
@@ -789,6 +790,9 @@ class Configuration(SingletonModel):
         return RootConfiguration.get_solo().get_stripe_api()
 
     def get_stripe_connect_account(self):
+        from PaiementCawl.services import enabled
+        if enabled():
+            return None
         # Si la procédure a déja été démmaré, le numero stripe connect a déja été créé.
         # Sinon, on en cherche un nouveau
         id_acc_connect = self.stripe_connect_account_test if self.stripe_mode_test else self.stripe_connect_account
@@ -808,6 +812,13 @@ class Configuration(SingletonModel):
         return id_acc_connect
 
     def onboard_stripe(self):
+        from PaiementCawl.services import enabled, gateway
+        if enabled():
+            try:
+                gateway()
+                return _("Compte CAWL configuré")
+            except Exception:
+                return _("Compte CAWL à configurer")
         try:
             # on vérifie que le compte soit toujours lié et qu'il peut recevoir des paiements :
             if not self.stripe_payouts_enabled:
@@ -2140,6 +2151,9 @@ class PriceSold(models.Model):
         return str_name
 
     def get_id_price_stripe(self, force=False):
+        from PaiementCawl.services import enabled
+        if enabled():
+            return None
         logger.info("get_id_price_stripe")
         if self.id_price_stripe and not force:
             return self.id_price_stripe
@@ -2366,8 +2380,14 @@ class Reservation(models.Model):
         avoir.save()
         return avoir
 
-    @atomic
     def cancel_and_refund_resa(self):
+        if self.paiements.filter(cawl_payment__isnull=False).exists():
+            from PaiementCawl.refunds import cancel_reservation
+            return cancel_reservation(self)
+        return self._cancel_and_refund_resa_stripe()
+
+    @atomic
+    def _cancel_and_refund_resa_stripe(self):
         if self.tickets.filter(status=Ticket.SCANNED).exists():
             raise Exception(_("You cannot cancel a reservation that has been scanned."))
 
@@ -2437,8 +2457,14 @@ class Reservation(models.Model):
 
         return self.cancel_text()
 
-    @atomic
     def cancel_and_refund_ticket(self, ticket):
+        if self.paiements.filter(cawl_payment__isnull=False).exists():
+            from PaiementCawl.refunds import cancel_reservation
+            return cancel_reservation(self, ticket)
+        return self._cancel_and_refund_ticket_stripe(ticket)
+
+    @atomic
+    def _cancel_and_refund_ticket_stripe(self, ticket):
         """
         Cancel and refund a single ticket of this reservation.
         - Refunds only the matching LigneArticle amount via Stripe (partial refund)
@@ -2813,6 +2839,9 @@ class Paiement_stripe(models.Model):
                 for ligne in self.lignearticles.all()])
 
     def get_checkout_session(self):
+        if hasattr(self, 'cawl_payment'):
+            from PaiementCawl.services import checkout_session
+            return checkout_session(self)
         self.config = Configuration.get_solo()
         # stripe.api_key = config.get_stripe_api()
         stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
@@ -2827,6 +2856,9 @@ class Paiement_stripe(models.Model):
         Fonction qui met à jour le statut juste après le webhook stripe de paiement reçu.
         """
 
+        if hasattr(self, 'cawl_payment'):
+            from PaiementCawl.services import update_payment
+            return update_payment(self)
         self.refresh_from_db()
 
         if self.status == Paiement_stripe.VALID:

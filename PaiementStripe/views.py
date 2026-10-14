@@ -43,6 +43,16 @@ class CreationPaiementStripe():
                  invoice=None,
                  ) -> None:
 
+        from PaiementCawl.services import CreationPaiementCawl, enabled
+        if enabled():
+            creation = CreationPaiementCawl(
+                user, liste_ligne_article, metadata, reservation, source,
+                absolute_domain, success_url, cancel_url, invoice,
+            )
+            self.__dict__.update(creation.__dict__)
+            self.invoice = None
+            return
+
         # On va chercher les informations de configuration
         # et test si tout est ok pour créer un paiement
         self.user = user
@@ -380,6 +390,9 @@ class StripeConnectOnboardingViewSet(viewsets.ViewSet):
         redirects. On InvalidRequestError (account expired/removed at
         Stripe), reset and retry.
         """
+        from PaiementCawl.services import enabled
+        if enabled():
+            raise serializers.ValidationError(_("Le compte CAWL se configure avec votre contrat Crédit Agricole."))
         config = Configuration.get_solo()
         id_acc_connect = config.get_stripe_connect_account()
         tenant = connection.tenant
@@ -473,6 +486,9 @@ class StripeConnectOnboardingViewSet(viewsets.ViewSet):
         and `payouts_enabled` via Stripe API, then updates
         `Configuration.stripe_payouts_enabled`.
         """
+        from PaiementCawl.services import enabled
+        if enabled():
+            raise Http404
         details_submitted = False
 
         stripe.api_key = RootConfiguration.get_solo().get_stripe_api()

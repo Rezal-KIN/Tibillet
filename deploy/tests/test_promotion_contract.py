@@ -122,6 +122,18 @@ class PromotionContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Stripe test"):
             preparer.update(original, "gala-smoke", generated, mail, mail)
 
+    def test_cawl_runtime_secret_must_match_the_gala_environment(self) -> None:
+        prefix = "arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/"
+        cawl = prefix + "shared/integrations-cawl-test-AbC123"
+        mail = prefix + "shared/integrations-mail-AbC123"
+        generated = prefix + "galas/gala-smoke/generated-AbC123"
+        original = 'GALA_SLUG="gala-smoke"\nDEPLOYMENT_LOCKED=true\n'
+        result = preparer.update(original, "gala-smoke", generated, cawl, mail)
+        self.assertIn(cawl, result)
+        self.assertEqual(preparer.update(result, "gala-smoke", generated, cawl, mail), result)
+        with self.assertRaises(ValueError):
+            preparer.update(original, "gala-smoke", generated, cawl.replace("cawl-test", "cawl-live"), mail)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,9 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
     if not re.fullmatch(rf"arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/galas/{slug}/generated-[A-Za-z0-9]{{6}}", generated_arn):
         raise ValueError("Gala requires its own generated secret")
     mode = "test" if slug == "gala-smoke" else "live"
-    if not ARN.fullmatch(stripe_arn) or f"integrations-stripe-{mode}-" not in stripe_arn:
+    if not ARN.fullmatch(stripe_arn) or not any(
+        f"integrations-{provider}-{mode}-" in stripe_arn for provider in ('stripe', 'cawl')
+    ):
         raise ValueError(f"Gala requires the shared Stripe {mode} secret")
     if not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn:
         raise ValueError("Smoke requires the shared mail secret")

@@ -1,0 +1,55 @@
+{
+  "revision": "1e5e60951e30c74fa9dae3f50f9f680ece1f2b72",
+  "tracked_files": 1834,
+  "files_with_stripe": 331,
+  "matched_lines": 3636,
+  "symbol_scopes": 595,
+  "python_symbol_scopes": 422,
+  "direct_sdk_call_sites": 40,
+  "direct_sdk_operations": [
+    "stripe.Account.create",
+    "stripe.Account.retrieve",
+    "stripe.AccountLink.create",
+    "stripe.Invoice.retrieve",
+    "stripe.PaymentIntent.retrieve",
+    "stripe.PaymentMethod.retrieve",
+    "stripe.Price.create",
+    "stripe.Product.create",
+    "stripe.Product.list",
+    "stripe.Product.retrieve",
+    "stripe.Refund.create",
+    "stripe.Subscription.modify",
+    "stripe.Subscription.retrieve",
+    "stripe.Transfer.retrieve",
+    "stripe.checkout.Session.create",
+    "stripe.checkout.Session.retrieve"
+  ],
+  "files_by_role": {
+    "application_deployee": 9,
+    "application_lespass": 51,
+    "archive": 10,
+    "configuration_ou_autre": 22,
+    "dependance": 2,
+    "documentation": 81,
+    "exploitation_deploiement": 28,
+    "interface": 31,
+    "migration_historique": 57,
+    "test": 38,
+    "traduction": 2
+  },
+  "parse_errors": [],
+  "limits": [
+    "Recherche insensible à la casse de Stripe dans les fichiers texte suivis par Git.",
+    "Les symboles incluent classes, fonctions, commentaires et docstrings ; ce n'est pas une mesure de code exécuté.",
+    "Les appels AST sont des emplacements syntaxiques, pas un graphe dynamique ni une preuve d'accessibilité.",
+    "Les sources internes des images Fedow/LaBoutik sont un périmètre distinct du dépôt.",
+    "Les fichiers ignorés, les données et les secrets de production ne sont pas lus."
+  ],
+  "sha256": {
+    "references.tsv": "c493d6231b4ba2e360578acf3ca1f388ff49a75a14cb91917bd640df3c331d13",
+    "files.tsv": "392dd66b8a86057a95690216df5dd7c46a1f294ca953f6006e23817a039f61d8",
+    "symbols.tsv": "a89b836ea9382edca7b4bacbc50dfe04af8b54941a110d969489f9c0278140b7",
+    "sdk-calls.tsv": "ec63b00103ef23f06ce57fda9aa2457c479b291e28c943b75eace6fb3f257562",
+    "call-sites.tsv": "00586814b31ce13706b5d2db19965354ec12cfec63ebb41eb65b7f6cac0a080c"
+  }
+}

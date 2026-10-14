@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'fedow_core',
+    'cawl_fedow',
     'solo',
     'django_extensions',
     'rest_framework',
@@ -107,6 +108,11 @@ if DEBUG:
     # MIDDLEWARE += ['django_browser_reload.middleware.BrowserReloadMiddleware']
 
 ROOT_URLCONF = 'fedowallet_django.urls'
+PAYMENT_PROVIDER = os.environ.get('PAYMENT_PROVIDER', 'stripe')
+if PAYMENT_PROVIDER not in {'stripe', 'cawl'}:
+    raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')
+if PAYMENT_PROVIDER == 'cawl':
+    ROOT_URLCONF = 'cawl_fedow.urls'
 
 TEMPLATES = [
     {

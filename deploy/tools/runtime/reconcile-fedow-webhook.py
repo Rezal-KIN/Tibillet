@@ -13,6 +13,11 @@ from fedow_core.models import Configuration
 
 
 def reconcile() -> None:
+    if getattr(settings, 'PAYMENT_PROVIDER', 'stripe') == 'cawl':
+        from payment_providers.cawl import CawlConfiguration
+        CawlConfiguration.from_environment(os.environ)
+        print('Fedow CAWL configuration present; sandbox validation is separate')
+        return
     name = "STRIPE_ENDPOINT_SECRET_TEST" if settings.STRIPE_TEST else "STRIPE_ENDPOINT_SECRET"
     expected = os.environ.get(name, "")
     if not expected.startswith("whsec_"):

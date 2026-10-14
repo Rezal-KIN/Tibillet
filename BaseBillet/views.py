@@ -1137,8 +1137,22 @@ class MyAccount(viewsets.ViewSet):
 
     #### REFILL STRIPE PRIMARY ####
 
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=['GET', 'POST'])
     def refill_wallet(self, request):
+        from PaiementCawl.services import enabled
+        if enabled():
+            if request.method == 'GET':
+                return render(request, 'reunion/views/account/refill_cawl.html', get_context(request))
+            from PaiementCawl.validators import RefillAmountInput
+            from rest_framework.exceptions import ValidationError
+            validator = RefillAmountInput(data=request.data)
+            validator.is_valid(raise_exception=True)
+            checkout_url = FedowAPI().wallet.get_federated_token_refill_checkout(
+                request.user, amount=validator.validated_data['amount'],
+            )
+            if not checkout_url:
+                raise ValidationError(_("La recharge CAWL est indisponible."))
+            return HttpResponseClientRedirect(checkout_url)
         user = request.user
         fedowAPI = FedowAPI()
         # C'est fedow qui génère la demande de paiement à Stripe.
@@ -2879,19 +2893,15 @@ class MembershipMVT(viewsets.ViewSet):
         # / Look for an existing pending Stripe payment for this membership
         paiement_stripe_existant = membership.stripe_paiement.filter(
             status__in=[Paiement_stripe.PENDING, Paiement_stripe.OPEN],
-            checkout_session_id_stripe__isnull=False,
+        ).filter(
+            Q(checkout_session_id_stripe__isnull=False) | Q(cawl_payment__hosted_checkout_id__isnull=False),
         ).order_by('-order_date').first()
 
         if paiement_stripe_existant:
             try:
                 # Interroger l'API Stripe pour connaitre l'etat reel de la session
                 # / Query Stripe API to get the real session status
-                stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
-                config = Configuration.get_solo()
-                session_stripe = stripe.checkout.Session.retrieve(
-                    paiement_stripe_existant.checkout_session_id_stripe,
-                    stripe_account=config.get_stripe_connect_account(),
-                )
+                session_stripe = paiement_stripe_existant.get_checkout_session()
 
                 # Cas 1 : Session encore ouverte — on reutilise l'URL
                 # L'utilisateur n'a pas encore rempli le formulaire de paiement

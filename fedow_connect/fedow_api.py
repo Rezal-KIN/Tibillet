@@ -621,7 +621,7 @@ class WalletFedow():
 
         raise Exception(f"Wallet FedowAPI create_from_email response : {response_link.status_code}")
 
-    def get_federated_token_refill_checkout(self, user: TibilletUser):
+    def get_federated_token_refill_checkout(self, user: TibilletUser, amount=None):
         # Pour que le retour Fedow soit vérifié par un élément de signature créé lors de la demande
         wallet = user.wallet
         if not wallet:
@@ -631,11 +631,14 @@ class WalletFedow():
         signed_data = signer.sign({
             "origin_request_wallet": f"{wallet.uuid}"
         })
+        checkout_data = {"lespass_signed_data": signed_data}
+        if amount is not None:
+            checkout_data['amount'] = amount
         response_checkout = _post(
             self.fedow_config,
             user=user,
             path=f'wallet/get_federated_token_refill_checkout',
-            data={"lespass_signed_data": signed_data},
+            data=checkout_data,
         )
 
         if response_checkout.status_code == 417:

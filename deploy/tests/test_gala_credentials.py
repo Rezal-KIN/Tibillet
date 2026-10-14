@@ -34,6 +34,17 @@ STRIPE_TEST = {
         "fedow_webhook_secret": "whsec_example",
     },
 }
+CAWL_TEST = {
+    "schema_version": 1,
+    "cawl": {
+        "mode": "test",
+        "merchant_id": "qa-merchant",
+        "api_key_id": "qa-key",
+        "api_secret": "qa-api-secret",
+        "webhook_key_id": "qa-hook",
+        "webhook_secret": "qa-hook-secret",
+    },
+}
 SHARED_MAIL = {
     "schema_version": 1,
     "mail": {
@@ -57,6 +68,41 @@ SHARED_MAIL = {
 
 
 class GeneratedGalaSecretTests(unittest.TestCase):
+    def test_cawl_credentials_stay_in_payment_services_and_preserve_gala_keys(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        files = renderer.assemble(generated, CAWL_TEST, SHARED_MAIL, *domains, True)
+        for filename in ("fedow.env", "lespass.env"):
+            self.assertIn("PAYMENT_PROVIDER='cawl'", files[filename])
+            self.assertIn("CAWL_TEST='1'", files[filename])
+            self.assertIn("CAWL_TENANT_SCHEMA='festival'", files[filename])
+            self.assertIn("CAWL_API_SECRET='qa-api-secret'", files[filename])
+            self.assertNotIn("STRIPE_", files[filename])
+        self.assertIn("PAYMENT_PROVIDER='cawl'", files["laboutik.env"])
+        self.assertNotIn("CAWL_API_", files["laboutik.env"])
+        self.assertNotIn("CAWL_WEBHOOK_", files["laboutik.env"])
+        self.assertIn(generated["fedow_fernet_key"], files["fedow.env"])
+        self.assertIn(generated["lespass_postgres_password"], files["lespass.env"])
+
+    def test_cawl_test_and_live_modes_cannot_cross_environments(self) -> None:
+        live = {**CAWL_TEST, "cawl": {**CAWL_TEST["cawl"], "mode": "live"}}
+        self.assertEqual(renderer.payment_environment(live, False, "festival")["CAWL_TEST"], "0")
+        for secret, smoke in ((live, True), (CAWL_TEST, False)):
+            with self.assertRaisesRegex(ValueError, "mode"):
+                renderer.payment_environment(secret, smoke, "festival")
+
+    def test_cawl_rejects_incomplete_or_mixed_credentials(self) -> None:
+        account = CAWL_TEST["cawl"]
+        invalid = [
+            {**CAWL_TEST, "stripe": STRIPE_TEST["stripe"]},
+            {**CAWL_TEST, "cawl": {key: value for key, value in account.items() if key != "webhook_secret"}},
+            {**CAWL_TEST, "cawl": {**account, "api_secret": " secret "}},
+            {**CAWL_TEST, "cawl": {**account, "api_secret": "secret\nnext-line"}},
+        ]
+        for secret in invalid:
+            with self.assertRaises(ValueError):
+                renderer.payment_environment(secret, True, "festival")
+
     def test_first_boot_requires_admin_hash_without_exposing_it_to_apps(self) -> None:
         generated = generator.generated_payload()
         domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")

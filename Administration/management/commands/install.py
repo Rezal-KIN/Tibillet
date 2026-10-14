@@ -47,7 +47,8 @@ class Command(BaseCommand):
         stripe_api_key = os.environ.get('STRIPE_KEY')
         stripe_test_api_key = os.environ.get('STRIPE_KEY_TEST')
         # Au moins une des deux clés.
-        if not any([stripe_api_key, stripe_test_api_key]) and not settings.DEBUG:
+        cawl_selected = getattr(settings, 'PAYMENT_PROVIDER', 'stripe') == 'cawl'
+        if not cawl_selected and not any([stripe_api_key, stripe_test_api_key]) and not settings.DEBUG:
             raise Exception("Need Stripe Api Key in .env file")
 
 
@@ -77,7 +78,10 @@ class Command(BaseCommand):
         # crash if bad api stripe key
         stripe_mode_test = True
         try:
-            if os.environ.get('STRIPE_TEST') != '1': # Si PROD
+            if cawl_selected:
+                from payment_providers.cawl import CawlConfiguration
+                CawlConfiguration.from_environment(os.environ)
+            elif os.environ.get('STRIPE_TEST') != '1': # Si PROD
                 stripe_mode_test = False
                 stripe.api_key = stripe_api_key
                 # Test de la cléf

@@ -28,15 +28,23 @@ class Command(BaseCommand):
         subdomain = slugify(os.environ.get('SUB', ''))
         if not subdomain or subdomain != os.environ.get('SUB'):
             raise CommandError('SUB must identify one Gala tenant')
-        stripe_test = os.environ.get('STRIPE_TEST')
-        if stripe_test not in {'0', '1'}:
-            raise CommandError('STRIPE_TEST must be 0 or 1')
-        mode = 'test' if stripe_test == '1' else 'live'
-        key_name = 'STRIPE_KEY_TEST' if mode == 'test' else 'STRIPE_KEY'
-        webhook_name = 'STRIPE_ENDPOINT_SECRET_TEST' if mode == 'test' else 'STRIPE_ENDPOINT_SECRET'
-        if not (os.environ.get(key_name, '').startswith(f'sk_{mode}_')
-                and os.environ.get(webhook_name, '').startswith('whsec_')):
-            raise CommandError('Gala Stripe credentials are missing or invalid')
+        from PaiementCawl.services import enabled
+        if enabled():
+            from payment_providers.cawl import CawlConfiguration, CawlError
+            try:
+                CawlConfiguration.from_environment(os.environ)
+            except CawlError as error:
+                raise CommandError(str(error)) from error
+        else:
+            stripe_test = os.environ.get('STRIPE_TEST')
+            if stripe_test not in {'0', '1'}:
+                raise CommandError('STRIPE_TEST must be 0 or 1')
+            mode = 'test' if stripe_test == '1' else 'live'
+            key_name = 'STRIPE_KEY_TEST' if mode == 'test' else 'STRIPE_KEY'
+            webhook_name = 'STRIPE_ENDPOINT_SECRET_TEST' if mode == 'test' else 'STRIPE_ENDPOINT_SECRET'
+            if not (os.environ.get(key_name, '').startswith(f'sk_{mode}_')
+                    and os.environ.get(webhook_name, '').startswith('whsec_')):
+                raise CommandError('Gala Stripe credentials are missing or invalid')
 
         try:
             gala = Client.objects.get(schema_name=subdomain, categorie=Client.SALLE_SPECTACLE)

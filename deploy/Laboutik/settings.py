@@ -60,6 +60,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [f'{os.environ.get("DOMAIN")}', ]
 # Application definition
 
 INSTALLED_APPS = [
+    'cawl_laboutik',
     'jet.dashboard',
     'jet',
     'django.contrib.admin',

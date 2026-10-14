@@ -41,6 +41,9 @@ class RootConfiguration(SingletonModel):
     fedow_primary_pub_pem = models.CharField(max_length=500, blank=True, null=True, editable=False)
 
     def get_stripe_api(self):
+        from django.conf import settings
+        if getattr(settings, 'PAYMENT_PROVIDER', 'stripe') == 'cawl':
+            raise ValueError('Les appels Stripe sont désactivés : PAYMENT_PROVIDER=cawl.')
         if self.stripe_mode_test:
             return os.environ.get('STRIPE_KEY_TEST')
         else:

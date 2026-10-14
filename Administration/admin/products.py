@@ -828,7 +828,13 @@ class ProductAdminCustomForm(ModelForm):
         # Vérification que la clé Stripe est opérationnelle :
         if categorie != Product.FREERES:
             config = Configuration.get_solo()
-            if not config.stripe_payouts_enabled:
+            from PaiementCawl.services import enabled, gateway
+            if enabled():
+                try:
+                    gateway()
+                except Exception:
+                    raise forms.ValidationError(_("Le compte CAWL de cette organisation doit être configuré."))
+            elif not config.stripe_payouts_enabled:
                 raise forms.ValidationError(
                     _(
                         "Your Stripe account is not activated. To create paid items, please go to Settings/Stripe/Onboard."
@@ -855,10 +861,12 @@ class CheckStripeComponent(BaseComponent):
     def get_context_data(self, **kwargs):
         config = Configuration.get_solo()
         context = super().get_context_data(**kwargs)
+        from PaiementCawl.services import enabled
         context["children"] = render_to_string(
             "admin/product/checkstripe_component.html",
             {
                 "stripe_payouts_enabled": config.stripe_payouts_enabled,
+                "cawl_enabled": enabled(),
             },
         )
         return context

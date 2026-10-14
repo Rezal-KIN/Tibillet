@@ -1,7 +1,11 @@
 {% load unfold humanize i18n %}
 
 
-{% if stripe_payouts_enabled %} {#On affiche une alerte si le compte stripe n'est pas activé#}
+{% if cawl_enabled %}
+    <span class="text-sm text-gray-500 dark:text-gray-400">
+        {% trans "Les encaissements en ligne utilisent CAWL. Le compte marchand se configure auprès de Crédit Agricole." %}
+    </span>
+{% elif stripe_payouts_enabled %} {#On affiche une alerte si le compte stripe n'est pas activé#}
 
     <span class="text-sm text-gray-500 dark:text-gray-400">
         {% trans "Votre compte stripe est connecté ! Vous pouvez créer ici des produits de type adhésion et billet payant ou de type reservation gratuite." %}
