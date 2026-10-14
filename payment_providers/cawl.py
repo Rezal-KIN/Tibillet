@@ -132,6 +132,7 @@ class CawlGateway:
             authorization_type="v1HMAC",
             connect_timeout=5,
             socket_timeout=20,
+            max_connections=CommunicatorConfiguration.DEFAULT_MAX_CONNECTIONS,
             integrator="TiBillet-AM-Rezal-CAWL",
         )
         with Factory.create_client_from_configuration(configuration) as client:
