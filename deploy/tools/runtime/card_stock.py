@@ -17,6 +17,18 @@ EMPTY_STOCK = {"schema_version": 1, "lots": []}
 MAX_CSV_BYTES = 10 * 1024 * 1024
 
 
+# Each Smoke host proves releases for one payment chain only. Production
+# validation reads proofs from the prefix of its Gala's provider.
+SMOKE_TARGETS = {"gala-smoke": "test-validated", "gala-smoke-cawl": "test-validated-cawl"}
+PROVIDER_PROOF_PREFIX = {"stripe": "test-validated", "cawl": "test-validated-cawl"}
+
+
+def smoke_target(slug):
+    if slug not in SMOKE_TARGETS:
+        raise ValueError("unknown Smoke host")
+    return slug, SMOKE_TARGETS[slug]
+
+
 def smoke_release_id(commit, stock):
     """Same code with different uploaded lots must have a different proof."""
     validate_catalogue(stock)

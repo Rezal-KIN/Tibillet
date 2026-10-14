@@ -119,20 +119,20 @@ class PromotionContractTests(unittest.TestCase):
         once = preparer.update(original, "gala-smoke", generated, stripe, mail)
         self.assertEqual(preparer.update(once, "gala-smoke", generated, stripe, mail), once)
         self.assertIn('DEPLOYMENT_LOCKED="false"', once)
-        with self.assertRaisesRegex(ValueError, "Stripe test"):
+        with self.assertRaisesRegex(ValueError, "payment test"):
             preparer.update(original, "gala-smoke", generated, mail, mail)
 
     def test_cawl_runtime_secret_must_match_the_gala_environment(self) -> None:
         prefix = "arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/"
-        cawl = prefix + "shared/integrations-cawl-test-AbC123"
+        cawl = prefix + "shared/integrations-stripe-live-AbC123"
         mail = prefix + "shared/integrations-mail-AbC123"
-        generated = prefix + "galas/gala-smoke/generated-AbC123"
-        original = 'GALA_SLUG="gala-smoke"\nDEPLOYMENT_LOCKED=true\n'
-        result = preparer.update(original, "gala-smoke", generated, cawl, mail)
+        generated = prefix + "galas/gala-cawl-example/generated-AbC123"
+        original = 'GALA_SLUG="gala-cawl-example"\nDEPLOYMENT_LOCKED=true\n'
+        result = preparer.update(original, "gala-cawl-example", generated, cawl, mail, "cawl")
         self.assertIn(cawl, result)
-        self.assertEqual(preparer.update(result, "gala-smoke", generated, cawl, mail), result)
+        self.assertEqual(preparer.update(result, "gala-cawl-example", generated, cawl, mail, "cawl"), result)
         with self.assertRaises(ValueError):
-            preparer.update(original, "gala-smoke", generated, cawl.replace("cawl-test", "cawl-live"), mail)
+            preparer.update(original, "gala-cawl-example", generated, cawl.replace("stripe-live", "stripe-test"), mail, "cawl")
 
 
 if __name__ == "__main__":

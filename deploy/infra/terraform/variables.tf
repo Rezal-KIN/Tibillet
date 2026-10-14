@@ -210,6 +210,23 @@ variable "test_source_branch" {
   default     = "main"
 }
 
+variable "enable_cawl_platform" {
+  description = "Creates the parallel CAWL delivery chain: CAWL secrets and ECR, Test CAWL pipeline on gala-smoke-cawl, and the Foundation CAWL pipeline. Foundation derives it from the catalogue."
+  type        = bool
+  default     = false
+}
+
+variable "cawl_source_branch" {
+  description = "Branch built by the Test CAWL pipeline and holding the reviewed CAWL Gala release manifests."
+  type        = string
+  default     = "migration/cawl-payments"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$", var.cawl_source_branch))
+    error_message = "cawl_source_branch must be a safe branch name."
+  }
+}
+
 variable "codebuild_log_retention_days" {
   description = "Short retention for CodeBuild diagnostics."
   type        = number
@@ -291,6 +308,7 @@ variable "galas" {
     associate_public_ip_address = optional(bool, false)
     create_instance             = optional(bool, false)
     protect_from_destruction    = optional(bool, true)
+    payment_provider            = optional(string, "stripe")
   }))
   default = {}
 
@@ -299,5 +317,17 @@ variable "galas" {
       for gala in values(var.galas) : contains(["v1", "v2-preview", "v2"], gala.platform)
     ])
     error_message = "A Gala platform must be v1, v2-preview, or v2."
+  }
+
+  validation {
+    condition = alltrue([
+      for gala in values(var.galas) : contains(["stripe", "cawl"], gala.payment_provider)
+    ])
+    error_message = "A Gala payment_provider must be stripe or cawl."
+  }
+
+  validation {
+    condition     = !contains(keys(var.galas), "gala-smoke-cawl") || try(var.galas["gala-smoke-cawl"].payment_provider == "cawl", false)
+    error_message = "gala-smoke-cawl is the CAWL Smoke host and must use payment_provider = cawl."
   }
 }

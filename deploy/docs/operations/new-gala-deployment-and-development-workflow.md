@@ -325,6 +325,52 @@ pas de vérifier les prérequis ni de laisser une trace de l'artefact approuvé.
    pour limiter le coût de calcul et conserver ses ressources pour inspection.
    Ne la supprimer que par un flux Terraform de retrait explicite et vérifié.
 
+## D. Chaîne CAWL parallèle (paiement Crédit Agricole)
+
+La chaîne CAWL duplique l'architecture Stripe sans la modifier. Un gala est
+**soit Stripe, soit CAWL**, fixé à sa création par le champ
+`payment_provider` du catalogue (absent = Stripe).
+
+| Élément | Stripe (existant) | CAWL |
+| --- | --- | --- |
+| Branche applicative | `main` | `migration/cawl-payments` (`var.cawl_source_branch`) |
+| Pipeline Test | `…-test` → `gala-smoke` | `…-test-cawl` → `gala-smoke-cawl` |
+| Images | ECR `lespass`, `fedow`, `laboutik` | ECR `cawl/lespass`, `cawl/fedow`, `cawl/laboutik` |
+| Preuve Smoke | `test-validated/smoke-*.json` | `test-validated-cawl/smoke-*.json` |
+| Création d'un gala | Pipeline `…-foundation` | Pipeline `…-foundation-cawl` (même code, `PAYMENT_PROVIDER=cawl`) |
+| Production du gala | Manifeste sur `main` | Manifeste sur la branche CAWL |
+| Secrets de paiement | Section `stripe` de `integrations-stripe-test/live` | Section `cawl` des mêmes secrets test/live |
+
+Un gala Stripe ne peut pas être promu avec une preuve CAWL, ni l'inverse.
+Les préfixes de preuve sont distincts et la politique IAM de chaque
+validation ne lit que celui de son fournisseur.
+
+### Activation (une seule fois)
+
+1. Fusionner dans `main` la PR d'infrastructure CAWL, puis fusionner `main`
+   dans `migration/cawl-payments`. Les scripts runtime et les outils Smoke
+   s'exécutent depuis le commit déployé : la branche CAWL doit les contenir.
+2. Lancer la pipeline **Foundation** standard avec `GalaName` =
+   `Enable CAWL Platform`. Le contrôle du plan n'accepte que la création des
+   ressources de `cawl-delivery.tf`, de l'EC2 `gala-smoke-cawl` et de son
+   document SSM. Les galas existants ne sont pas modifiés.
+3. Mettre à jour le lecteur runtime sur chaque EC2 Stripe conservée avant
+   d’ajouter la section `cawl` aux secrets existants `integrations-stripe-test`
+   et `integrations-stripe-live` (format dans `active-gala-and-shared-integrations.md`).
+   **Tant que les cinq identifiants CAWL test sont vides, le déploiement sur
+   `gala-smoke-cawl` est bloqué avant le démarrage des applications.**
+4. Pousser sur `migration/cawl-payments` : la pipeline Test CAWL construit et
+   déploie `gala-smoke-cawl`.
+
+### Créer puis livrer un gala CAWL
+
+Lancer **Foundation CAWL** avec le nom du gala : même contrôle de plan, même
+EC2 dédiée, pipeline Production propre. Ensuite, comme pour Stripe :
+manifeste `releases/<slug>/production.json` sur la branche CAWL, avec les
+digests validés sur `gala-smoke-cawl`, puis validation, approbation humaine et
+déploiement SSM. Les retours CAWL et les webhooks ne peuvent être essayés de
+bout en bout que lorsque le gala reçoit l'IP publique (pipeline Gala actif).
+
 ## État actuel de l'outillage
 
 Les définitions AWS de Foundation, Test et Production ont été relues pendant

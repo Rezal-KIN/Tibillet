@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "production_validate" {
   statement {
     sid       = "ReadOnlySuccessfulSmokeCandidates"
     actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.backups[0].arn}/test-validated/smoke-*.json"]
+    resources = ["${aws_s3_bucket.backups[0].arn}/${local.smoke_marker_prefix[each.value.payment_provider]}/smoke-*.json"]
   }
 
   statement {
@@ -72,6 +72,14 @@ resource "aws_codebuild_project" "production_validate" {
     environment_variable {
       name  = "RELEASE_BUCKET"
       value = aws_s3_bucket.backups[0].bucket
+    }
+    # Stripe Galas keep their exact historical environment.
+    dynamic "environment_variable" {
+      for_each = each.value.payment_provider == "cawl" ? ["cawl"] : []
+      content {
+        name  = "PAYMENT_PROVIDER"
+        value = environment_variable.value
+      }
     }
   }
 

@@ -276,3 +276,18 @@ Timer backup actif. Les 78 tests passent. Le rôle gala-operator ne possède
 pas PutApprovalResult ; approbation donnée avec le rôle gala-elevated existant
 après vérification du compte et de l'artefact exact, conformément à la demande
 explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
+
+## Chaîne CAWL parallèle — couplage entre `main` et `migration/cawl-payments` (2026-10-14)
+
+- **Système concerné** : pipelines Test CAWL / Production des galas CAWL (`deploy/infra/terraform/cawl-delivery.tf`).
+- **Piège** : la définition AWS (Terraform, buildspecs embarqués) vient de `main`, appliquée par Foundation. Mais le document SSM
+  fait `git checkout` du `fork_commit` du manifeste. Les buildspecs Test exécutent aussi `deploy/tools/*` depuis la branche
+  construite. Pour un gala CAWL, ce sont donc **les scripts de `migration/cawl-payments`** qui tournent
+  (`reconcile-runtime.py`, `fetch-runtime-secret.sh`, `create-smoke-manifest.py`, `deploy-smoke-candidate.py`,
+  `validate-promotion.py`, `materialize-runtime-env.py`).
+- **Conséquence** : toute évolution de ces scripts sur `main` doit être fusionnée dans la branche CAWL avant la prochaine
+  exécution CAWL. Sinon `gala-smoke-cawl` est traité comme un gala live, ou ses preuves partent sous le préfixe Stripe.
+- **Isolation voulue** : préfixe de preuve `test-validated-cawl/`, ECR `cawl/*`, secrets `integrations-cawl-*`. Un manifeste
+  CAWL ne peut pas être promu sur un gala Stripe, ni l'inverse.
+- **Fedow en mode CAWL** : ses settings exigeaient une clé Stripe au démarrage. Corrigé sur la branche CAWL
+  (PR #115), à conserver si les settings Fedow sont re-synchronisés.

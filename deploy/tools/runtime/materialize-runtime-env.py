@@ -72,10 +72,18 @@ def dotenv_line(name: str, value: str) -> str:
     return f"{name}='{escaped}'\n"
 
 
-def payment_environment(source, smoke, tenant_schema):
+def payment_environment(source, smoke, tenant_schema, provider=None):
     if source.get('schema_version') != 1:
         raise ValueError('shared payment schema is invalid')
-    if set(source) == {'schema_version', 'cawl'}:
+    providers = set(source) - {'schema_version'}
+    if not providers or not providers <= {'stripe', 'cawl'}:
+        raise ValueError('shared payment schema is invalid')
+    # Existing standalone CAWL secrets remain readable; a combined secret
+    # defaults to Stripe until versioned host configuration selects CAWL.
+    provider = provider or ('cawl' if providers == {'cawl'} else 'stripe')
+    if provider not in {'stripe', 'cawl'} or provider not in providers:
+        raise ValueError('selected payment provider is missing or invalid')
+    if provider == 'cawl':
         account = source['cawl']
         fields = {'mode', 'merchant_id', 'api_key_id', 'api_secret', 'webhook_key_id', 'webhook_secret'}
         if not isinstance(account, dict) or set(account) != fields:
@@ -91,8 +99,6 @@ def payment_environment(source, smoke, tenant_schema):
                 raise ValueError('invalid CAWL field: ' + field)
             result['CAWL_' + field.upper()] = value
         return result
-    if set(source) != {'schema_version', 'stripe'}:
-        raise ValueError('shared Stripe schema is invalid')
     stripe = source['stripe']
     if not isinstance(stripe, dict) or set(stripe) != {'mode', 'secret_key', 'publishable_key', 'fedow_webhook_secret'}:
         raise ValueError('shared Stripe fields are invalid')
@@ -119,6 +125,7 @@ def assemble(
     mail_secret: dict[str, object], fedow_domain: str,
     laboutik_domain: str, lespass_domain: str, smoke: bool,
     admin_secret: dict[str, object] | None = None, require_admin: bool = False,
+    payment_provider: str | None = None,
 ) -> dict[str, str]:
     # Older secrets may retain this unused field. Accept them without rotating
     # existing Gala keys, but never write PostgreSQL settings into Fedow's env.
@@ -148,7 +155,7 @@ def assemble(
         if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", text_field(site, name)):
             raise ValueError(f"invalid site subdomain: {name}")
     text_field(site, "public_name")
-    stripe_lines = payment_environment(stripe_secret, smoke, text_field(site, 'tenant_subdomain'))
+    stripe_lines = payment_environment(stripe_secret, smoke, text_field(site, 'tenant_subdomain'), payment_provider)
     for name in ("host", "username", "password", "from", "admin_email"):
         text_field(mail, name)
     port = mail["port"]
@@ -251,6 +258,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--generated", required=True, type=Path)
     parser.add_argument("--stripe", "--payment", dest="stripe", required=True, type=Path)
+    parser.add_argument("--provider", choices=["stripe", "cawl"], default="stripe")
+    parser.add_argument("--check-combined-compatibility", action="store_true")
     parser.add_argument("--mail", required=True, type=Path)
     parser.add_argument("--smoke", required=True, choices=["true", "false"])
     parser.add_argument("--fedow-domain", required=True)
@@ -259,14 +268,28 @@ def main() -> None:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--admin", required=True, type=Path)
     args = parser.parse_args()
-    files = assemble(
-        read_json(args.generated, "generated secret"),
-        read_json(args.stripe, "shared Stripe secret"),
-        read_json(args.mail, "shared mail secret"),
-        args.fedow_domain, args.laboutik_domain, args.lespass_domain,
-        args.smoke == "true", read_json(args.admin, "shared admin secret"), require_admin=True,
-    )
-    write_files(args.output_dir, files)
+    generated = read_json(args.generated, "generated secret")
+    payment = read_json(args.stripe, "shared payment secret")
+    mail = read_json(args.mail, "shared mail secret")
+    admin = read_json(args.admin, "shared admin secret")
+    def render(payment_secret):
+        return assemble(generated, payment_secret, mail,
+                        args.fedow_domain, args.laboutik_domain, args.lespass_domain,
+                        args.smoke == "true", admin, require_admin=True,
+                        payment_provider=args.provider)
+    files = render(payment)
+    if args.check_combined_compatibility:
+        if args.provider != "stripe":
+            raise ValueError("compatibility check requires a Stripe Gala")
+        combined = dict(payment)
+        combined.setdefault("cawl", {"mode": "test" if args.smoke == "true" else "live",
+                                    **{field: "" for field in ("merchant_id", "api_key_id", "api_secret", "webhook_key_id", "webhook_secret")}})
+        if render(combined) != files:
+            raise ValueError("adding the CAWL section changes Stripe runtime credentials")
+        print("Shared payment secret compatibility verified; Stripe runtime is identical")
+    else:
+        write_files(args.output_dir, files)
+
 
 
 if __name__ == "__main__":
