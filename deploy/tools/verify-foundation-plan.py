@@ -40,6 +40,23 @@ ALIGNMENT_RETIREMENT_OPERATIONS = {
     "Prepare Gala Alignment Retirement": "prepare",
     "Retire Gala Alignment": "retire",
 }
+ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
+CAWL_SMOKE_SLUG = "gala-smoke-cawl"
+# Exactly the shared resources of the parallel CAWL chain (cawl-delivery.tf).
+CAWL_PLATFORM_ADDRESSES = frozenset({
+    *(f'aws_ecr_repository.cawl["{component}"]' for component in ('lespass', 'fedow', 'laboutik')),
+    *(f'aws_ecr_lifecycle_policy.cawl["{component}"]' for component in ('lespass', 'fedow', 'laboutik')),
+    *(f'{kind}[0]' for kind in (
+        'aws_cloudwatch_log_group.test_cawl_build', 'aws_iam_role.test_cawl_build',
+        'aws_iam_role_policy.test_cawl_build', 'aws_codebuild_project.test_cawl',
+        'aws_cloudwatch_log_group.test_cawl_deploy', 'aws_iam_role.test_cawl_deploy',
+        'aws_iam_role_policy.test_cawl_deploy', 'aws_codebuild_project.test_cawl_deploy',
+        'aws_iam_role.test_cawl_pipeline', 'aws_iam_role_policy.test_cawl_pipeline',
+        'aws_codepipeline.test_cawl',
+        'aws_iam_role.foundation_cawl_pipeline', 'aws_iam_role_policy.foundation_cawl_pipeline',
+        'aws_codepipeline.foundation_cawl',
+    )),
+})
 
 
 def verify_validation_retirement_plan(
@@ -264,7 +281,7 @@ def safe_validation_policy_removal(change: dict[str, object], removed_resources:
     return changed_sids == {"MoveOnlyTheSharedGalaEip", "ChangeOnlyKnownGalaNetworkInterfaces", "RunReadOnlyTargetHealthcheck"}
 
 
-def verify(plan: dict[str, object], slug: str) -> list[str]:
+def verify(plan: dict[str, object], slug: str, *, extra_new: frozenset[str] = frozenset()) -> list[str]:
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,62}", slug):
         raise ValueError("invalid requested Gala slug")
     allowed_new = {
@@ -284,6 +301,7 @@ def verify(plan: dict[str, object], slug: str) -> list[str]:
     for component in ('fedow', 'laboutik'):
         allowed_new.update({f'aws_ecr_repository.applications["{component}"]',
                             f'aws_ecr_lifecycle_policy.applications["{component}"]'})
+    allowed_new.update(extra_new)
     # A reviewed, one-time Foundation run may retire only the two obsolete
     # validation delivery chains. EC2s, secrets, backups and logs are excluded.
     retired_slugs = {"gala-validation", "gala-validation-2"}
@@ -598,7 +616,11 @@ def main() -> None:
     verification_phase = VERIFICATION_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
-    if alignment_phase:
+    if os.environ.get("GALA_NAME", "") == ENABLE_CAWL_PLATFORM_REQUEST:
+        if args.slug != CAWL_SMOKE_SLUG:
+            raise ValueError("Enable CAWL Platform requires the exact CAWL Smoke slug")
+        changed = verify(plan, args.slug, extra_new=CAWL_PLATFORM_ADDRESSES)
+    elif alignment_phase:
         if args.slug != ALIGNMENT_SLUGS[0]:
             raise ValueError("alignment retirement requires the exact trial slug")
         changed = verify_verification_retirement_plan(plan, alignment_phase, targets=ALIGNMENT_SLUGS)

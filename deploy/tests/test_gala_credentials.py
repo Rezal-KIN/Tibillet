@@ -135,6 +135,28 @@ class GeneratedGalaSecretTests(unittest.TestCase):
             for filename in files:
                 self.assertEqual(stat.S_IMODE(os.stat(Path(directory) / filename).st_mode), 0o600)
 
+    def test_combined_secret_selects_only_the_configured_provider(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        empty_cawl = {field: "" for field in ("merchant_id", "api_key_id", "api_secret", "webhook_key_id", "webhook_secret")}
+        combined = {**STRIPE_TEST, "cawl": {"mode": "test", **empty_cawl}}
+        before = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True)
+        after = renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="stripe")
+        self.assertEqual(before, after)
+        self.assertNotIn("CAWL_", after["fedow.env"])
+        with self.assertRaisesRegex(ValueError, "merchant_id|api_key_id|api_secret"):
+            renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+        combined["cawl"] = {"mode": "test", **{field: "cawl-example" for field in empty_cawl}}
+        cawl = renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+        for filename in ("fedow.env", "laboutik.env", "lespass.env"):
+            self.assertIn("PAYMENT_PROVIDER='cawl'", cawl[filename])
+            if filename != "laboutik.env":
+                self.assertIn("CAWL_API_SECRET='cawl-example'", cawl[filename])
+            self.assertNotIn("STRIPE_", cawl[filename])
+        combined["cawl"]["mode"] = "live"
+        with self.assertRaisesRegex(ValueError, "mode"):
+            renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+
     def test_rejects_bad_shared_mode_and_generated_schema(self) -> None:
         generated = generator.generated_payload()
         domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")

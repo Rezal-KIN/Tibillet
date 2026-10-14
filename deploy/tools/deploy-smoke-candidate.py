@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
-from card_stock import EMPTY_STOCK, smoke_release_id
+from card_stock import EMPTY_STOCK, smoke_release_id, smoke_target
 
 
 def aws(*args: str) -> dict[str, object]:
@@ -78,7 +78,8 @@ def main() -> None:
     path = Path(sys.argv[1])
     manifest = json.loads(path.read_text(encoding="utf-8"))
     commit = manifest["fork_commit"]
-    if manifest["gala_slug"] != "gala-smoke" or not re.fullmatch(r"[0-9a-f]{40}", commit):
+    slug, proof_prefix = smoke_target(os.environ.get("SMOKE_GALA_SLUG", "gala-smoke"))
+    if manifest["gala_slug"] != slug or not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("manifest is not a fixed Smoke commit")
     source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     if source_commit != commit:
@@ -95,7 +96,7 @@ def main() -> None:
     release_id = smoke_release_id(commit, manifest.get('card_stock', EMPTY_STOCK))
     if manifest['release_id'] != release_id:
         raise ValueError('Smoke release identity differs from the frozen catalogue')
-    key = f"releases/gala-smoke/{release_id}.json"
+    key = f"releases/{slug}/{release_id}.json"
     put_immutable(bucket, key, path)
     uri = f"s3://{bucket}/{key}"
     print(f"Immutable Smoke manifest: {uri}", flush=True)
@@ -103,7 +104,7 @@ def main() -> None:
     # This marker is created only after the complete SSM deployment and local
     # healthcheck have succeeded. Production validation trusts the marker,
     # never a build-only candidate or an uploaded-but-failed Smoke manifest.
-    put_immutable(bucket, f"test-validated/{release_id}.json", path)
+    put_immutable(bucket, f"{proof_prefix}/{release_id}.json", path)
     print(f"Smoke deployment succeeded: commit={commit} instance={instance_id}")
 
 

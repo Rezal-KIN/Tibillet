@@ -6,7 +6,15 @@ locals {
   # Smoke uses the Test pipeline; the two historical trials no longer need
   # their failed Production pipelines. Retired Gala roles and audit logs stay
   # available after their separately gated EC2 retirement.
-  retired_production_pipeline_slugs = toset(["gala-smoke", "gala-validation", "gala-validation-2"])
+  retired_production_pipeline_slugs = toset(["gala-smoke", "gala-smoke-cawl", "gala-validation", "gala-validation-2"])
+  # Smoke hosts use test payment credentials. gala-smoke-cawl is the CAWL
+  # twin of gala-smoke, deployed by the Test CAWL pipeline only.
+  smoke_gala_slugs      = toset(["gala-smoke", "gala-smoke-cawl"])
+  cawl_smoke_slug       = "gala-smoke-cawl"
+  cawl_platform_enabled = local.production_resources_enabled && var.enable_cawl_platform
+  # A Stripe Gala can never be promoted from a CAWL Smoke proof, nor the
+  # reverse: each provider has its own marker prefix and IAM scope.
+  smoke_marker_prefix = { stripe = "test-validated", cawl = "test-validated-cawl" }
   production_target_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
     if gala.create_instance && !contains(local.retired_production_pipeline_slugs, slug)
@@ -19,7 +27,7 @@ locals {
   } : {}
   production_log_galas = local.production_resources_enabled ? {
     for slug, gala in var.galas : slug => gala
-    if gala.create_instance || contains(["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"], slug)
+    if(gala.create_instance && slug != "gala-smoke-cawl") || contains(["gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"], slug)
   } : {}
   # Keep retired validation IAM roles without permissions until a separately
   # reviewed IAM-deletion migration is available in Foundation.

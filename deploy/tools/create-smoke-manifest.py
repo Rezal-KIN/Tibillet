@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
-from card_stock import EMPTY_STOCK, validate_catalogue, smoke_release_id
+from card_stock import EMPTY_STOCK, smoke_release_id, smoke_target, validate_catalogue
 from application_images import validate_image_builds
 
 IMAGE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 
 
-def create(candidate: dict[str, object], pinned: dict[str, object], stock=None) -> dict[str, object]:
+def create(candidate: dict[str, object], pinned: dict[str, object], stock=None,
+           gala_slug: str = "gala-smoke") -> dict[str, object]:
+    gala_slug, _ = smoke_target(gala_slug)
     if candidate.get("application_repository") != "Rezal-KIN/Tibillet":
         raise ValueError("unexpected candidate repository")
     commit = candidate.get("fork_commit")
@@ -34,7 +37,7 @@ def create(candidate: dict[str, object], pinned: dict[str, object], stock=None) 
     stock = validate_catalogue(EMPTY_STOCK if stock is None else stock)
     manifest = {
         "release_id": smoke_release_id(commit, stock),
-        "gala_slug": "gala-smoke",
+        "gala_slug": gala_slug,
         "platform": "v1",
         "application_repository": "Rezal-KIN/Tibillet",
         "fork_commit": commit,
@@ -64,6 +67,8 @@ def main() -> None:
         json.loads(args.candidate.read_text(encoding="utf-8")),
         json.loads(args.image_lock.read_text(encoding="utf-8")),
         json.loads(args.card_stock.read_text(encoding="utf-8")),
+        # The Test CAWL deploy project sets gala-smoke-cawl; Test keeps Smoke.
+        os.environ.get("SMOKE_GALA_SLUG", "gala-smoke"),
     )
     args.output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Smoke manifest created for {manifest['fork_commit']}")

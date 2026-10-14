@@ -5,19 +5,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
-from card_stock import EMPTY_STOCK, validate_catalogue, smoke_release_id
+from card_stock import EMPTY_STOCK, PROVIDER_PROOF_PREFIX, SMOKE_TARGETS, smoke_release_id, validate_catalogue
 
 IMAGES = ("lespass_image", "fedow_image", "laboutik_image", "traefik_image")
 
 
 def compare(manifest: dict[str, object], tested: dict[str, object], slug: str) -> None:
-    if manifest.get("gala_slug") != slug or slug == "gala-smoke":
+    if manifest.get("gala_slug") != slug or slug in SMOKE_TARGETS:
         raise ValueError("Production manifest targets the wrong Gala")
     if manifest.get("platform") != "v1" or tested.get("platform") != "v1":
         raise ValueError("Production release must be a tested v1 stack")
@@ -49,11 +50,17 @@ def main() -> None:
     )
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     commit = manifest["fork_commit"]
+    # Set only on the validation project of a CAWL Gala; IAM also limits each
+    # project to its own proof prefix.
+    provider = os.environ.get("PAYMENT_PROVIDER", "stripe")
+    if provider not in PROVIDER_PROOF_PREFIX:
+        raise ValueError("unknown payment provider")
+    proofs = PROVIDER_PROOF_PREFIX[provider]
     with tempfile.TemporaryDirectory() as directory:
         marker = Path(directory) / "tested.json"
         identity = smoke_release_id(commit, manifest.get('card_stock', EMPTY_STOCK))
         command = ["aws", "s3", "cp", "--only-show-errors",
-                   f"s3://{args.bucket}/test-validated/{identity}.json",
+                   f"s3://{args.bucket}/{proofs}/{identity}.json",
                    str(marker), "--region", "eu-west-3"]
         try:
             subprocess.run(command, check=True, capture_output=True, text=True)
@@ -63,7 +70,7 @@ def main() -> None:
             if identity == f'smoke-{commit}' or not any(
                     message in (error.stderr or '') for message in ('404', 'NoSuchKey', 'Not Found')):
                 raise
-            command[4] = f"s3://{args.bucket}/test-validated/smoke-{commit}.json"
+            command[4] = f"s3://{args.bucket}/{proofs}/smoke-{commit}.json"
             subprocess.run(command, check=True, capture_output=True, text=True)
         compare(manifest, json.loads(marker.read_text(encoding="utf-8")), args.gala)
     source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()

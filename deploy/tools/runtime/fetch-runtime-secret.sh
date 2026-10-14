@@ -10,6 +10,12 @@ source "$SCRIPT_DIR/lib.sh"
 CONFIG_PATH="${1:-}"
 [[ -n "$CONFIG_PATH" ]] || fail "usage: $0 CONFIG"
 load_gala_config "$CONFIG_PATH"
+mode_args=()
+if [[ "${2:-}" == "--check-combined-compatibility" ]]; then
+  mode_args+=(--check-combined-compatibility)
+elif [[ -n "${2:-}" ]]; then
+  fail "unsupported runtime secret mode"
+fi
 require_command aws
 require_command python3
 require_var GENERATED_SECRET_ARN
@@ -56,12 +62,13 @@ aws secretsmanager get-secret-value \
 python3 "$SCRIPT_DIR/materialize-runtime-env.py" \
   --generated "$generated_file" \
   --stripe "$stripe_file" \
+  --provider "${PAYMENT_PROVIDER:-stripe}" "${mode_args[@]}" \
   --mail "$mail_file" \
-  --smoke "$([[ "$GALA_SLUG" == "gala-smoke" ]] && printf true || printf false)" \
+  --smoke "$([[ "$GALA_SLUG" == "gala-smoke" || "$GALA_SLUG" == "gala-smoke-cawl" ]] && printf true || printf false)" \
   --admin "$admin_file" \
   --fedow-domain "$FEDOW_PUBLIC_DOMAIN" \
   --laboutik-domain "$LABOUTIK_PUBLIC_DOMAIN" \
   --lespass-domain "$LESPASS_PUBLIC_DOMAIN" \
   --output-dir "$(runtime_dir)"
 
-printf 'Runtime credentials materialized for gala %s\n' "$GALA_SLUG"
+[[ ${#mode_args[@]} -gt 0 ]] || printf 'Runtime credentials materialized for gala %s\n' "$GALA_SLUG"
