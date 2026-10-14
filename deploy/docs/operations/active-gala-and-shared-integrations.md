@@ -1,6 +1,6 @@
 # Gala actif, IP publique unique et secrets partagés
 
-**Statut : code cible versionné, à vérifier dans AWS après l'apply.** Smoke
+**Statut : secrets communs migrés et droits IAM appliqués le 14 octobre 2026.** Smoke
 lit les clés Stripe test et les galas réels les clés live du même compte, dans
 des secrets différents. L'EC2 Smoke ne reçoit pas le droit de lire les clés
 live.
@@ -118,9 +118,13 @@ sélection CAWL. Les objets propres aux galas restent en place ; aucun mot de
 passe ou clé de chiffrement n'est changé. La restauration de l'ancienne archive
 Aix utilise toujours son secret `galas/gala-am-aix/generated`.
 
-Après migration, les trois galas conservés correspondent donc à cinq objets
-AWS : trois secrets propres et deux secrets communs. Cette migration reste
-suspendue tant que la reprise des opérations AWS n'est pas demandée.
+Les trois galas conservés correspondent désormais à cinq objets AWS actifs :
+trois secrets propres et deux secrets communs. Le secret historique
+`integrations-mail` a été retiré après copie de ses valeurs. Les configurations
+Stripe produites sont strictement identiques avant et après la migration ; les
+versions des trois secrets propres aux galas sont inchangées. Les deux Smoke
+ont reçu le lecteur compatible, également présent sur la branche CAWL. Les
+identifiants CAWL restent à renseigner.
 
 ## Déploiement et bascule du trafic
 
