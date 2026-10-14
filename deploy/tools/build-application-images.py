@@ -15,6 +15,30 @@ def run(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def reverse_settings_overlays(component, source):
+    overlays = json.loads(Path('deploy/source/cawl-settings-overlays.json').read_text())
+    for original, modified in overlays[component]:
+        if not original or not modified or source.count(modified) != 1:
+            raise ValueError('CAWL settings differ from the reviewed overlay: ' + component)
+        source = source.replace(modified, original, 1)
+    return source
+
+
+def build_snapshot():
+    # The Fedow image explicitly copies the shared CAWL gateway as well as its
+    # application package. Include every tracked source needed by image_files.
+    inputs = run('git', 'ls-files', 'deploy/Fedow', 'deploy/Laboutik',
+                 'deploy/source/admin-templates', 'payment_providers').splitlines()
+    snapshot = {path: (Path(path).read_bytes(), 0o644)
+                for path in inputs if Path(path).suffix in {'.py', '.html'}}
+    for folder in ('Fedow', 'Laboutik'):
+        path = 'deploy/' + folder + '/Dockerfile'
+        if run('git', 'ls-files', path) != path:
+            raise ValueError('application Dockerfile must be versioned before building a release')
+        snapshot[path] = (Path(path).read_bytes(), 0o644)
+    return snapshot
+
+
 def verify_native_sources(catalog):
     spec = importlib.util.spec_from_file_location('image_source_offer', 'deploy/tools/build-source-offer.py')
     offer = importlib.util.module_from_spec(spec)
@@ -34,8 +58,9 @@ def verify_native_sources(catalog):
             source = source.replace("EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')\n", '')
             source = source.replace("EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS') == '1'", "EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', False)")
             source = source.replace("EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL') == '1'", "EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)")
+        source = reverse_settings_overlays(component, source)
         if source != natives[component][target][0].decode():
-            raise ValueError('settings contain changes outside the agreed email/source-template scope: ' + component)
+            raise ValueError('settings contain changes outside the reviewed email/source-template/CAWL overlays: ' + component)
 
 
 def main():
@@ -48,13 +73,7 @@ def main():
     verify_native_sources(catalog)
     # Only explicit build inputs are read. Runtime data and private CSVs are
     # never copied into the two native application images.
-    inputs = run('git', 'ls-files', 'deploy/Fedow', 'deploy/Laboutik', 'deploy/source/admin-templates').splitlines()
-    snapshot = {path: (Path(path).read_bytes(), 0o644) for path in inputs if Path(path).suffix in {'.py', '.html'}}
-    for folder in ('Fedow', 'Laboutik'):
-        path = 'deploy/' + folder + '/Dockerfile'
-        if run('git', 'ls-files', path) != path:
-            raise ValueError('application Dockerfile must be versioned before building a release')
-        snapshot[path] = (Path(path).read_bytes(), 0o644)
+    snapshot = build_snapshot()
     result = {'application_repository': 'Rezal-KIN/Tibillet', 'fork_commit': commit,
               'platform': os.environ['RELEASE_PLATFORM'], 'image_builds': {}}
     for component, dockerfile in (('lespass', 'dockerfile'), ('fedow', 'deploy/Fedow/Dockerfile'), ('laboutik', 'deploy/Laboutik/Dockerfile')):

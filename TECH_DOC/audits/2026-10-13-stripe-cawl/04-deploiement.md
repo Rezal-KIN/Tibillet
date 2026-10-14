@@ -51,11 +51,20 @@ l'utilisation du compte marchand si son schéma courant ne correspond pas à
 `CAWL_TENANT_SCHEMA`. Aucun compte marchand global de repli n'est choisi pour
 un autre tenant.
 
-Le générateur runtime accepte le schéma suivant pour le secret d'intégration :
+Les deux secrets de paiement existants (`integrations-stripe-test` et
+`integrations-stripe-live`) contiennent chacun les sections `stripe` et `cawl`.
+Installer le lecteur runtime compatible sur toutes les EC2 conservées avant
+d’ajouter la section CAWL. Exemple de secret test :
 
 ```json
 {
   "schema_version": 1,
+  "stripe": {
+    "mode": "test",
+    "secret_key": "sk_test_EXAMPLE",
+    "publishable_key": "pk_test_EXAMPLE",
+    "fedow_webhook_secret": "whsec_EXAMPLE"
+  },
   "cawl": {
     "mode": "test",
     "merchant_id": "<PSPID-test>",
@@ -73,10 +82,10 @@ Fernet, bases, SMTP et domaines existants : changer le prestataire ne justifie
 pas de régénérer les identités des portefeuilles ou les clés de signature.
 
 La configuration runtime conserve le nom historique
-`SHARED_STRIPE_SECRET_ARN`. Cette branche accepte une ARN `integrations-cawl`
-à cet emplacement. Il faut vérifier les permissions IAM effectives de lecture
-de cette nouvelle ARN et adapter l'IaC/configuration distante ; ces permissions
-n'ont pas été modifiées pendant cet audit.
+`SHARED_STRIPE_SECRET_ARN` et les ARN existantes test/live. Le catalogue fixe
+`payment_provider=cawl` et le runtime choisit explicitement la section CAWL ;
+les champs vides bloquent ce fournisseur, sans modifier les environnements
+Stripe. Aucun secret de paiement supplémentaire n’est créé.
 
 ## 3. Construire une release de la branche
 

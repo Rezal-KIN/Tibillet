@@ -56,4 +56,19 @@ Les tests de non-régression correspondants sont ajoutés dans
 Aucun identifiant CAWL (PSPID, clé API, clé webhook) n'est disponible au
 14 octobre 2026. La pipeline CAWL peut construire les images. Le déploiement
 sur `gala-smoke-cawl` échouera à la lecture du secret
-`integrations-cawl-test` tant qu'il n'est pas renseigné.
+la section `cawl` du secret de paiement test tant qu’elle n’est pas renseignée.
+
+
+## Reprise de la livraison — 14 octobre 2026
+
+Le premier build réel CAWL a révélé deux contrôles de fabrication restés au
+contrat Stripe : la comparaison des settings refusait les modifications CAWL
+revues, et l’inventaire des sources Fedow omettait `payment_providers/cawl.py`
+pourtant copié explicitement par son Dockerfile. Les corrections conservent
+la comparaison intégrale avec les sources natives : seules les substitutions
+CAWL exactes de `deploy/source/cawl-settings-overlays.json` sont inversées
+avant comparaison. Le snapshot de build inclut le client commun.
+
+Vérification locale : comparaison intégrale avec les archives natives épinglées,
+16 fichiers Fedow et 13 LaBoutik explicitement vérifiés ; 198 tests sans base
+passés, 3 ignorés. Le succès du build AWS reste une vérification distincte.

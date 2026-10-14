@@ -15,7 +15,32 @@ check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
 
 
+build_spec = importlib.util.spec_from_file_location('build_cawl_images', RUNTIME.parent / 'build-application-images.py')
+builder = importlib.util.module_from_spec(build_spec)
+build_spec.loader.exec_module(builder)
+
+
 class ApplicationImageTests(unittest.TestCase):
+    def test_build_snapshot_contains_every_explicit_cawl_copy(self):
+        snapshot = builder.build_snapshot()
+        self.assertIn('payment_providers/cawl.py', snapshot)
+        for component in ('fedow', 'laboutik'):
+            base, copies = builder.image_files(component, snapshot)
+            self.assertTrue(base)
+            self.assertTrue(copies)
+            self.assertTrue(all(path in snapshot for path in copies))
+
+    def test_only_the_reviewed_settings_overlay_is_reversed(self):
+        overlays = json.loads((RUNTIME.parents[1] / 'source/cawl-settings-overlays.json').read_text())
+        for component, changes in overlays.items():
+            native = '\n'.join(original for original, modified in changes)
+            modified = native
+            for original, replacement in changes:
+                modified = modified.replace(original, replacement, 1)
+            self.assertEqual(builder.reverse_settings_overlays(component, modified), native)
+            with self.assertRaisesRegex(ValueError, 'reviewed overlay'):
+                builder.reverse_settings_overlays(component, modified.replace(changes[0][1], changes[0][1].replace('cawl', 'unreviewed', 1)))
+
     def test_labels_must_match_the_recorded_sources_before_startup(self):
         commit = 'a' * 40
         builds = {component: {'base_image': 'native/' + component + '@sha256:' + 'b' * 64,
