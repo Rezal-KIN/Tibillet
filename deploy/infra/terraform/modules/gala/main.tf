@@ -4,7 +4,7 @@ locals {
   release_prefix = "releases/${var.gala_slug}/"
   # One allowlist powers both count and the lifecycle precondition, so a
   # newly approved disposable host cannot pass one gate and fail the other.
-  retirable_gala_slugs = ["baldubapts2026", "gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10"]
+  retirable_gala_slugs = ["baldubapts2026", "gala-validation", "gala-validation-2", "gala-verification", "gala-first-run-20260926", "gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10", "gala-premier-lancement-2026-10-05", "gala-import-cartes-2026-10-07", "gala-images-csv-2026-10-08"]
 
   tags = merge({
     Project       = var.project_name
@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "runtime" {
   statement {
     sid       = "ReadOnlyOwnRuntimeSecrets"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn])
+    resources = distinct(compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn]))
   }
 
   statement {

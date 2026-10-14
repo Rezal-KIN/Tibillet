@@ -6,6 +6,19 @@ d'approbation manuelle du plan pour une création normale.
 Voir le [protocole de déploiement](new-gala-deployment-and-development-workflow.md)
 avant toute nouvelle exécution.
 
+**Nettoyage vérifié le 14 octobre 2026 :** les trois réserves
+`gala-premier-lancement-2026-10-05`, `gala-import-cartes-2026-10-07` et
+`gala-images-csv-2026-10-08` ont été retirées complètement à la demande de
+l'utilisateur, ainsi que les secrets et archives des anciens essais
+`gala-validation`, `gala-validation-2`, `gala-verification`,
+`gala-first-run-20260926`, des deux galas d'alignement et de `baldubapts2026`.
+Le catalogue ne conserve que l'archive de l'ancien Aix et les deux Smoke.
+Les procédures de retrait historiques ci-dessous décrivent des opérations
+terminées ; leurs anciens snapshots de test ont également été supprimés.
+Les cinq pipelines permanentes restent Foundation Stripe, Foundation CAWL,
+Test Stripe, Test CAWL et Gala actif. Un prochain gala recevra sa propre
+pipeline Production à sa création.
+
 La pipeline **Foundation** est le point d'entrée manuel pour ajouter un gala.
 Elle crée l'EC2, son conteneur de clés, ses préfixes S3, puis la pipeline
 Production verrouillée sur cette EC2. Après l'apply, une étape Finalize génère

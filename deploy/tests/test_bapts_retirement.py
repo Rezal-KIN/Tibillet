@@ -67,6 +67,20 @@ class BaptsRetirementTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 plans.verify_verification_retirement_plan(plan, phase, slug=SLUG)
 
+    def test_cawl_smoke_policy_refresh_preserves_identity_and_permissions(self):
+        plan = trial('retire')
+        before = {'id': 'existing', 'name': 'cawl-smoke-policy', 'role': 'cawl-smoke-role', 'policy': '{}'}
+        item = {'address': 'aws_iam_role_policy.test_cawl_deploy[0]',
+                'change': {'actions': ['update'], 'before': before,
+                           'after': {**before, 'policy': None}, 'after_unknown': {'policy': True}}}
+        plan['resource_changes'].append(item)
+        self.assertEqual(len(plans.verify_verification_retirement_plan(plan, 'retire', slug=SLUG)), 2)
+        for update in ({'role': 'another-role'}, {'policy': '{"Statement": []}'}):
+            invalid = copy.deepcopy(plan)
+            invalid['resource_changes'][-1]['change']['after'].update(update)
+            with self.assertRaises(ValueError):
+                plans.verify_verification_retirement_plan(invalid, 'retire', slug=SLUG)
+
     def responder(self, *args):
         if args[:2] == ('sts', 'get-caller-identity'): return {'Account': park.ACCOUNT}
         if args[:2] == ('ec2', 'describe-instances'):

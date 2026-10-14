@@ -1,19 +1,7 @@
 aws_account_id: "318629836660"
 runtime_region: eu-west-3
 instances:
-  - id: i-0b1c966b50fd97f80
-    name: tibillet-gala-paris-baldubapts2026
   - id: i-0037b98572fccdff2
     name: tibillet-gala-paris-gala-smoke
-  - id: i-00cb72994b875e92d
-    name: tibillet-gala-paris-gala-premier-lancement-2026-10-05
-  - id: i-06c4a26b49ac45afa
-    name: tibillet-gala-paris-gala-import-cartes-2026-10-07
-  - id: i-0fb1dd7f460d6d88d
-    name: tibillet-gala-paris-gala-alignement-vanilla-2026-10-10
-  - id: i-03a85efbda0291201
-    name: tibillet-gala-paris-gala-alignement-final-2026-10-10
-  - id: i-0824730d4d46b3673
-    name: tibillet-gala-paris-gala-images-csv-2026-10-08
   - id: i-0ee4f5b43eed4cf8b
     name: tibillet-gala-paris-gala-smoke-cawl

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Gala dotenv files from stable generated keys and shared integrations."""
+"""Build Gala dotenv files from its own keys and shared dev/prod integrations."""
 from __future__ import annotations
 
 import argparse
@@ -22,6 +22,21 @@ GENERATED_FIELDS = {
 }
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
 ADMIN_HASH = re.compile(r"pbkdf2_sha256\$[1-9][0-9]{4,6}\$[a-zA-Z0-9]+\$[a-zA-Z0-9+/]{43}=")
+
+
+def environment_sections(source: dict, smoke: bool) -> tuple[dict, dict, dict]:
+    required = {"schema_version", "environment", "stripe", "cawl", "mail", "site",
+                "test_recipient", "admin"}
+    if set(source) != required or source.get("schema_version") != 2:
+        raise ValueError("environment secret schema is invalid")
+    if source.get("environment") != ("dev" if smoke else "prod"):
+        raise ValueError("environment secret does not match Gala environment")
+    for provider in ("stripe", "cawl"):
+        if not isinstance(source[provider], dict) or source[provider].get("mode") != ("test" if smoke else "live"):
+            raise ValueError("payment mode does not match environment secret")
+    payment = {"schema_version": 1, "stripe": source["stripe"], "cawl": source["cawl"]}
+    mail = {"schema_version": 1, **{key: source[key] for key in ("mail", "site", "test_recipient")}}
+    return payment, mail, admin_credentials(source["admin"])
 
 
 def admin_credentials(source: dict[str, object] | None) -> dict[str, str]:
@@ -256,22 +271,31 @@ def write_files(output_dir: Path, contents: dict[str, str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--environment", type=Path)
     parser.add_argument("--generated", required=True, type=Path)
-    parser.add_argument("--stripe", "--payment", dest="stripe", required=True, type=Path)
+    parser.add_argument("--stripe", "--payment", dest="stripe", type=Path)
     parser.add_argument("--provider", choices=["stripe", "cawl"], default="stripe")
     parser.add_argument("--check-combined-compatibility", action="store_true")
-    parser.add_argument("--mail", required=True, type=Path)
+    parser.add_argument("--mail", type=Path)
     parser.add_argument("--smoke", required=True, choices=["true", "false"])
     parser.add_argument("--fedow-domain", required=True)
     parser.add_argument("--laboutik-domain", required=True)
     parser.add_argument("--lespass-domain", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
-    parser.add_argument("--admin", required=True, type=Path)
+    parser.add_argument("--admin", type=Path)
     args = parser.parse_args()
     generated = read_json(args.generated, "generated secret")
-    payment = read_json(args.stripe, "shared payment secret")
-    mail = read_json(args.mail, "shared mail secret")
-    admin = read_json(args.admin, "shared admin secret")
+    if args.environment:
+        if any((args.stripe, args.mail, args.admin)):
+            raise ValueError("shared environment secret cannot be mixed with legacy integration selectors")
+        payment, mail, admin = environment_sections(
+            read_json(args.environment, "environment secret"), args.smoke == "true")
+    else:
+        if not all((args.stripe, args.mail, args.admin)):
+            raise ValueError("legacy runtime requires generated, payment, mail and admin secrets")
+        payment = read_json(args.stripe, "shared payment secret")
+        mail = read_json(args.mail, "shared mail secret")
+        admin = read_json(args.admin, "shared admin secret")
     def render(payment_secret):
         return assemble(generated, payment_secret, mail,
                         args.fedow_domain, args.laboutik_domain, args.lespass_domain,
