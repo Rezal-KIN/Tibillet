@@ -19,8 +19,6 @@ SMOKE_SLUGS = {"gala-smoke", "gala-smoke-cawl"}
 def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: str, payment_provider: str = "stripe") -> str:
     if not SLUG.fullmatch(slug) or slug == "bapts":
         raise ValueError("invalid Gala slug")
-    if not re.fullmatch(rf"arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/galas/{slug}/generated-[A-Za-z0-9]{{6}}", generated_arn):
-        raise ValueError("Gala requires its own generated secret")
     mode = "test" if slug in SMOKE_SLUGS else "live"
     if payment_provider not in {"stripe", "cawl"}:
         raise ValueError("invalid payment provider")
@@ -30,8 +28,12 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
         raise ValueError("Stripe Smoke requires the Stripe provider")
     if not ARN.fullmatch(stripe_arn) or f"integrations-stripe-{mode}-" not in stripe_arn:
         raise ValueError(f"Gala requires the shared payment {mode} secret")
-    if not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn:
-        raise ValueError("Smoke requires the shared mail secret")
+    unified = generated_arn == stripe_arn == mail_arn
+    if not unified:
+        if not re.fullmatch(rf"arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/galas/{slug}/generated-[A-Za-z0-9]{{6}}", generated_arn):
+            raise ValueError("Gala requires its own generated secret")
+        if not ARN.fullmatch(mail_arn) or "integrations-mail-" not in mail_arn:
+            raise ValueError("Smoke requires the shared mail secret")
     if not re.search(rf'^GALA_SLUG=["\']?{slug}["\']?$', text, re.MULTILINE):
         raise ValueError("target config targets another Gala")
     replacements = {

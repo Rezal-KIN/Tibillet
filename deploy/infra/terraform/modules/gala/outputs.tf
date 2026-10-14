@@ -1,6 +1,6 @@
 output "generated_secret_arn" {
-  value       = aws_secretsmanager_secret.generated.arn
-  description = "Generated application keys and database credentials for the target Gala."
+  value       = var.shared_stripe_secret_arn
+  description = "Environment secret containing this Gala's stable generated-key entry."
 }
 
 output "instance_id" {

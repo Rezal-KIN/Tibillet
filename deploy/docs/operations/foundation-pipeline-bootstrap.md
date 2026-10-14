@@ -20,7 +20,7 @@ Test Stripe, Test CAWL et Gala actif. Un prochain gala recevra sa propre
 pipeline Production à sa création.
 
 La pipeline **Foundation** est le point d'entrée manuel pour ajouter un gala.
-Elle crée l'EC2, son conteneur de clés, ses préfixes S3, puis la pipeline
+Elle crée l'EC2, son entrée de clés dans le secret dev/prod, ses préfixes S3, puis la pipeline
 Production verrouillée sur cette EC2. Après l'apply, une étape Finalize génère
 les clés une seule fois, vérifie cloud-init et le runtime sur l'EC2 exacte via
 SSM, puis enregistre le catalogue. Elle ne reçoit jamais de
@@ -42,8 +42,8 @@ ressources `tibillet-gala-paris` et à Paris. Un ARN de rôle approuvé peut aus
 être fourni à la place. Dans les deux cas, il doit pouvoir lire/verrouiller
 l'état Terraform, lire et écrire `foundation-inputs/galas.json`, écrire les
 artefacts/logs, utiliser la connexion GitHub approuvée et effectuer les actions
-Terraform nécessaires. Il peut initialiser les seuls secrets `*/generated` ;
-il ne reçoit pas `GetSecretValue` ni accès aux identifiants Stripe/SMTP.
+Terraform nécessaires. Il peut lire et mettre à jour les deux seuls secrets dev/prod pour ajouter une
+entrée `galas.<slug>`, en préservant les clés et intégrations existantes.
 
 Avant la première exécution, le catalogue doit être créé dans le bucket de
 sauvegardes à la clé `foundation-inputs/galas.json`. Il contient la
@@ -63,7 +63,7 @@ La pipeline valide le nom, fusionne le gala dans le catalogue, calcule le
 plan Terraform et refuse toute suppression, remplacement, modification d'un
 autre gala ou changement de plateforme inattendu. Elle applique ensuite le
 plan binaire exactement produit. Une étape Finalize indépendante initialise les
-clés stables du nouveau gala (et préserve celles des galas existants), vérifie
+clés stables du nouveau gala dans le secret prod (et préserve les autres entrées), vérifie
 le bootstrap via SSM, puis seulement enregistre le nouveau catalogue.
 Finalize peut être réessayée sans
 rejouer un plan Terraform déjà appliqué.

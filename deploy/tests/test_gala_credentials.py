@@ -92,9 +92,11 @@ class GeneratedGalaSecretTests(unittest.TestCase):
         self.assertEqual(len({payload["fedow_fernet_key"], payload["laboutik_fernet_key"], payload["lespass_fernet_key"]}), 3)
 
     def test_an_existing_current_version_is_never_replaced(self) -> None:
-        with mock.patch.object(generator, "current_version_exists", return_value=True), mock.patch.object(generator, "aws") as aws:
-            generator.initialize("example/generated", "gala-example")
-        aws.assert_not_called()
+        payload = {"schema_version": 2, "environment": "prod", "galas": {"gala-example": generator.generated_payload()}}
+        with mock.patch.object(generator, "read_environment", return_value=(payload, "version")), \
+             mock.patch.object(generator, "publish_environment") as publish:
+            generator.initialize("example/prod", "gala-example")
+        publish.assert_not_called()
 
     def test_sqlite_fedow_omits_postgres_and_accepts_existing_secrets(self) -> None:
         generated = generator.generated_payload()

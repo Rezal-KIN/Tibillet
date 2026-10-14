@@ -144,10 +144,11 @@ data "aws_iam_policy_document" "foundation_build" {
   }
 
   statement {
-    sid     = "InitializeOnlyGeneratedGalaSecrets"
-    actions = ["secretsmanager:PutSecretValue"]
+    sid     = "InitializeOnlyEnvironmentGalaEntries"
+    actions = ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue", "secretsmanager:UpdateSecretVersionStage"]
     resources = [
-      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/galas/*/generated-*",
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/shared/integrations-stripe-test-*",
+      "arn:${data.aws_partition.current.partition}:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/shared/integrations-stripe-live-*",
     ]
 
     condition {

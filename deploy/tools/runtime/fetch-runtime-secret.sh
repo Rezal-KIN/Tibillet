@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Assemble stable per-Gala credentials and shared Stripe/mail credentials
-# into three application-specific dotenv files. Secret values are never printed.
+# Read one dev/prod secret. Legacy reads remain available during migration.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,14 +35,23 @@ trap cleanup EXIT
 
 aws secretsmanager get-secret-value \
   --region "$AWS_REGION" \
-  --secret-id "$GENERATED_SECRET_ARN" \
-  --query SecretString \
-  --output text > "$generated_file"
-aws secretsmanager get-secret-value \
-  --region "$AWS_REGION" \
   --secret-id "$SHARED_STRIPE_SECRET_ARN" \
   --query SecretString \
   --output text > "$stripe_file"
+schema_version="$(python3 - "$stripe_file" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1]))['schema_version'])
+PY
+)"
+secret_args=()
+if [[ "$schema_version" == "2" ]]; then
+  secret_args+=(--environment "$stripe_file" --gala-slug "$GALA_SLUG")
+else
+aws secretsmanager get-secret-value \
+  --region "$AWS_REGION" \
+  --secret-id "$GENERATED_SECRET_ARN" \
+  --query SecretString \
+  --output text > "$generated_file"
 aws secretsmanager get-secret-value \
   --region "$AWS_REGION" \
   --secret-id "$SHARED_MAIL_SECRET_ARN" \
@@ -58,14 +66,13 @@ aws secretsmanager get-secret-value \
   --version-stage GALA_ADMIN \
   --query SecretString \
   --output text > "$admin_file"
+secret_args+=(--generated "$generated_file" --stripe "$stripe_file" --mail "$mail_file" --admin "$admin_file")
+fi
 
 python3 "$SCRIPT_DIR/materialize-runtime-env.py" \
-  --generated "$generated_file" \
-  --stripe "$stripe_file" \
+  "${secret_args[@]}" \
   --provider "${PAYMENT_PROVIDER:-stripe}" "${mode_args[@]}" \
-  --mail "$mail_file" \
   --smoke "$([[ "$GALA_SLUG" == "gala-smoke" || "$GALA_SLUG" == "gala-smoke-cawl" ]] && printf true || printf false)" \
-  --admin "$admin_file" \
   --fedow-domain "$FEDOW_PUBLIC_DOMAIN" \
   --laboutik-domain "$LABOUTIK_PUBLIC_DOMAIN" \
   --lespass-domain "$LESPASS_PUBLIC_DOMAIN" \

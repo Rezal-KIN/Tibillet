@@ -28,7 +28,7 @@ module "gala" {
   ecr_lespass_repository_arn      = local.gala_lespass_repository_arn[each.key]
   ecr_application_repository_arns = local.gala_application_repository_arns[each.key]
   shared_stripe_secret_arn        = local.gala_payment_secret_arn[each.key]
-  shared_mail_secret_arn          = aws_secretsmanager_secret.shared_mail[0].arn
+  shared_mail_secret_arn          = local.gala_payment_secret_arn[each.key]
   repository_url                  = "https://github.com/${var.github_owner}/${var.github_repository}.git"
   repository_ref                  = var.runtime_repository_ref
   ssh_emergency_cidrs             = each.value.ssh_emergency_cidrs

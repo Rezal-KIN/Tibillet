@@ -15,18 +15,6 @@ locals {
   }, var.extra_tags)
 }
 
-resource "aws_secretsmanager_secret" "generated" {
-  name                    = "${var.project_name}/galas/${var.gala_slug}/generated"
-  description             = "Stable application keys and database passwords, initialized once by the Foundation pipeline."
-  recovery_window_in_days = 7
-
-  tags = local.tags
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 data "aws_iam_policy_document" "instance_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -53,7 +41,7 @@ data "aws_iam_policy_document" "runtime" {
   statement {
     sid       = "ReadOnlyOwnRuntimeSecrets"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = compact([aws_secretsmanager_secret.generated.arn, var.shared_stripe_secret_arn, var.shared_mail_secret_arn])
+    resources = distinct(compact([var.shared_stripe_secret_arn, var.shared_mail_secret_arn]))
   }
 
   statement {
@@ -213,7 +201,7 @@ resource "aws_instance" "runtime" {
     payment_provider         = var.payment_provider
     repository_ref           = var.repository_ref
     repository_url           = var.repository_url
-    generated_secret_arn     = aws_secretsmanager_secret.generated.arn
+    generated_secret_arn     = var.shared_stripe_secret_arn
     shared_stripe_secret_arn = var.shared_stripe_secret_arn
     shared_mail_secret_arn   = var.shared_mail_secret_arn
   })
@@ -283,7 +271,7 @@ resource "aws_instance" "retirable" {
     payment_provider         = var.payment_provider
     repository_ref           = var.repository_ref
     repository_url           = var.repository_url
-    generated_secret_arn     = aws_secretsmanager_secret.generated.arn
+    generated_secret_arn     = var.shared_stripe_secret_arn
     shared_stripe_secret_arn = var.shared_stripe_secret_arn
     shared_mail_secret_arn   = var.shared_mail_secret_arn
   })

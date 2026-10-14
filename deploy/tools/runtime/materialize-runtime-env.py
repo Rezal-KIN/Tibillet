@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Gala dotenv files from stable generated keys and shared integrations."""
+"""Build Gala dotenv files from the dev/prod secret without changing stored keys."""
 from __future__ import annotations
 
 import argparse
@@ -22,6 +22,30 @@ GENERATED_FIELDS = {
 }
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
 ADMIN_HASH = re.compile(r"pbkdf2_sha256\$[1-9][0-9]{4,6}\$[a-zA-Z0-9]+\$[a-zA-Z0-9+/]{43}=")
+
+
+def environment_sections(source: dict, slug: str, smoke: bool) -> tuple[dict, dict, dict, dict]:
+    required = {"schema_version", "environment", "stripe", "cawl", "mail", "site",
+                "test_recipient", "admin", "galas"}
+    if set(source) != required or source.get("schema_version") != 2:
+        raise ValueError("environment secret schema is invalid")
+    if source.get("environment") != ("dev" if smoke else "prod"):
+        raise ValueError("environment secret does not match Gala environment")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,62}", slug):
+        raise ValueError("invalid Gala slug")
+    galas = source.get("galas")
+    if not isinstance(galas, dict) or not isinstance(galas.get(slug), dict):
+        raise ValueError("Gala keys are missing from environment secret")
+    if any(not isinstance(name, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,62}", name)
+           or (name in {"gala-smoke", "gala-smoke-cawl"}) != smoke for name in galas):
+        raise ValueError("Gala keys are stored in the wrong environment")
+    for provider in ("stripe", "cawl"):
+        if not isinstance(source[provider], dict) or source[provider].get("mode") != ("test" if smoke else "live"):
+            raise ValueError("payment mode does not match environment secret")
+    generated = galas[slug]
+    payment = {"schema_version": 1, "stripe": source["stripe"], "cawl": source["cawl"]}
+    mail = {"schema_version": 1, **{key: source[key] for key in ("mail", "site", "test_recipient")}}
+    return generated, payment, mail, admin_credentials(source["admin"])
 
 
 def admin_credentials(source: dict[str, object] | None) -> dict[str, str]:
@@ -256,22 +280,32 @@ def write_files(output_dir: Path, contents: dict[str, str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--generated", required=True, type=Path)
-    parser.add_argument("--stripe", "--payment", dest="stripe", required=True, type=Path)
+    parser.add_argument("--environment", type=Path)
+    parser.add_argument("--gala-slug")
+    parser.add_argument("--generated", type=Path)
+    parser.add_argument("--stripe", "--payment", dest="stripe", type=Path)
     parser.add_argument("--provider", choices=["stripe", "cawl"], default="stripe")
     parser.add_argument("--check-combined-compatibility", action="store_true")
-    parser.add_argument("--mail", required=True, type=Path)
+    parser.add_argument("--mail", type=Path)
     parser.add_argument("--smoke", required=True, choices=["true", "false"])
     parser.add_argument("--fedow-domain", required=True)
     parser.add_argument("--laboutik-domain", required=True)
     parser.add_argument("--lespass-domain", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
-    parser.add_argument("--admin", required=True, type=Path)
+    parser.add_argument("--admin", type=Path)
     args = parser.parse_args()
-    generated = read_json(args.generated, "generated secret")
-    payment = read_json(args.stripe, "shared payment secret")
-    mail = read_json(args.mail, "shared mail secret")
-    admin = read_json(args.admin, "shared admin secret")
+    if args.environment:
+        if not args.gala_slug or any((args.generated, args.stripe, args.mail, args.admin)):
+            raise ValueError("environment secret requires a Gala slug and no legacy selectors")
+        generated, payment, mail, admin = environment_sections(
+            read_json(args.environment, "environment secret"), args.gala_slug, args.smoke == "true")
+    else:
+        if not all((args.generated, args.stripe, args.mail, args.admin)):
+            raise ValueError("legacy runtime requires generated, payment, mail and admin secrets")
+        generated = read_json(args.generated, "generated secret")
+        payment = read_json(args.stripe, "shared payment secret")
+        mail = read_json(args.mail, "shared mail secret")
+        admin = read_json(args.admin, "shared admin secret")
     def render(payment_secret):
         return assemble(generated, payment_secret, mail,
                         args.fedow_domain, args.laboutik_domain, args.lespass_domain,

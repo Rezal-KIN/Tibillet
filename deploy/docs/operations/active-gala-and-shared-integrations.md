@@ -25,29 +25,26 @@ live.
   Les autres EC2 gardent leur accès sortant et SSM, avec une adresse publique
   temporaire attribuée par AWS après la perte de leur EIP.
 
-## Secrets Manager
+## Secrets Manager : deux secrets au total
 
-Foundation crée pour chaque gala `tibillet-gala-paris/galas/<slug>/generated`.
-Après l'apply approuvé, son étape Finalize crée **une seule fois** une valeur
-contenant les clés Django, les trois clés Fernet, les mots de passe PostgreSQL
-et le token interne Fedow/Lespass. Une exécution ultérieure préserve
-`AWSCURRENT`. Aucune valeur n'entre dans Terraform, le catalogue, Git ou les
-artefacts CodePipeline.
+Tous les identifiants sont regroupés par environnement dans deux objets. Les
+noms historiques sont conservés pour garder les mêmes ARN :
 
-Trois secrets communs sont créés par Terraform, sans valeur :
+- **dev** : `tibillet-gala-paris/shared/integrations-stripe-test` ;
+- **prod** : `tibillet-gala-paris/shared/integrations-stripe-live`.
 
-- `tibillet-gala-paris/shared/integrations-stripe-test`, lisible par Smoke ;
-- `tibillet-gala-paris/shared/integrations-stripe-live`, lisible par les galas réels ;
-- `tibillet-gala-paris/shared/integrations-mail`, lisible par tous.
+Chaque objet contient Stripe, CAWL, le courrier, les domaines, l'administration
+et une entrée de clés stables par gala. Les deux Smoke lisent uniquement dev.
+Les galas réels et l'archive de l'ancien Aix utilisent prod. Les clés de chaque
+gala restent différentes ; leur regroupement ne les régénère jamais.
 
-L'administrateur renseigne les vrais identifiants **directement dans Secrets
-Manager**, jamais dans Git ou Terraform. Chaque secret Stripe a ce schéma (ici
-une clé test fictive ; le secret live a `mode: live` et des préfixes `sk_live_`
-et `pk_live_`) :
+Exemple de structure dev, avec des valeurs fictives et une table de galas vide
+avant sa première initialisation :
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "environment": "dev",
   "stripe": {
     "mode": "test",
     "secret_key": "sk_test_EXAMPLE",
@@ -61,28 +58,7 @@ et `pk_live_`) :
     "api_secret": "",
     "webhook_key_id": "",
     "webhook_secret": ""
-  }
-}
-```
-
-Les noms historiques `integrations-stripe-test/live` sont conservés : il y a
-un seul secret de paiement par environnement. La configuration versionnée du
-gala (`PAYMENT_PROVIDER`, défaut `stripe`) choisit la section à matérialiser.
-Les champs CAWL vides sont acceptés par un gala Stripe, et bloquent un gala
-CAWL tant qu'ils ne sont pas renseignés. Le secret production a `mode: live`
-dans les deux sections. Le runtime n'écrit jamais les deux fournisseurs dans
-les fichiers applicatifs.
-
-**Migration des EC2 existantes :** installer et vérifier le nouveau lecteur
-runtime sur toutes les EC2 conservées avant d'ajouter la section `cawl` à
-`AWSCURRENT`. Les anciens lecteurs refusaient une section supplémentaire.
-Les clés Stripe, les clés générées et le secret mail restent identiques.
-
-Le secret mail commun a le schéma suivant (valeurs fictives) :
-
-```json
-{
-  "schema_version": 1,
+  },
   "mail": {
     "host": "smtp.example.invalid",
     "port": 587,
@@ -99,30 +75,41 @@ Le secret mail commun a le schéma suivant (valeurs fictives) :
     "public_name": "Gala",
     "tenant_subdomain": "festival",
     "meta_subdomain": "agenda"
-  }
+  },
+  "admin": {
+    "username": "admin",
+    "password_hash": "EMPREINTE_DJANGO_PBKDF2_SHA256"
+  },
+  "galas": {}
 }
 ```
 
-Les noms de domaine communs y sont déclarés ; le runtime refuse un écart avec
-les noms approuvés dans Terraform et le catalogue Foundation. Sur l'EC2, le
-script runtime lit le secret généré du gala, le secret Stripe de son
-environnement et le secret mail, puis construit les trois fichiers
-`fedow.env`, `laboutik.env`, `lespass.env` et `admin.json` en mode `0600`. Le
-dernier fichier contient seulement le nom administrateur commun et son
-empreinte Django PBKDF2 SHA256 ; le mot de passe en clair n'est pas conservé.
-Les accès admin sont lus séparément dans la version marquée `GALA_ADMIN` du
-même secret : `{"username":"admin","password_hash":"EMPREINTE_DJANGO"}`.
-La version `AWSCURRENT` et son schéma mail restent inchangés pour les anciennes
-releases. Le runtime exige cette version pour configurer les administrations au premier
-déploiement, sans commande manuelle supplémentaire. Les domaines,
-connexions interservices, noms PostgreSQL et paramètres communs sont assemblés
-automatiquement. Smoke configure le backend e-mail Django « dummy » et son
-groupe réseau bloque les ports SMTP sortants : aucun mail aux participants ne
-part. `test_recipient` reste la destination prévue pour un futur relais de
-test ; l'envoi effectif vers cette boîte n'est **pas encore implémenté**. Les
-anciens conteneurs `<slug>/runtime`, vides et non lus par les EC2, ont été
-retirés de la configuration Terraform ; leur suppression AWS est planifiée
-avec la fenêtre de récupération Secrets Manager.
+Prod utilise `environment: prod` et `mode: live` dans les deux fournisseurs.
+Les identifiants sont saisis directement dans Secrets Manager, jamais dans Git.
+`PAYMENT_PROVIDER` sélectionne Stripe ou CAWL ; les champs CAWL vides bloquent
+uniquement le démarrage CAWL. Smoke désactive les envois aux participants avec
+le backend mail dummy et ses restrictions réseau.
+
+Foundation ajoute une seule fois `galas.<slug>` : clés Django et Fernet,
+mots de passe PostgreSQL et token interne Fedow/Lespass. Elle préserve une
+entrée déjà présente. Une écriture concurrente du secret est détectée avec le
+numéro de version `AWSCURRENT` : une autre entrée ou une modification des
+identifiants externes ne peut pas être écrasée par le finaliseur.
+Foundation peut lire et mettre à jour uniquement ces deux secrets pour cela.
+
+Le runtime fait une seule lecture du secret de son environnement. Il sélectionne
+les clés de son gala et produit `fedow.env`, `laboutik.env`, `lespass.env` et
+`admin.json` en mode `0600`. Le courrier et l'empreinte administrateur sont dans
+le même JSON ; la version séparée `GALA_ADMIN` n'est plus nécessaire. Les trois
+variables de configuration historiques `GENERATED_SECRET_ARN`,
+`SHARED_STRIPE_SECRET_ARN` et `SHARED_MAIL_SECRET_ARN` pointent toutes vers cet
+unique ARN. Le lecteur reste compatible avec l'ancien format pendant la migration.
+
+Avant de retirer les anciens objets, installer le nouveau lecteur sur les deux
+Smoke, copier les valeurs et clés existantes dans les deux objets, puis vérifier
+l'identité des fichiers Stripe et la sélection CAWL. Aucun mot de passe ou clé de
+chiffrement n'est changé. La restauration de l'ancienne archive Aix utilise les
+clés `galas.gala-am-aix` du secret prod et le runtime versionné actuel.
 
 ## Déploiement et bascule du trafic
 
