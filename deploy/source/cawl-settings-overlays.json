@@ -2,7 +2,7 @@
   "fedow": [
     [
       "    'fedow_core',\n",
-      "    'fedow_core',\n    'cawl_fedow',\n"
+      "    # Django gives commands from earlier apps precedence over later apps.\n    'cawl_fedow',\n    'fedow_core',\n"
     ],
     [
       "ROOT_URLCONF = 'fedowallet_django.urls'\n",
