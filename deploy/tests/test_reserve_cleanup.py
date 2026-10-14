@@ -30,6 +30,38 @@ def plan(phase):
 
 
 class ReserveCleanupTests(unittest.TestCase):
+    def test_historical_cleanup_cannot_delete_ec2_or_other_gala(self):
+        valid = {"resource_changes": [{"address": 'module.gala["gala-validation"].aws_iam_role.instance',
+                 "change": {"actions": ["delete"], "before": {}, "after": None}}]}
+        self.assertEqual(len(cleanup.verify_historical(valid, {"gala-validation"})), 1)
+        for address in ('module.gala["gala-validation"].aws_instance.retirable[0]',
+                        'module.gala["gala-smoke"].aws_iam_role.instance',
+                        'module.gala["gala-am-aix"].aws_iam_role.instance',
+                        'aws_secretsmanager_secret.shared_stripe_live[0]'):
+            invalid = copy.deepcopy(valid)
+            invalid["resource_changes"][0]["address"] = address
+            with self.assertRaises(ValueError):
+                cleanup.verify_historical(invalid, {"gala-validation"})
+        with self.assertRaises(ValueError):
+            cleanup.verify_historical(valid, {"gala-am-aix"})
+
+    def test_switch_policy_can_only_remove_the_exact_resource_ids(self):
+        old = {"Version": "2012-10-17", "Statement": [{"Sid": "ReferenceOnlyKnownGalaSecurityGroups",
+               "Effect": "Allow", "Action": ["ec2:ModifyInstanceAttribute"], "Resource": ["retired", "smoke"]}]}
+        new = copy.deepcopy(old)
+        new["Statement"][0]["Resource"] = ["smoke"]
+        import json
+        change = {"before": {"role": "same", "policy": json.dumps(old)},
+                  "after": {"role": "same", "policy": json.dumps(new)}, "after_unknown": {}}
+        cleanup.verify_switch_policy(change, {"retired"})
+        for changed in ({"Resource": []}, {"Action": ["ec2:*"]}):
+            invalid = copy.deepcopy(change)
+            bad = copy.deepcopy(new)
+            bad["Statement"][0].update(changed)
+            invalid["after"]["policy"] = json.dumps(bad)
+            with self.assertRaises(ValueError):
+                cleanup.verify_switch_policy(invalid, {"retired"})
+
     def test_missing_or_changed_target_is_rejected(self):
         for phase in ("prepare", "purge"):
             valid = plan(phase)
