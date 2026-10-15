@@ -1,7 +1,7 @@
-{% extends "reunion/base.html" %}
+{% extends base_template %}
 {% load i18n %}
 {% block main %}
-<main class="container py-5">
+<main class="container-lg py-5">
     <h1>{% translate "Recharger mon portefeuille" %}</h1>
     <p>{% translate "Choisissez le montant à ajouter. Votre solde sera crédité après confirmation du paiement." %}</p>
     <form method="post" action="/my_account/refill_wallet/">
