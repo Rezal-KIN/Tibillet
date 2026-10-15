@@ -12,7 +12,7 @@ from rest_framework.exceptions import ValidationError
 from BaseBillet.models import Configuration, Event, LigneArticle, Paiement_stripe, Price, PriceSold, Product, ProductSold, Reservation
 from PaiementCawl.models import CawlRefund
 from PaiementCawl.refunds import cancel_reservation, finish_refund
-from PaiementCawl.services import CreationPaiementCawl, update_payment
+from PaiementCawl.services import CreationPaiementCawl, checkout_session, update_payment
 from payment_providers.cawl import CawlConfiguration, CawlError, HostedCheckout, PaymentSnapshot
 
 
@@ -41,7 +41,8 @@ class PaymentTests(FastTenantTestCase):
         self.line = LigneArticle.objects.create(pricesold=self.sold, qty=1, amount=500, reservation=self.reservation)
         self.gateway = SimpleNamespace(configuration=CawlConfiguration('merchant', 'key', 'secret', 'hook', 'hook-secret', True))
         from unittest.mock import Mock
-        self.gateway.create_checkout = Mock(return_value=HostedCheckout('hosted-' + uuid4().hex, 'https://payment.preprod.cawl-solutions.fr/qa', 'mac'))
+        self.gateway.create_checkout = Mock(side_effect=lambda **kwargs: HostedCheckout(
+            'hosted-' + uuid4().hex, 'https://payment.preprod.cawl-solutions.fr/qa', 'mac'))
         self.gateway_patch = patch('PaiementCawl.services.gateway', return_value=self.gateway)
         self.gateway_patch.start()
         self.addCleanup(self.gateway_patch.stop)
@@ -136,7 +137,8 @@ class PaymentTests(FastTenantTestCase):
         self.assertFalse(LigneArticle.objects.filter(qty__lt=0).exists())
 
     def test_failed_checkout_creation_releases_the_order(self):
-        self.gateway.create_checkout.side_effect = [RuntimeError('network'), self.gateway.create_checkout.return_value]
+        self.gateway.create_checkout.side_effect = [RuntimeError('network'), HostedCheckout(
+            'hosted-' + uuid4().hex, 'https://payment.preprod.cawl-solutions.fr/qa', 'mac')]
         with self.assertRaises(ValidationError):
             self.create()
         self.assertEqual(Paiement_stripe.objects.get(reservation=self.reservation).status, Paiement_stripe.CANCELED)
@@ -156,6 +158,29 @@ class PaymentTests(FastTenantTestCase):
         self.assertEqual(update_payment(payment), Paiement_stripe.EXPIRE)
         self.create()
         self.assertEqual(self.gateway.create_checkout.call_count, 2)
+
+    def test_failed_checkout_cannot_be_reused_as_an_open_membership_session(self):
+        payment = self.create().paiement_stripe_db
+        for status in ('REJECTED', 'REJECTED_CAPTURE', 'CANCELLED'):
+            with self.subTest(status=status):
+                snapshot = PaymentSnapshot('payment-1', str(payment.pk), 500, 'EUR', status)
+                self.gateway.get_checkout = lambda checkout_id: ('PAYMENT_CREATED', snapshot)
+                session = checkout_session(payment)
+                self.assertEqual(session.status, 'expired')
+                self.assertEqual(session.payment_status, 'unpaid')
+
+    def test_processing_payment_is_not_reopened_after_checkout_timeout(self):
+        from datetime import timedelta
+        from PaiementCawl.models import CawlPayment
+
+        payment = self.create().paiement_stripe_db
+        CawlPayment.objects.filter(pk=payment.pk).update(created_at=timezone.now() - timedelta(hours=2))
+        payment.refresh_from_db()
+        snapshot = PaymentSnapshot('payment-1', str(payment.pk), 500, 'EUR', 'CAPTURE_REQUESTED')
+        self.gateway.get_checkout = lambda checkout_id: ('PAYMENT_CREATED', snapshot)
+        session = checkout_session(payment)
+        self.assertEqual(session.status, 'complete')
+        self.assertEqual(session.payment_status, 'unpaid')
 
     def test_refund_cap_includes_previous_refunds(self):
         payment = self.create().paiement_stripe_db

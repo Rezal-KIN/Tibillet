@@ -126,8 +126,10 @@ def checkout_session(payment):
     check_account(record, client)
     checkout_status, snapshot = (client.get_checkout(record.hosted_checkout_id)
                                  if record.hosted_checkout_id else ("", None))
-    if snapshot is not None and snapshot.status not in FAILED_PAYMENT_STATES:
-        status = "complete"
+    if snapshot is not None:
+        # A definitively rejected/cancelled payment cannot reuse its checkout.
+        # Processing payments stay complete to prevent a second collection.
+        status = "expired" if snapshot.status in FAILED_PAYMENT_STATES else "complete"
     elif checkout_expired(record, checkout_status):
         status = "expired"
     else:
