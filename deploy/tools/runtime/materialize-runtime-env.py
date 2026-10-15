@@ -199,11 +199,11 @@ def assemble(
         "EMAIL_USE_SSL": "0",
     }
     if smoke:
-        # Until a dedicated recipient-rewriting SMTP relay is part of the
-        # stack, no email from Smoke may leave the host. Admin notices are
-        # addressed to the configured test mailbox, but Django is a sink.
+        # Use the same native SMTP transport on both Smoke hosts, with every
+        # outgoing envelope confined to the configured test mailbox.
         mail_lines["ADMIN_EMAIL"] = test_recipient
-        mail_lines["EMAIL_BACKEND"] = "django.core.mail.backends.dummy.EmailBackend"
+        mail_lines["EMAIL_BACKEND"] = "gala_mail.TestRecipientEmailBackend"
+        mail_lines["GALA_TEST_MAIL_RECIPIENT"] = test_recipient
     common = {"TIME_ZONE": "Europe/Paris", "TZ": "Europe/Paris"}
     fedow = {
         "SECRET_KEY": text_field(generated, "fedow_secret_key"),

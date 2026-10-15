@@ -39,7 +39,9 @@ def image_files(component, snapshot):
         if not match:
             raise ValueError('unsupported application image COPY; explicit files required')
         origin, target = match.groups()
-        if (not origin.startswith(('deploy/' + folder + '/', 'deploy/source/admin-templates/'))
+        allowed_source = (origin.startswith(('deploy/' + folder + '/', 'deploy/source/admin-templates/'))
+                          or (component == 'laboutik' and origin == 'gala_mail.py'))
+        if (not allowed_source
                 or '..' in PurePosixPath(origin).parts
                 or not target.startswith(prefix) or '..' in PurePosixPath(target).parts):
             raise ValueError('application image COPY is outside its source scope')

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Opt-in QR onboarding test on the non-public Smoke Gala only. No payment is made.
+# Opt-in QR onboarding test on either Smoke Gala. No payment is made.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -7,12 +7,23 @@ source "$SCRIPT_DIR/lib.sh"
 CONFIG_PATH="${1:-}"
 [[ -n "$CONFIG_PATH" ]] || fail "usage: $0 SMOKE_CONFIG"
 load_gala_config "$CONFIG_PATH"
-[[ "$GALA_SLUG" == "gala-smoke" ]] || fail "QR E2E is restricted to gala-smoke"
+case "$GALA_SLUG" in gala-smoke|gala-smoke-cawl) ;; *) fail "QR E2E requires a Smoke Gala" ;; esac
 require_command docker
 require_command python3
-docker exec fedow_django sh -lc 'test "$STRIPE_TEST" = 1 && test -n "$STRIPE_KEY_TEST"'
-docker exec lespass_django sh -lc \
-  'test "$STRIPE_TEST" = 1 && test "$EMAIL_BACKEND" = django.core.mail.backends.dummy.EmailBackend'
+for application in fedow_django lespass_django; do
+  docker exec "$application" sh -lc '
+    case "$PAYMENT_PROVIDER" in
+      stripe) test "$STRIPE_TEST" = 1 && test -n "$STRIPE_KEY_TEST" ;;
+      cawl) test "$CAWL_TEST" = 1 && test -n "$CAWL_API_KEY_ID" ;;
+      *) exit 1 ;;
+    esac'
+done
+docker exec lespass_django sh -lc '
+  case "$EMAIL_BACKEND" in
+    django.core.mail.backends.dummy.EmailBackend) ;;
+    gala_mail.TestRecipientEmailBackend) test -n "$GALA_TEST_MAIL_RECIPIENT" ;;
+    *) exit 1 ;;
+  esac'
 
 read -r qr_uuid card_number tag_id tag_uuid < <(python3 -c \
   'import secrets,uuid; print(uuid.uuid4(),secrets.token_hex(4).upper(),secrets.token_hex(4).upper(),uuid.uuid4())')
@@ -27,6 +38,7 @@ timeout 120s docker exec -i \
   < "$SCRIPT_DIR/create-qr-smoke-card.py"
 
 timeout 600s docker exec -e API_KEY=qr-smoke-placeholder -e RUN_QR_CARD_E2E=1 \
+  -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \
   -e QR_SMOKE_CARD_UUID="$qr_uuid" -e QR_SMOKE_CARD_NUMBER="$card_number" \
   lespass_django sh -lc \
   'cd /DjangoFiles && poetry run pytest -q tests/pytest/test_qr_card_fedow_e2e.py'

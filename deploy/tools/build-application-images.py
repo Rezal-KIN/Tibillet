@@ -48,7 +48,7 @@ def main():
     verify_native_sources(catalog)
     # Only explicit build inputs are read. Runtime data and private CSVs are
     # never copied into the two native application images.
-    inputs = run('git', 'ls-files', 'deploy/Fedow', 'deploy/Laboutik', 'deploy/source/admin-templates').splitlines()
+    inputs = run('git', 'ls-files', 'deploy/Fedow', 'deploy/Laboutik', 'deploy/source/admin-templates', 'gala_mail.py').splitlines()
     snapshot = {path: (Path(path).read_bytes(), 0o644) for path in inputs if Path(path).suffix in {'.py', '.html'}}
     for folder in ('Fedow', 'Laboutik'):
         path = 'deploy/' + folder + '/Dockerfile'

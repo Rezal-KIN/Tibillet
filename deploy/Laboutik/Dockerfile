@@ -8,6 +8,7 @@ COPY --chown=tibillet:tibillet deploy/Laboutik/views.py /DjangoFiles/webview/vie
 COPY --chown=tibillet:tibillet deploy/Laboutik/validators.py /DjangoFiles/webview/validators.py
 COPY --chown=tibillet:tibillet deploy/Laboutik/install.py /DjangoFiles/administration/management/commands/install.py
 COPY --chown=tibillet:tibillet deploy/Laboutik/settings.py /DjangoFiles/Cashless/settings.py
+COPY --chown=tibillet:tibillet gala_mail.py /DjangoFiles/gala_mail.py
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/login.html /DjangoFiles/webview/templates/login.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/kiosk_base.html /DjangoFiles/htmxview/templates/kiosk/base.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/infos.html /DjangoFiles/htmxview/templates/appsettings/infos.html
