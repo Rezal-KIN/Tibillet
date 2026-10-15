@@ -43,6 +43,7 @@ BAPTS_RETIREMENT_OPERATIONS = {
 }
 # One-time operation creating the parallel CAWL chain and its Smoke host.
 ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
+ENABLE_SMOKE_MAIL_REQUEST = "Enable Smoke Mail"
 CAWL_SMOKE_SLUG = "gala-smoke-cawl"
 PAYMENT_PROVIDERS = ("stripe", "cawl")
 
@@ -84,6 +85,8 @@ def value(name: str) -> str:
 
 
 def gala_slug(name: str) -> str:
+    if name == ENABLE_SMOKE_MAIL_REQUEST:
+        return "gala-smoke"
     if name in BAPTS_RETIREMENT_OPERATIONS:
         return BAPTS_SLUG
     if name in ALIGNMENT_RETIREMENT_OPERATIONS:
@@ -137,6 +140,7 @@ def main() -> None:
     alignment_retirement = ALIGNMENT_RETIREMENT_OPERATIONS.get(gala_name)
     bapts_retirement = BAPTS_RETIREMENT_OPERATIONS.get(gala_name)
     enable_cawl_platform = gala_name == ENABLE_CAWL_PLATFORM_REQUEST
+    enable_smoke_mail = gala_name == ENABLE_SMOKE_MAIL_REQUEST
     # Set only by the Foundation CAWL pipeline; Foundation keeps Stripe.
     payment_provider = os.environ.get("PAYMENT_PROVIDER", "").strip() or "stripe"
     if payment_provider not in PAYMENT_PROVIDERS:
@@ -298,6 +302,12 @@ def main() -> None:
             if existing.get("protect_from_destruction") is not False:
                 fail("prepare Gala First Run Retirement before terminating its EC2")
             existing["create_instance"] = False
+    elif enable_smoke_mail:
+        if payment_provider != "stripe" or any(
+            not isinstance(galas.get(target), dict) or galas[target].get("create_instance") is not True
+            for target in ("gala-smoke", CAWL_SMOKE_SLUG)
+        ):
+            fail("Enable Smoke Mail requires both existing Smoke hosts and the standard Foundation pipeline")
     elif retire_smoke_pipeline:
         if slug not in galas or galas[slug].get("create_instance") is not True:
             fail("Smoke pipeline retirement requires an existing Terraform-managed Smoke EC2")

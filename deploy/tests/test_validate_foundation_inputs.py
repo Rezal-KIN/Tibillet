@@ -60,6 +60,18 @@ def run(catalog: dict[str, object], **overrides: str) -> tuple[subprocess.Comple
 
 
 class FoundationInputTests(unittest.TestCase):
+    def test_enable_smoke_mail_preserves_the_existing_catalog(self):
+        galas = {slug: {"create_instance": True, "payment_provider": provider,
+                        "domain": "galas-am-aix.rezal.fr"}
+                 for slug, provider in (("gala-smoke", "stripe"), ("gala-smoke-cawl", "cawl"))}
+        result, output, proposal = run({"version": 1, "galas": galas}, GALA_NAME="Enable Smoke Mail")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["galas"], galas)
+        self.assertEqual(proposal["galas"], galas)
+        result, _, _ = run({"version": 1, "galas": {"gala-smoke": galas["gala-smoke"]}},
+                           GALA_NAME="Enable Smoke Mail")
+        self.assertNotEqual(result.returncode, 0)
+
     def test_retirable_ec2_count_and_precondition_share_one_allowlist(self) -> None:
         module = (ROOT / "infra/terraform/modules/gala/main.tf").read_text(encoding="utf-8")
         self.assertIn('retirable_gala_slugs = ["baldubapts2026", "gala-validation", "gala-validation-2", '

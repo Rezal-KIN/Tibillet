@@ -118,10 +118,10 @@ capacité déjà vérifiée de la Foundation actuelle.
 - Le **même compte SMTP** est conservé, mais Smoke ne doit jamais envoyer de
   vrais messages à des participants : ses destinataires sortants sont limités
   à une adresse de test configurée avec le secret SMTP commun. Aucun nouveau
-  compte mail n'est demandé pour chaque gala. Dans la première mise en œuvre,
-  l'envoi Smoke est désactivé (backend « dummy » et egress SMTP bloqué) ; un
-  relais qui réécrit **tous** les destinataires vers la boîte de test reste à
-  réaliser avant de prétendre tester l'envoi effectif d'e-mails.
+  compte mail n'est demandé pour chaque gala. Les deux Smoke utilisent le
+  transport SMTP Django avec un backend qui réécrit **tous** les destinataires
+  vers la boîte de test. TCP 587 sortant est autorisé ; les mails natifs,
+  leurs liens et le traitement Celery restent communs à Stripe et CAWL.
 
 ### Production d'un gala
 

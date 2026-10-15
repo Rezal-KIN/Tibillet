@@ -21,6 +21,33 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_smoke_mail_plan_can_only_add_submission_egress_to_both_smoke_hosts(self):
+        rule = {"from_port": 587, "to_port": 587, "protocol": "tcp",
+                "cidr_blocks": ["0.0.0.0/0"], "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [], "security_groups": [], "self": False, "description": ""}
+        plan = {"resource_changes": []}
+        for slug in ("gala-smoke", "gala-smoke-cawl"):
+            before = {"id": "sg-example", "vpc_id": "vpc-example", "ingress": [],
+                      "tags": {"Gala": slug, "Project": "tibillet-gala-paris"},
+                      "egress": [{**rule, "from_port": 443, "to_port": 443}]}
+            after = {**before, "egress": before["egress"] + [rule]}
+            plan["resource_changes"].append({"address": f'module.gala["{slug}"].aws_security_group.runtime',
+                "change": {"actions": ["update"], "before": before, "after": after, "after_unknown": {}}})
+        self.assertEqual(len(module.verify_smoke_mail_plan(plan)), 2)
+        mutations = [
+            lambda p: p["resource_changes"][0]["change"]["after"].update(ingress=[rule]),
+            lambda p: p["resource_changes"][0]["change"]["after"]["egress"][-1].update(to_port=65535),
+            lambda p: p["resource_changes"][0]["change"]["after"]["egress"].pop(0),
+            lambda p: p["resource_changes"][0].update(address='module.gala["other"].aws_security_group.runtime'),
+            lambda p: p["resource_changes"][0]["change"].update(after_unknown={"egress": True}),
+            lambda p: p["resource_changes"].append(change('aws_eip.shared_public[0]', ["delete"])),
+        ]
+        for mutation in mutations:
+            bad = copy.deepcopy(plan)
+            mutation(bad)
+            with self.assertRaises(ValueError):
+                module.verify_smoke_mail_plan(bad)
+
     def test_image_build_keeps_role_and_only_adds_two_repository_names(self):
         env = [{'name': 'LESPASS_ECR_REPOSITORY', 'type': 'PLAINTEXT', 'value': 'tibillet-gala-paris/lespass'}]
         before = {'name': 'test', 'service_role': 'same', 'source': [{'type': 'CODEPIPELINE', 'buildspec': 'old'}],

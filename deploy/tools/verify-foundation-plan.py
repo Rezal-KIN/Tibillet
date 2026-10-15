@@ -49,6 +49,7 @@ ALIGNMENT_RETIREMENT_OPERATIONS = {
     "Retire Gala Alignment": "retire",
 }
 ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
+ENABLE_SMOKE_MAIL_REQUEST = "Enable Smoke Mail"
 CAWL_SMOKE_SLUG = "gala-smoke-cawl"
 # Exactly the shared resources of the parallel CAWL chain (cawl-delivery.tf).
 CAWL_PLATFORM_ADDRESSES = frozenset({
@@ -291,6 +292,49 @@ def safe_validation_policy_removal(change: dict[str, object], removed_resources:
             return False
         changed_sids.add(sid)
     return changed_sids == {"MoveOnlyTheSharedGalaEip", "ChangeOnlyKnownGalaNetworkInterfaces", "RunReadOnlyTargetHealthcheck"}
+
+
+def verify_smoke_mail_plan(plan: dict[str, object]) -> list[str]:
+    """Permit only SMTP submission egress on the two existing Paris Smoke SGs."""
+    changes = plan.get("resource_changes")
+    if not isinstance(changes, list):
+        raise ValueError("Terraform plan has no resource_changes array")
+    accepted = []
+    allowed = {f'module.gala["{slug}"].aws_security_group.runtime': slug
+               for slug in ("gala-smoke", CAWL_SMOKE_SLUG)}
+    for item in changes:
+        address = item.get("address")
+        change = item.get("change", {})
+        actions = change.get("actions")
+        if actions == ["no-op"] or (item.get("mode") == "data" and actions == ["read"]):
+            continue
+        if address not in allowed or actions != ["update"] or address in accepted:
+            raise ValueError(f"unexpected Smoke mail change: {address}")
+        before, after = change.get("before"), change.get("after")
+        if (not isinstance(before, dict) or not isinstance(after, dict)
+                or has_unknown(change.get("after_unknown"))
+                or {k: v for k, v in before.items() if k != "egress"}
+                != {k: v for k, v in after.items() if k != "egress"}
+                or before.get("tags", {}).get("Gala") != allowed[address]
+                or before.get("tags", {}).get("Project") != "tibillet-gala-paris"):
+            raise ValueError(f"Smoke mail must preserve the existing security group: {address}")
+        prior, later = before.get("egress"), after.get("egress")
+        if not isinstance(prior, list) or not isinstance(later, list):
+            raise ValueError("Smoke mail requires explicit egress rules")
+        canonical = lambda rules: sorted(json.dumps(rule, sort_keys=True) for rule in rules)
+        additions = [rule for rule in later if rule not in prior]
+        if (len(additions) != 1 or canonical(later) != canonical(prior + additions)
+                or any(additions[0].get(k) != v for k, v in {
+                    "from_port": 587, "to_port": 587, "protocol": "tcp",
+                    "cidr_blocks": ["0.0.0.0/0"], "ipv6_cidr_blocks": [],
+                    "prefix_list_ids": [], "security_groups": [], "self": False,
+                }.items())
+                or additions[0].get("description") not in (None, "")
+                or set(additions[0]) - {"from_port", "to_port", "protocol", "cidr_blocks",
+                    "ipv6_cidr_blocks", "prefix_list_ids", "security_groups", "self", "description"}):
+            raise ValueError(f"Smoke mail may only add TCP 587 egress: {address}")
+        accepted.append(address)
+    return accepted
 
 
 def verify(plan: dict[str, object], slug: str, *, extra_new: frozenset[str] = frozenset()) -> list[str]:
@@ -629,7 +673,11 @@ def main() -> None:
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     bapts_phase = BAPTS_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
-    if bapts_phase:
+    if os.environ.get("GALA_NAME", "") == ENABLE_SMOKE_MAIL_REQUEST:
+        if args.slug != "gala-smoke":
+            raise ValueError("Enable Smoke Mail requires the exact Stripe Smoke slug")
+        changed = verify_smoke_mail_plan(plan)
+    elif bapts_phase:
         if args.slug != BAPTS_SLUG:
             raise ValueError("BalduBapts2026 retirement requires the exact slug")
         changed = verify_verification_retirement_plan(plan, bapts_phase, slug=BAPTS_SLUG)
