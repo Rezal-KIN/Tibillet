@@ -93,8 +93,16 @@ Exemple de structure commune dev, avec des valeurs fictives :
 Prod utilise `environment: prod` et `mode: live` dans les deux fournisseurs.
 Les identifiants sont saisis directement dans Secrets Manager, jamais dans Git.
 `PAYMENT_PROVIDER` sélectionne Stripe ou CAWL ; les champs CAWL vides bloquent
-uniquement le démarrage CAWL. Smoke désactive les envois aux participants avec
-le backend mail dummy et ses restrictions réseau.
+uniquement le démarrage CAWL. Les deux Smoke utilisent le même backend SMTP
+`gala_mail.TestRecipientEmailBackend` : tous les destinataires (To, Cc, Bcc)
+sont redirigés vers `test_recipient`. Les liens et le contenu des mails natifs
+sont conservés. Sans destinataire de test valide, le backend refuse de démarrer.
+La production garde le backend SMTP Django natif et les vrais destinataires.
+
+Pour activer le transport sur les Smoke existants, lancer Foundation avec
+`GalaName = Enable Smoke Mail`. Son contrôle de plan autorise uniquement
+l'ajout de TCP 587 sortant sur les deux groupes de sécurité Smoke Paris ;
+aucune instance, IP, règle entrante ou ressource Stockholm n'est modifiée.
 
 Foundation initialise uniquement les objets `galas/<slug>/generated`.
 Elle ne reçoit ni `GetSecretValue` ni le droit d'écrire les valeurs des

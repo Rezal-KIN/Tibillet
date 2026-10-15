@@ -25,17 +25,22 @@ pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 def test_new_qr_card_links_and_opens_refill_landing():
     if os.environ.get('RUN_QR_CARD_E2E') != '1':
         pytest.skip('explicit Smoke E2E opt-in required')
-    # Django's test runner replaces the runtime dummy backend with its own
-    # in-memory backend. Check both the deployed configuration and the backend
-    # actually used by this test so a real SMTP send can never slip through.
-    if not (os.environ.get('STRIPE_TEST') == '1'
+    provider = os.environ.get('PAYMENT_PROVIDER', 'stripe')
+    test_mode = (provider == 'stripe' and os.environ.get('STRIPE_TEST') == '1'
+                 or provider == 'cawl' and os.environ.get('CAWL_TEST') == '1')
+    # The wrapper uses memory mail for this synthetic journey. Real mail
+    # delivery is checked separately against the configured test mailbox.
+    if not (test_mode
             and os.environ.get('GALA_APEX_TENANT') == '1'
-            and os.environ.get('EMAIL_BACKEND') == 'django.core.mail.backends.dummy.EmailBackend'
+            and os.environ.get('EMAIL_BACKEND') in {
+                'django.core.mail.backends.dummy.EmailBackend',
+                'django.core.mail.backends.locmem.EmailBackend',
+            }
             and settings.EMAIL_BACKEND in {
                 'django.core.mail.backends.dummy.EmailBackend',
                 'django.core.mail.backends.locmem.EmailBackend',
             }):
-        pytest.skip('requires Smoke Stripe test mode and non-SMTP mail backend')
+        pytest.skip('requires Smoke payment test mode and non-SMTP mail backend')
 
     domain = os.environ['DOMAIN']
     tenant = Client.objects.get(schema_name=os.environ['SUB'])
@@ -82,12 +87,21 @@ def test_new_qr_card_links_and_opens_refill_landing():
         assert landing.status_code == 200
         assert b'/my_account/refill_wallet/' in landing.content
 
-        # A Checkout creation is safe in STRIPE_TEST mode: no payment is made.
-        # This checks the Fedow-to-Stripe leg, not just the presence of a CTA.
+        # Only the provider checkout differs; native onboarding is shared.
         checkout = browser.get('/my_account/refill_wallet/', HTTP_HX_REQUEST='true')
         assert checkout.status_code == 200
-        checkout_url = urlparse(checkout['HX-Redirect'])
-        assert (checkout_url.scheme, checkout_url.hostname) == ('https', 'checkout.stripe.com')
+        if provider == 'stripe':
+            checkout_url = urlparse(checkout['HX-Redirect'])
+            assert (checkout_url.scheme, checkout_url.hostname) == ('https', 'checkout.stripe.com')
+        else:
+            assert checkout['HX-Redirect'] == '/my_account/refill_wallet/'
+            amount_form = browser.get('/my_account/refill_wallet/')
+            assert amount_form.status_code == 200
+            assert b'name="amount"' in amount_form.content
+            checkout = browser.post('/my_account/refill_wallet/', {'amount': 100})
+            assert checkout.status_code == 302
+            checkout_url = urlparse(checkout['Location'])
+            assert (checkout_url.scheme, checkout_url.hostname) == ('https', 'payment.preprod.cawl-solutions.fr')
     finally:
         if user is not None:
             with tenant_context(tenant):

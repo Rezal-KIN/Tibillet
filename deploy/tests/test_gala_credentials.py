@@ -68,6 +68,22 @@ SHARED_MAIL = {
 
 
 class GeneratedGalaSecretTests(unittest.TestCase):
+    def test_mail_transport_is_shared_by_providers_and_production_keeps_native_smtp(self):
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        for provider, secret in (("stripe", STRIPE_TEST), ("cawl", CAWL_TEST)):
+            with self.subTest(provider=provider):
+                smoke = renderer.assemble(generated, secret, SHARED_MAIL, *domains, True)
+                live_secret = {**secret, provider: {**secret[provider], "mode": "live"}}
+                if provider == "stripe":
+                    live_secret[provider].update(secret_key="sk_live_example", publishable_key="pk_live_example")
+                live = renderer.assemble(generated, live_secret, SHARED_MAIL, *domains, False)
+                for application in ("lespass", "laboutik"):
+                    self.assertIn("EMAIL_BACKEND='gala_mail.TestRecipientEmailBackend'", smoke[f"{application}.env"])
+                    self.assertIn("GALA_TEST_MAIL_RECIPIENT='smoke@example.fr'", smoke[f"{application}.env"])
+                    self.assertNotIn("EMAIL_BACKEND=", live[f"{application}.env"])
+                    self.assertNotIn("GALA_TEST_MAIL_RECIPIENT=", live[f"{application}.env"])
+
     def test_cawl_credentials_stay_in_payment_services_and_preserve_gala_keys(self) -> None:
         generated = generator.generated_payload()
         domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
@@ -170,7 +186,9 @@ class GeneratedGalaSecretTests(unittest.TestCase):
         self.assertIn("EMAIL_HOST_PASSWORD='sample$#\\'password'", files["lespass.env"])
         self.assertIn("EMAIL_USE_TLS='1'", files["lespass.env"])
         self.assertIn("EMAIL_USE_SSL='0'", files["lespass.env"])
-        self.assertIn("EMAIL_BACKEND='django.core.mail.backends.dummy.EmailBackend'", files["lespass.env"])
+        for application in ("lespass", "laboutik"):
+            self.assertIn("EMAIL_BACKEND='gala_mail.TestRecipientEmailBackend'", files[f"{application}.env"])
+            self.assertIn("GALA_TEST_MAIL_RECIPIENT='smoke@example.fr'", files[f"{application}.env"])
         self.assertIn("SUB='festival'", files["lespass.env"])
         self.assertIn("GALA_APEX_TENANT='1'", files["lespass.env"])
         self.assertIn("GALA_LOCAL_FEDOW='1'", files["lespass.env"])

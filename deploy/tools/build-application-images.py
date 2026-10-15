@@ -28,7 +28,7 @@ def build_snapshot():
     # The Fedow image explicitly copies the shared CAWL gateway as well as its
     # application package. Include every tracked source needed by image_files.
     inputs = run('git', 'ls-files', 'deploy/Fedow', 'deploy/Laboutik',
-                 'deploy/source/admin-templates', 'payment_providers').splitlines()
+                 'deploy/source/admin-templates', 'payment_providers', 'gala_mail.py').splitlines()
     snapshot = {path: (Path(path).read_bytes(), 0o644)
                 for path in inputs if Path(path).suffix in {'.py', '.html'}}
     for folder in ('Fedow', 'Laboutik'):

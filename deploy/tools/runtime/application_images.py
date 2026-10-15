@@ -42,7 +42,8 @@ def image_files(component, snapshot):
         source_prefixes = ('deploy/' + folder + '/', 'deploy/source/admin-templates/')
         if component == 'fedow':
             source_prefixes += ('payment_providers/',)
-        if (not origin.startswith(source_prefixes)
+        allowed_source = origin.startswith(source_prefixes) or (component == 'laboutik' and origin == 'gala_mail.py')
+        if (not allowed_source
                 or '..' in PurePosixPath(origin).parts
                 or not target.startswith(prefix) or '..' in PurePosixPath(target).parts):
             raise ValueError('application image COPY is outside its source scope')
