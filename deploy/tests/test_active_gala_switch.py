@@ -42,6 +42,27 @@ PLAN = {
 
 
 class ActiveGalaSwitchTests(unittest.TestCase):
+    def test_both_payment_providers_use_the_same_shared_eip(self) -> None:
+        for slug, provider in (("gala-smoke", "stripe"), ("gala-smoke-cawl", "cawl")):
+            host = {"InstanceId": "i-target", "NetworkInterfaces": [{
+                "NetworkInterfaceId": "eni-target", "Attachment": {"DeviceIndex": 0},
+                "Groups": [{"GroupId": "sg-target"}],
+            }]}
+            with self.subTest(provider=provider), \
+                    mock.patch.object(switch, "catalog_galas", return_value={slug: {
+                        "create_instance": True, "domain": SETTINGS["public_domain"],
+                        "payment_provider": provider,
+                    }}), \
+                    mock.patch.object(switch, "target_instance", return_value=host), \
+                    mock.patch.object(switch, "address", return_value={"PublicIp": "51.44.90.200"}), \
+                    mock.patch.object(switch, "active_marker", return_value="none"), \
+                    mock.patch.object(switch, "aws", return_value={"Addresses": []}), \
+                    mock.patch.object(switch, "command", return_value="a" * 40):
+                plan = switch.build_plan(slug, SETTINGS)
+            self.assertEqual(plan["eip_allocation_id"], SETTINGS["allocation_id"])
+            self.assertEqual(plan["eip_public_ip"], "51.44.90.200")
+            self.assertEqual(plan["target_slug"], slug)
+
     def test_rejects_stale_plan_before_mutation(self) -> None:
         with mock.patch.object(switch, "build_plan", return_value={**PLAN, "current_marker": "other"}), mock.patch.object(switch, "aws") as aws:
             with self.assertRaisesRegex(ValueError, "stale"):

@@ -180,8 +180,10 @@ resource "aws_security_group" "runtime" {
       { port = 53, protocol = "udp" },
       { port = 80, protocol = "tcp" },
       { port = 443, protocol = "tcp" },
+      { port = 587, protocol = "tcp" },
     ] : [{ port = 0, protocol = "-1" }]
     content {
+      description = ""
       from_port   = egress.value.port
       to_port     = egress.value.port
       protocol    = egress.value.protocol
