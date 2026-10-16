@@ -202,19 +202,28 @@ class CawlGateway:
             response = merchant.refunds().get_refunds(payment_id).to_dictionary()
         return response.get("refunds", [])
 
-    def refund(self, payment_id, amount, operation_id):
+    def refund(self, payment_id, amount, operation_id, operation_reference=None):
         from onlinepayments.sdk.call_context import CallContext
         from onlinepayments.sdk.domain.refund_request import RefundRequest
+        from onlinepayments.sdk.declined_refund_exception import DeclinedRefundException
 
         operation_id = str(UUID(str(operation_id)))
         if type(amount) is not int or amount <= 0:
             raise CawlError("Le remboursement doit être positif, en centimes.")
         request = RefundRequest()
         request.from_dictionary({"amountOfMoney": {"amount": amount, "currencyCode": "EUR"}})
+        if operation_reference is not None:
+            # Durable correlation also survives the provider's idempotence window.
+            request.from_dictionary({"operationReferences": {"merchantReference": operation_reference}})
         with self.merchant() as merchant:
-            response = merchant.payments().refund_payment(
-                payment_id, request, CallContext(idempotence_key=operation_id),
-            )
+            try:
+                response = merchant.payments().refund_payment(
+                    payment_id, request, CallContext(idempotence_key=operation_id),
+                )
+            except DeclinedRefundException as error:
+                if error.refund_response is None:
+                    raise
+                response = error.refund_response
         return response.to_dictionary()
 
     def verify_webhook(self, body, headers):

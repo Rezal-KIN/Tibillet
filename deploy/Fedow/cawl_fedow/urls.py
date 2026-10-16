@@ -7,7 +7,8 @@ urlpatterns = [
     path("wallet/get_federated_token_refill_checkout/", CawlWalletAPI.as_view({"post": "get_federated_token_refill_checkout"})),
     path("wallet/<uuid:pk>/retrieve_from_refill_checkout/", CawlWalletAPI.as_view({"get": "retrieve_from_refill_checkout"})),
     path("wallet/global_asset_bank_stripe_deposit/", stripe_disabled),
-    path("wallet/refund_fed_by_signature/", stripe_disabled),
+    path("wallet/refund_fed_by_signature/", CawlWalletAPI.as_view({"post": "refund_fed_by_signature"})),
+    path("wallet/cawl_refund_status/", CawlWalletAPI.as_view({"get": "cawl_refund_status"})),
     path("webhook_stripe/", stripe_disabled),
     re_path(r"^stripe(?:/|$)", stripe_disabled),
 ] + native_urls

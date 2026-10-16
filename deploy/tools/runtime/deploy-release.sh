@@ -86,6 +86,11 @@ for group in "${compose_groups[@]}"; do
 done
 python3 "$SCRIPT_DIR/validate-application-images.py" "$MANIFEST_PATH"
 
+# Do not run the previous worker while its container and migrations change.
+if [[ "${PAYMENT_PROVIDER:-stripe}" == cawl ]] && systemctl is-active --quiet "tibillet-gala-cawl-refunds@${GALA_SLUG}.timer"; then
+  systemctl stop "tibillet-gala-cawl-refunds@${GALA_SLUG}.timer" "tibillet-gala-cawl-refunds@${GALA_SLUG}.service"
+fi
+
 prepare_writable_mounts "$FEDOW_IMAGE" fedow \
   "$REPO_ROOT/deploy/Fedow/www" "$REPO_ROOT/deploy/Fedow/logs" \
   "$REPO_ROOT/deploy/Fedow/sqlite-database"
@@ -243,6 +248,13 @@ trap cleanup EXIT
 cp "$MANIFEST_PATH" "$manifest_copy"
 chmod 600 "$manifest_copy"
 mv -f "$manifest_copy" "$(deployed_manifest_path)"
+# Process only after migrations, service health, backup and the exact manifest
+# are confirmed. Stripe hosts never enable this payment-provider worker.
+if [[ "${PAYMENT_PROVIDER:-stripe}" == cawl ]]; then
+  systemctl enable --now "tibillet-gala-cawl-refunds@${GALA_SLUG}.timer"
+elif systemctl cat "tibillet-gala-cawl-refunds@.timer" >/dev/null 2>&1; then
+  systemctl disable --now "tibillet-gala-cawl-refunds@${GALA_SLUG}.timer"
+fi
 # Bootstrap can attempt startup before the first deployed manifest exists.
 # Once this release is healthy and backed up, reconcile the same boot service
 # so a historical first-boot failure is not left behind indefinitely.

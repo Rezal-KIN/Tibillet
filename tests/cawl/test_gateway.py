@@ -141,6 +141,32 @@ def test_refund_has_stable_idempotence_key_and_amount(config):
     assert sent == [("payment-001", {"amountOfMoney": {"amount": 500, "currencyCode": "EUR"}}, str(operation))]
 
 
+def test_wallet_refund_reference_is_serialized_by_the_official_sdk(config):
+    from onlinepayments.sdk.domain.refund_response import RefundResponse
+
+    sent = []
+    def refund(payment_id, request, context):
+        sent.append(request.to_dictionary())
+        return RefundResponse().from_dictionary({'id': 'refund-001', 'status': 'REFUND_REQUESTED'})
+    merchant = SimpleNamespace(payments=lambda: SimpleNamespace(refund_payment=refund))
+    operation = uuid4()
+    CawlGateway(config, merchant).refund('payment-001', 800, operation, operation_reference=operation.hex)
+    assert sent == [{'amountOfMoney': {'amount': 800, 'currencyCode': 'EUR'},
+                     'operationReferences': {'merchantReference': operation.hex}}]
+
+
+def test_declined_refund_preserves_the_definitive_provider_result(config):
+    from onlinepayments.sdk.declined_refund_exception import DeclinedRefundException
+    from onlinepayments.sdk.domain.refund_error_response import RefundErrorResponse
+
+    response = {'id': 'refund-rejected', 'status': 'REJECTED',
+                'refundOutput': {'amountOfMoney': {'amount': 800, 'currencyCode': 'EUR'}}}
+    def refund(*_args):
+        raise DeclinedRefundException(400, '{}', RefundErrorResponse().from_dictionary({'refundResult': response}))
+    merchant = SimpleNamespace(payments=lambda: SimpleNamespace(refund_payment=refund))
+    assert CawlGateway(config, merchant).refund('payment-001', 800, uuid4()) == response
+
+
 def test_no_payment_created_is_pending(config):
     from onlinepayments.sdk.domain.get_hosted_checkout_response import GetHostedCheckoutResponse
 

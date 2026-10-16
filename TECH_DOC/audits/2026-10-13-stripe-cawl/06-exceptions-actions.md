@@ -1,5 +1,12 @@
 # Exceptions et actions à effectuer
 
+Mise à jour de périmètre du 16 octobre 2026 : abonnements automatiques, TPE
+bancaires connectés et répartition des fonds entre organisations sont exclus
+définitivement par décision utilisateur. Leur absence ne bloque pas la production
+Gala. Le remboursement du solde rechargé en ligne est, lui, requis ; son parcours
+et ses contrôles sont documentés dans
+[le périmètre CAWL et les remboursements](../../../deploy/docs/operations/cawl-scope-and-wallet-refunds.md).
+
 ## Avant une qualification de production
 
 | Priorité | Exception / action | Pourquoi / critère de fermeture |
@@ -26,13 +33,13 @@
 | Validation manuelle d'adhésion | Porte d'entrée conservée | Vérifier acceptation admin, lien de paiement, soumission en attente et refus |
 | Contribution Crowds | Finalisation explicite CAWL | Tester navigateur fermé, callback répété et unicité de l'email |
 | Refund réservation/billet | Journal, demande API et confirmation ajoutés | Sandbox refus/attente/succès, rapprochement, limites de quantité et reprise après interruption |
-| Refund du portefeuille fédéré | Parcours Stripe bloqué en mode CAWL | Construire un débit Fedow et un refund CAWL corrélés, avec fonds déjà dépensés, concurrence et reprise |
-| Abonnement automatique CAWL | Non implémenté ; tarifs récurrents refusés avant appel PSP | Collecte initiale COF, autorisation de paiements ultérieurs, échéancier, échec/relance, arrêt et itérations |
+| Refund du portefeuille fédéré | Parcours CAWL avec réservation native Fedow et remboursement des recharges d'origine | Qualifier la livraison et le remboursement auprès du prestataire ; voir le document de périmètre |
+| Abonnement automatique CAWL | Hors périmètre définitif ; tarifs récurrents refusés avant appel PSP | Aucune implémentation prévue, décision utilisateur du 16 octobre 2026 |
 | Abonnements Stripe existants | Historique conservé, aucune conversion | Arrêter ou maintenir leur suivi dans Stripe ; réinscription CAWL suivant le contrat du marchand |
 | Mandat SEPA existant | Aucun transfert implémenté | Confirmer support CAWL, réautorisation et traitements différés/refus/retours |
-| Onboarding Connect automatique | Refusé en mode CAWL | Associer un contrat marchand approuvé à chaque organisation ; API marketplace si le contrat la fournit |
-| Reversement fédéré inter-organisations | `transfer.created` Stripe désactivé | Définir une mécanique CAWL/bancaire et une comptabilité des créances par organisation |
-| Terminal WisePOS | Routes Stripe Fedow désactivées | Intégrer l'offre terminal CAWL pertinente ou conserver un moyen caisse indépendant |
+| Onboarding Connect automatique | Hors périmètre définitif ; refusé en mode CAWL | Aucune implémentation prévue dans cette intégration Gala |
+| Reversement fédéré inter-organisations | Hors périmètre définitif ; `transfer.created` Stripe désactivé | Aucune implémentation prévue, décision utilisateur du 16 octobre 2026 |
+| Terminal WisePOS | Hors périmètre définitif ; routes Stripe Fedow désactivées | Aucune implémentation prévue ; lecteurs NFC cashless distincts et conservés |
 | Devises autres que EUR | Refus explicite | Paramétrage marchand, calculs et tests par devise, sans réutiliser implicitement l'unité des tokens |
 | Session HCP expirée sans ID paiement connu | Reprise automatique incomplète | Recherche/rapprochement marchand qualifié ; ne pas recréer un débit en cas d'incertitude |
 | Capture/refund contesté ou chargeback | Pas de mécanisme dédié ajouté | Événements réels du contrat, journal, rapprochement et procédure pour fonds déjà dépensés |
@@ -49,8 +56,9 @@
 3. Un paiement capturé suivi d'une panne de synchronisation ne doit pas être
    recapturé. Corriger la synchronisation de la vente existante.
 4. Un refund PSP d'une recharge ne doit pas laisser en circulation une monnaie
-   remboursée. Le parcours de remboursement des wallets doit être conçu avant
-   son activation, et distinguer solde disponible et sommes déjà dépensées.
+   remboursée. Le parcours réserve désormais les sommes dans le journal natif
+   avant soumission bancaire et restitue uniquement un refus définitif. Sa
+   qualification doit vérifier les cas décrits dans le document de périmètre.
 5. La désactivation de Stripe coupe ses nouveaux appels, mais l'ancien stock de
    factures, mandats et refunds doit continuer à être rapproché dans son
    prestataire d'origine.
@@ -68,7 +76,6 @@
   et mise à jour des tests historiques ; le mode CAWL actuel la conserve comme
   dépendance de compatibilité, tout en bloquant ses opérations concernées.
 
-Le remplacement complet de l'ensemble de Stripe n'est donc **pas encore
-qualifié ni fonctionnellement achevé**. La branche fournit une candidate
-concrète pour les paiements ponctuels et la recharge, avec les exclusions et
-les étapes de fermeture ci-dessus.
+La qualification de production porte sur le **périmètre Gala convenu**, et non
+sur un remplacement de toutes les capacités de Stripe. Les exclusions
+définitives ci-dessus ne constituent pas une liste d'implémentations futures.

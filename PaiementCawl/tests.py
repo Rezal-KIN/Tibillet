@@ -17,11 +17,12 @@ from payment_providers.cawl import CawlConfiguration, CawlError, HostedCheckout,
 
 
 class WalletRefundViewTests(SimpleTestCase):
-    def request(self):
+    def request(self, method='get', data=None):
         from django.contrib.messages.storage.fallback import FallbackStorage
 
-        request = RequestFactory().get('/my_account/refund_online/')
+        request = getattr(RequestFactory(), method)('/my_account/refund_online/', data or {}, HTTP_HX_REQUEST='true')
         request.user = SimpleNamespace(email='refund-qa@example.test',
+                                       email_valid=True,
                                        wallet=SimpleNamespace(uuid=uuid4()),
                                        full_name=lambda: 'Refund QA')
         request.session = {}
@@ -29,15 +30,74 @@ class WalletRefundViewTests(SimpleTestCase):
         return request
 
     @override_settings(PAYMENT_PROVIDER='cawl')
-    def test_cawl_wallet_refund_stops_before_the_unsupported_fedow_call(self):
+    def test_cawl_get_cannot_trigger_a_financial_operation(self):
         from BaseBillet.views import MyAccount
 
         request = self.request()
-        with patch('BaseBillet.views.FedowAPI') as fedow:
+        with patch('PaiementCawl.wallet_refunds.FedowAPI') as fedow:
             response = MyAccount().refund_online(request)
         fedow.assert_not_called()
         self.assertEqual(response['HX-Redirect'], '/my_account/balance/')
-        self.assertIn('Contactez le collectif', str(list(request._messages)[0]))
+        self.assertEqual(list(request._messages), [])
+
+    @override_settings(PAYMENT_PROVIDER='cawl')
+    def test_cawl_post_records_a_request_and_sends_an_accurate_confirmation(self):
+        from BaseBillet.views import MyAccount
+
+        request_id = uuid4()
+        request = self.request('post', {'request_id': str(request_id), 'amount': '999999'})
+        with patch('PaiementCawl.wallet_refunds.FedowAPI') as fedow, \
+                patch('PaiementCawl.wallet_refunds.send_email_generique.delay') as confirmation:
+            wallet = fedow.return_value.wallet
+            wallet.request_cawl_wallet_refund.side_effect = [
+                (202, {'created': True, 'amount': 800, 'status': 'PENDING'}),
+                (202, {'created': False, 'amount': 800, 'status': 'PENDING'}),
+            ]
+            response = MyAccount().refund_online(request)
+            MyAccount().refund_online(request)
+        self.assertEqual(response['HX-Redirect'], '/my_account/balance/')
+        wallet.request_cawl_wallet_refund.assert_called_with(request.user, request_id)
+        self.assertEqual(wallet.request_cawl_wallet_refund.call_count, 2)
+        confirmation.assert_called_once()
+        body = confirmation.call_args.kwargs['context']
+        self.assertIn('8.00', body['title'])
+        self.assertIn('enregistrée', body['title'])
+        self.assertIn('CAWL', body['main_text'])
+        self.assertNotIn('Stripe', str(body))
+        wallet.refund_fed_by_signature.assert_not_called()
+
+    @override_settings(PAYMENT_PROVIDER='cawl')
+    def test_cawl_requires_confirmed_email_and_a_valid_request_id(self):
+        from BaseBillet.views import MyAccount
+
+        with patch('PaiementCawl.wallet_refunds.FedowAPI') as fedow:
+            unconfirmed = self.request('post', {'request_id': str(uuid4())})
+            unconfirmed.user.email_valid = False
+            MyAccount().refund_online(unconfirmed)
+            MyAccount().refund_online(self.request('post', {'request_id': 'invalid'}))
+        fedow.assert_not_called()
+
+    @override_settings(PAYMENT_PROVIDER='cawl')
+    def test_cawl_timeout_does_not_announce_a_successful_refund(self):
+        from BaseBillet.views import MyAccount
+
+        request = self.request('post', {'request_id': str(uuid4())})
+        with patch('PaiementCawl.wallet_refunds.FedowAPI') as fedow, \
+                patch('PaiementCawl.wallet_refunds.send_email_generique.delay') as confirmation:
+            fedow.return_value.wallet.request_cawl_wallet_refund.side_effect = TimeoutError()
+            MyAccount().refund_online(request)
+        confirmation.assert_not_called()
+        self.assertIn('interrompue', str(list(request._messages)[0]))
+
+    @override_settings(PAYMENT_PROVIDER='cawl')
+    def test_cawl_non_htmx_form_has_a_normal_redirect(self):
+        from BaseBillet.views import MyAccount
+
+        request = self.request()
+        del request.META['HTTP_HX_REQUEST']
+        response = MyAccount().refund_online(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/my_account/balance/')
 
     @override_settings(PAYMENT_PROVIDER='stripe')
     def test_stripe_wallet_refund_keeps_the_native_request_and_confirmation(self):

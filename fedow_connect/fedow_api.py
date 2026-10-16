@@ -594,6 +594,17 @@ class WalletFedow():
             return response_refund_fed.status_code, wallet_serialized
         return (500, wallet_serialized.errors)
 
+    def request_cawl_wallet_refund(self, user, request_id):
+        response = _post(self.fedow_config, user=user,
+                         path='wallet/refund_fed_by_signature',
+                         data={'request_id': str(request_id)})
+        return response.status_code, response.json()
+
+    def cawl_wallet_refund_status(self, user):
+        response = _get(self.fedow_config, user=user, path='wallet/cawl_refund_status')
+        response.raise_for_status()
+        return response.json()
+
     def get_or_create_wallet(self, user: TibilletUser):
         email = user.email.lower()
         response_link = _post(self.fedow_config, user=user, path='wallet/get_or_create', data={
