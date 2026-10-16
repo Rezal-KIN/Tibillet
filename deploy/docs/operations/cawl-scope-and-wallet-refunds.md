@@ -77,6 +77,11 @@ une image différente de ce manifeste. Les webhooks signés de remboursement
 déclenchent également une lecture de l'état bancaire. Leur répétition ne crée
 aucune écriture financière supplémentaire.
 
+CAWL annonce la demande par `refund.refund_requested`, puis sa confirmation
+finale par `payment.refunded`. Ce dernier événement est traité comme un
+remboursement, même si son montant est inférieur à celui de la recharge
+d'origine ; il ne doit jamais repasser par la création monétaire.
+
 Pour une demande en `REVIEW`, conserver les écritures et leur référence, puis
 rechercher cette référence dans les remboursements du paiement d'origine.
 Relancer la commande ne soumet pas une nouvelle opération après l'expiration

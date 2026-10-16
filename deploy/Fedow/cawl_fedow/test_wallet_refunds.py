@@ -356,6 +356,34 @@ class WalletRefundTests(RefundFixture, TestCase):
         self.assertEqual(Transaction.objects.filter(action=Transaction.REFUND).count(), 1)
         self.gateway.refund.assert_not_called()
 
+    def test_final_payment_refunded_webhook_confirms_a_partial_refund_without_minting(self):
+        self.recharge(2000)
+        self.spend(1200)
+        batch = self.reserve()
+        refund = batch.refunds.get()
+        response = self.provider_refund(refund.checkout.provider_payment_id, 800, refund.pk, refund.pk.hex)
+        response['status'] = 'REFUND_REQUESTED'
+        finish_wallet_refund(refund, response)
+        response['status'] = 'REFUNDED'
+        # The documented final event contains payment, with the refund operation
+        # ID and refund amount, rather than the initial 2,000-cent capture.
+        event = {'apiVersion': 'v1', 'id': str(uuid4()), 'type': 'payment.refunded',
+                 'merchantId': self.config.merchant_id, 'payment': {
+                     'id': response['id'], 'status': 'REFUNDED', 'paymentOutput': {
+                         'amountOfMoney': {'amount': 800, 'currencyCode': 'EUR'},
+                         'references': {'merchantReference': str(refund.checkout_id)}}}}
+        body = json.dumps(event).encode()
+        signature = base64.b64encode(hmac.new(self.config.webhook_secret.encode(), body, hashlib.sha256).digest()).decode()
+        for _ in range(2):
+            result = APIClient().post('/webhook_cawl/', body, content_type='application/json',
+                HTTP_X_GCS_KEYID=self.config.webhook_key_id, HTTP_X_GCS_SIGNATURE=signature)
+            self.assertEqual(result.status_code, 200)
+        self.assertEqual(refund_summary(batch)['refunded'], 800)
+        self.assertEqual(self.balance(), 0)
+        self.assertEqual(Transaction.objects.filter(action=Transaction.CREATION).count(), 1)
+        self.assertEqual(Transaction.objects.filter(action=Transaction.REFUND).count(), 1)
+        self.gateway.get_payment.assert_not_called()
+
 
 @override_settings(PAYMENT_PROVIDER='cawl')
 class WalletRefundConcurrencyTests(RefundFixture, TransactionTestCase):
