@@ -31,7 +31,7 @@
             </p>
         </div>
 
-        {% if config.show_refill_button %}
+        {% if config.show_refill_button and payment_provider != 'cawl' %}
             <!-- Si pas possible de recharger, alors pas possible de se faire rembourser -->
             <!-- refund panel -->
             <div class="offcanvas-start offcanvas" tabindex="-1" id="refundPanel" aria-labelledby="refundPanelLabel">
@@ -131,7 +131,7 @@
                     </div>
 
 
-                    {% if config.show_refill_button %} <!-- Si pas possible de recharger -->
+                    {% if config.show_refill_button and payment_provider != 'cawl' %} <!-- Si pas possible de recharger -->
                         <div class="col-6 col-md-auto">
                             <button class="btn btn-secondary square-btn w-100"
                                     type="button"
@@ -149,7 +149,11 @@
 
                 {% if config.show_refill_button %} <!-- Si pas possible de recharger -->
                     <p class="opacity-50 m-0 mt-2">
+                        {% if payment_provider == 'cawl' %}
+                            {% trans "Le remboursement en ligne du solde n'est pas encore disponible. Contactez le collectif pour demander un remboursement." %}
+                        {% else %}
                         {% trans 'The TiBillet, recharged online, are the only currency we can refund online. For local currencies (recharged in cash or at a bank terminal on site), please contact the collective that issued them.' %}
+                        {% endif %}
                     </p>
                 {% endif %}
             </div>

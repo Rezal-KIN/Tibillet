@@ -3,7 +3,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
-from django.test import override_settings
+from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.utils import timezone
 from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.utils import tenant_context
@@ -14,6 +14,47 @@ from PaiementCawl.models import CawlRefund
 from PaiementCawl.refunds import cancel_reservation, finish_refund
 from PaiementCawl.services import CreationPaiementCawl, checkout_session, update_payment
 from payment_providers.cawl import CawlConfiguration, CawlError, HostedCheckout, PaymentSnapshot
+
+
+class WalletRefundViewTests(SimpleTestCase):
+    def request(self):
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        request = RequestFactory().get('/my_account/refund_online/')
+        request.user = SimpleNamespace(email='refund-qa@example.test',
+                                       wallet=SimpleNamespace(uuid=uuid4()),
+                                       full_name=lambda: 'Refund QA')
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        return request
+
+    @override_settings(PAYMENT_PROVIDER='cawl')
+    def test_cawl_wallet_refund_stops_before_the_unsupported_fedow_call(self):
+        from BaseBillet.views import MyAccount
+
+        request = self.request()
+        with patch('BaseBillet.views.FedowAPI') as fedow:
+            response = MyAccount().refund_online(request)
+        fedow.assert_not_called()
+        self.assertEqual(response['HX-Redirect'], '/my_account/balance/')
+        self.assertIn('Contactez le collectif', str(list(request._messages)[0]))
+
+    @override_settings(PAYMENT_PROVIDER='stripe')
+    def test_stripe_wallet_refund_keeps_the_native_request_and_confirmation(self):
+        from BaseBillet.views import MyAccount
+
+        request = self.request()
+        with patch('BaseBillet.views.FedowAPI') as fedow, \
+                patch('BaseBillet.views.send_email_generique.delay') as confirmation:
+            wallet = fedow.return_value.wallet
+            wallet.cached_retrieve_by_signature.return_value.validated_data = {
+                'tokens': [{'asset': {'is_stripe_primary': True}, 'value': 500}],
+            }
+            wallet.refund_fed_by_signature.return_value = (202, {})
+            response = MyAccount().refund_online(request)
+        wallet.refund_fed_by_signature.assert_called_once_with(request.user)
+        confirmation.assert_called_once()
+        self.assertEqual(response['HX-Redirect'], '/my_account/')
 
 
 class PaymentTests(FastTenantTestCase):
