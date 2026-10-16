@@ -162,6 +162,7 @@ def get_context(request):
 
     context = {
         "base_template": base_template,
+        "payment_provider": settings.PAYMENT_PROVIDER,
         "page": request.GET.get('page', 1),
         "tags": request.GET.getlist('tag'),
         "url_name": request.resolver_match.url_name if request.resolver_match else None,
@@ -963,6 +964,12 @@ class MyAccount(viewsets.ViewSet):
 
     @action(detail=False, methods=['GET'])
     def refund_online(self, request):
+        from PaiementCawl.services import enabled
+        if enabled():
+            messages.add_message(request, messages.INFO,
+                                 _("Le remboursement en ligne du solde n'est pas encore disponible. Contactez le collectif pour demander un remboursement."))
+            return HttpResponseClientRedirect('/my_account/balance/')
+
         user = request.user
         fedowAPI = FedowAPI()
         wallet = fedowAPI.wallet.cached_retrieve_by_signature(user).validated_data
