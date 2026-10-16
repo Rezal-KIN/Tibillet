@@ -3,6 +3,11 @@
 Audit commencé le 13 octobre 2026, arrêté pour revue le 14 octobre 2026.
 Prestataire cible : **CAWL, Crédit Agricole / Worldline**.
 
+**Décision de périmètre du 16 octobre 2026 :** renouvellements automatiques,
+TPE bancaires connectés et répartition des fonds entre organisations sont
+définitivement hors périmètre. Le remboursement du solde rechargé en ligne est
+requis. Voir [le périmètre actuel et le fonctionnement du remboursement](../../../deploy/docs/operations/cawl-scope-and-wallet-refunds.md).
+
 Livraison limitée à la branche, à la demande de l'utilisateur. Aucun déploiement
 ni modification de production. Le remplacement fonctionnel complet reste à
 achever ; les exclusions sont recensées dans le chapitre 6.

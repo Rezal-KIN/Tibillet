@@ -1,0 +1,10 @@
+[Unit]
+Description=Follow pending CAWL wallet refunds
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=30s
+Unit=tibillet-gala-cawl-refunds@%i.service
+
+[Install]
+WantedBy=timers.target

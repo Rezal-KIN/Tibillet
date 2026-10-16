@@ -790,7 +790,27 @@ class MyAccount(viewsets.ViewSet):
         template_context['header'] = False
         template_context['account_tab'] = 'balance'
 
+        from PaiementCawl.services import enabled
+        if enabled():
+            from PaiementCawl.wallet_refunds import status_context
+            template_context['cawl_refund_request_id'] = str(uuid.uuid4())
+            template_context['cawl_refund'] = status_context(request.user)
+
         return render(request, "reunion/views/account/balance.html", context=template_context)
+
+    @action(detail=False, methods=['GET'])
+    def cawl_refund_status(self, request):
+        from PaiementCawl.services import enabled
+        if not enabled():
+            return HttpResponse(status=404)
+        from PaiementCawl.wallet_refunds import status_context
+        refund = status_context(request.user)
+        response = render(request, "reunion/views/account/cawl_refund_status.html", {'cawl_refund': refund})
+        if request.headers.get('HX-Request') and refund.get('amount') and not refund.get('pending'):
+            # Refresh the balance/history and unlock a fresh confirmation after a
+            # rejection. The final page has no poll, so this cannot loop.
+            response['HX-Refresh'] = 'true'
+        return response
 
     @action(detail=False, methods=['GET'])
     def my_cards(self, request):
@@ -962,13 +982,12 @@ class MyAccount(viewsets.ViewSet):
             logger.warning(_("User email not active"))
             return HttpResponseClientRedirect('/my_account/')
 
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=['GET', 'POST'])
     def refund_online(self, request):
         from PaiementCawl.services import enabled
         if enabled():
-            messages.add_message(request, messages.INFO,
-                                 _("Le remboursement en ligne du solde n'est pas encore disponible. Contactez le collectif pour demander un remboursement."))
-            return HttpResponseClientRedirect('/my_account/balance/')
+            from PaiementCawl.wallet_refunds import request_wallet_refund
+            return request_wallet_refund(request)
 
         user = request.user
         fedowAPI = FedowAPI()

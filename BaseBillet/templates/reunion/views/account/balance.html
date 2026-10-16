@@ -31,7 +31,7 @@
             </p>
         </div>
 
-        {% if config.show_refill_button and payment_provider != 'cawl' %}
+        {% if config.show_refill_button %}
             <!-- Si pas possible de recharger, alors pas possible de se faire rembourser -->
             <!-- refund panel -->
             <div class="offcanvas-start offcanvas" tabindex="-1" id="refundPanel" aria-labelledby="refundPanelLabel">
@@ -44,6 +44,11 @@
                     <div class="d-flex flex-column justify-content-between h-100">
                         <div>
                             <div class="alert  alert-primary" role="alert">
+                                {% if payment_provider == 'cawl' %}
+                                <h4>{% trans "Récupérer votre solde restant" %}</h4>
+                                <p>{% trans "Votre solde rechargé en ligne sera remboursé sur les moyens de paiement utilisés pour vos recharges." %}</p>
+                                <p>{% trans "Le montant demandé est retiré de votre solde disponible pendant le traitement. En cas de refus bancaire définitif, il est recrédité sur votre portefeuille." %}</p>
+                                {% else %}
                                 <h4>{% trans "Don't panic! You've got time left…" %}</h4>
                                 <p>
                                     {% translate 'TiBillet works on a <a href="https://tibillet.github.io/documentation_v3/">melting funds</a> principle.' %}
@@ -56,22 +61,39 @@
                                 <p>
                                     {% translate "Your Pass card itself and your account are yours for life and can be used with every TiBillet collective!" %}
                                 </p>
+                                {% endif %}
                             </div>
                         </div>
 
                         <div class="p-3">
                             <div class="alert  alert-warning" role="alert">
+                                {% if payment_provider == 'cawl' %}
+                                <p>{% trans "Pour les montants rechargés en espèces ou à la caisse, contactez le collectif." %}</p>
+                                {% else %}
                                 <p>{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named ‘TiBillet’. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
+                                {% endif %}
                             </div>
                             <p class="lead">
                                 {# TODO: montant remboursement #}
                                 {% trans "Confirm the refund request?" %}
                             </p>
 
+                            {% if payment_provider == 'cawl' %}
+                            <form method="post" action="/my_account/refund_online/"
+                                  hx-post="/my_account/refund_online/" hx-indicator="#tibillet-spinner">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_id" value="{{ cawl_refund_request_id }}">
+                                <button type="submit" class="btn btn-primary d-block w-100 mb-3"
+                                        data-bs-dismiss="offcanvas" {% if cawl_refund.pending %}disabled{% endif %}>
+                                    {% trans "Send request" %}
+                                </button>
+                            </form>
+                            {% else %}
                             <button type="button" class="btn btn-primary d-block w-100 mb-3"
                                     data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"
                                     hx-get="/my_account/refund_online/" hx-indicator="#tibillet-spinner">
                                 {% trans "Send request" %}</button>
+                            {% endif %}
 
 {#                            <button disabled type="button" class="btn btn-secondary d-block w-100 mb-3"#}
 {#                                {% trans "Gift my leftover balance to" %} {{ config.organisation }}#}
@@ -131,7 +153,7 @@
                     </div>
 
 
-                    {% if config.show_refill_button and payment_provider != 'cawl' %} <!-- Si pas possible de recharger -->
+                    {% if config.show_refill_button %} <!-- Si pas possible de recharger -->
                         <div class="col-6 col-md-auto">
                             <button class="btn btn-secondary square-btn w-100"
                                     type="button"
@@ -150,11 +172,14 @@
                 {% if config.show_refill_button %} <!-- Si pas possible de recharger -->
                     <p class="opacity-50 m-0 mt-2">
                         {% if payment_provider == 'cawl' %}
-                            {% trans "Le remboursement en ligne du solde n'est pas encore disponible. Contactez le collectif pour demander un remboursement." %}
+                            {% trans "Le solde rechargé en ligne peut être remboursé sur les moyens de paiement d'origine. Pour les recharges en caisse, contactez le collectif." %}
                         {% else %}
                         {% trans 'The TiBillet, recharged online, are the only currency we can refund online. For local currencies (recharged in cash or at a bank terminal on site), please contact the collective that issued them.' %}
                         {% endif %}
                     </p>
+                {% endif %}
+                {% if payment_provider == 'cawl' %}
+                    {% include 'reunion/views/account/cawl_refund_status.html' %}
                 {% endif %}
             </div>
 

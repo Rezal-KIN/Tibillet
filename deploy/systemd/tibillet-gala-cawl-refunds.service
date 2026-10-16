@@ -1,0 +1,16 @@
+[Unit]
+Description=Reconcile CAWL wallet refunds for one TiBillet Gala
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=/etc/tibillet-gala/%i.conf
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/lib/tibillet-gala/reconcile-cawl-wallet-refunds.sh /etc/tibillet-gala/%i.conf
+TimeoutStartSec=30min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full

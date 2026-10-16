@@ -35,7 +35,7 @@ for script in \
   card_stock.py import_card_stock_fedow.py import-gala-card-stock.py \
   deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
-  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py fedow-sqlite.py \
+  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py reconcile-cawl-wallet-refunds.sh fedow-sqlite.py \
   reclaim-deployment-space.sh restore-postgres.sh \
   verify-backup-restore.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do
@@ -45,6 +45,8 @@ done
 install -m 0644 "$REPO_ROOT/deploy/systemd/tibillet-gala-stacks.service" "/etc/systemd/system/tibillet-gala-stacks@.service"
 install -m 0644 "$REPO_ROOT/deploy/systemd/tibillet-gala-backup.service" "/etc/systemd/system/tibillet-gala-backup@.service"
 install -m 0644 "$REPO_ROOT/deploy/systemd/tibillet-gala-backup.timer" "/etc/systemd/system/tibillet-gala-backup@.timer"
+install -m 0644 "$REPO_ROOT/deploy/systemd/tibillet-gala-cawl-refunds.service" "/etc/systemd/system/tibillet-gala-cawl-refunds@.service"
+install -m 0644 "$REPO_ROOT/deploy/systemd/tibillet-gala-cawl-refunds.timer" "/etc/systemd/system/tibillet-gala-cawl-refunds@.timer"
 systemctl daemon-reload
 systemctl enable "tibillet-gala-stacks@${GALA_SLUG}.service"
 printf 'Runtime contract installed for gala %s at commit %s\n' "$GALA_SLUG" "$(git -C "$REPO_ROOT" rev-parse HEAD)"
