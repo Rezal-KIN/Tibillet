@@ -101,14 +101,18 @@ def webhook(request):
         event = client.verify_webhook(request.body, request.headers)
     except CawlError:
         return HttpResponse(status=400)
-    if event["type"].startswith("refund.") and event.get("refund"):
+    # CAWL announces the final refund with payment.refunded, including when
+    # its amount is smaller than the original refill. Never treat it as a mint.
+    refund_payload = event.get("refund") if event["type"].startswith("refund.") else (
+        event.get("payment") if event["type"] == "payment.refunded" else None)
+    if refund_payload:
         from cawl_fedow.models import WalletRefund
         from cawl_fedow.refunds import reconcile_wallet_refund, reference
 
         try:
             if Webhook.objects.filter(event_id=event["id"]).exists():
                 return HttpResponse(status=200)
-            payload = event["refund"]
+            payload = refund_payload
             provider_id = payload.get("id")
             if not isinstance(provider_id, str) or not provider_id:
                 return HttpResponse(status=400)
