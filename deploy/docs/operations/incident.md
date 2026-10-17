@@ -20,8 +20,10 @@ pendant l'événement, pas une barrière qui nécessite un comité pour être le
    validé sur une release déjà qualifiée par la pipeline Test).
 2. `aws sso login --profile gala-elevated` (session de 12 h, nouvelle MFA seulement si la
    session portail de 14 jours a expiré — voir `docs/aws-access.md`).
-3. Backup manuel avant toute action : `sudo /usr/local/lib/tibillet-gala/backup-postgres.sh
-   /etc/tibillet-gala/<slug>.conf` (voir `docs/operations/backup-restore.md`).
+3. Vérifier le backup existant. Si une nouvelle sauvegarde est nécessaire, demander
+   l'accord explicite de l'utilisateur pour cette copie, puis utiliser
+   `backup-postgres.sh CONFIG BACKUP_ID --confirm-backup` (voir
+   `docs/operations/backup-restore.md`). Un incident ne dispense pas de cet accord.
 4. Éditer `/etc/tibillet-gala/<slug>.conf` sur l'EC2 : `DEPLOYMENT_LOCKED=false`.
 5. `deploy-release.sh` avec le manifeste de la release déjà validée (jamais une release qui
    n'a pas été qualifiée par la pipeline Test — l'incident ne dispense pas de cette étape).

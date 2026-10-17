@@ -147,9 +147,10 @@ class FedowSQLiteStorageTests(unittest.TestCase):
         release = (RUNTIME / "deploy-release.sh").read_text()
         self.assertLess(release.index("begin-initialization"), release.index("up -d"))
         prepare = release.index("--check-only")
-        upload = release.index('"$SCRIPT_DIR/backup-postgres.sh"', prepare)
-        seal = release.index('"$SCRIPT_DIR/fedow-sqlite.py" initialize-storage', upload)
-        self.assertLess(upload, seal)
+        gate = release.index('require_initial_backup_coverage "$fedow_storage_state"', prepare)
+        seal = release.index('"$SCRIPT_DIR/fedow-sqlite.py" initialize-storage', gate)
+        self.assertLess(gate, seal)
+        self.assertNotIn('"$SCRIPT_DIR/backup-postgres.sh"', release)
 
 
 if __name__ == "__main__":

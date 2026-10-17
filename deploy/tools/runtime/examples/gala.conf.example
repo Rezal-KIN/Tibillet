@@ -44,7 +44,8 @@ DEPLOYMENT_LOCKED=true
 
 # The sole exception to the normally mandatory prior backup: set true only for
 # the very first deployment to an empty, dedicated gala instance. The initial
-# deployment must create a successful backup, then this is immediately false.
+# deployment waits for a separately approved successful backup before it can
+# finalize. No deployment or boot is allowed to create a backup implicitly.
 ALLOW_INITIAL_DEPLOY=false
 
 # Preflight thresholds. 86400 = 24h max backup age. 10485760 KiB = 10 GiB free.

@@ -17,13 +17,11 @@ require_command python3
 require_var AWS_REGION
 require_var COMPOSE_FILES
 
+disable_automatic_backups
 "$SCRIPT_DIR/reclaim-deployment-space.sh" "$CONFIG_PATH"
 
-# Hosts deployed before the first-backup gate may have a release marker but no
-# backup. Take that backup before preflight; never waive the gate on a retry.
-if [[ -f "$(deployed_manifest_path)" && ! -s "$(runtime_dir)/last-successful-backup" ]]; then
-  "$SCRIPT_DIR/backup-postgres.sh" "$CONFIG_PATH"
-fi
+# Missing or stale backups are reported by preflight. Deployment approval never
+# implicitly authorizes a new backup; the operator must ask for that separately.
 
 # Materialize the three app-specific secrets before Compose reads their env_file
 # paths. This is also required for the first release, before systemd has ever
@@ -232,15 +230,9 @@ done
 # A fresh Gala must have a recoverable database snapshot before its first
 # release is marked deployed. Existing Galas are already covered by preflight.
 fedow_storage_state="$(python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" --check-only)"
-# Take a first SQLite backup even if a historical PostgreSQL backup exists.
-if [[ "$fedow_storage_state" == initialized || ! -s "$(runtime_dir)/last-successful-backup" ]]; then
-  "$SCRIPT_DIR/backup-postgres.sh" "$CONFIG_PATH"
-fi
-# Seal only after that upload succeeded; a failed first backup must be retried.
+require_initial_backup_coverage "$fedow_storage_state"
+# Seal only after an explicitly approved compatible backup succeeded.
 python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" >/dev/null
-# Enable the periodic timer only after databases exist and one upload worked.
-# install-runtime-contract intentionally does not start it during bootstrap.
-systemctl enable --now "tibillet-gala-backup@${GALA_SLUG}.timer"
 install -d -m 0750 "$(release_dir)"
 manifest_copy="$(mktemp "$(release_dir)/deployed-manifest.json.XXXXXX")"
 cleanup() { rm -f "$manifest_copy"; }
