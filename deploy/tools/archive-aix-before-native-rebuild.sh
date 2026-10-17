@@ -6,8 +6,12 @@ set -euo pipefail
 umask 077
 
 case "${1:-}" in
-  --check|--archive-three-databases) ;;
-  *) echo 'Use --check or explicit --archive-three-databases' >&2; exit 1 ;;
+  --check) [[ "$#" == 1 ]] || exit 1 ;;
+  --archive-three-databases)
+    [[ "$#" == 2 && "${2:-}" == --confirm-backup ]] || {
+      echo 'Ask the user before creating an archive, then pass --confirm-backup' >&2; exit 1;
+    } ;;
+  *) echo 'Use --check or explicit --archive-three-databases --confirm-backup' >&2; exit 1 ;;
 esac
 CONFIG=/etc/tibillet-gala/gala-am-aix.conf
 # shellcheck source=/dev/null
@@ -48,7 +52,8 @@ fi
 systemctl stop "tibillet-gala-backup@${GALA_SLUG}.timer"
 systemctl stop "tibillet-gala-backup@${GALA_SLUG}.service"
 docker stop lespass_celery lespass_django laboutik_django fedow_django >/dev/null
-/usr/local/lib/tibillet-gala/backup-postgres.sh "$CONFIG"
+approved_backup_id="$(date -u +%Y%m%dT%H%M%SZ)"
+/usr/local/lib/tibillet-gala/backup-postgres.sh "$CONFIG" "$approved_backup_id" --confirm-backup
 BACKUP_ID=$(cat "$RUNTIME/last-successful-backup")
 [[ "$BACKUP_ID" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || exit 1
 /usr/local/lib/tibillet-gala/verify-backup-restore.sh "$CONFIG" "$BACKUP_ID"
