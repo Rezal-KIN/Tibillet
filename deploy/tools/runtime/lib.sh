@@ -38,6 +38,33 @@ runtime_dir() {
   printf '%s\n' "${RUNTIME_ROOT:-/var/lib/tibillet-gala}/${GALA_SLUG}"
 }
 
+disable_automatic_backups() {
+  local timer="tibillet-gala-backup@${GALA_SLUG}.timer"
+  local service="tibillet-gala-backup@${GALA_SLUG}.service"
+  # Preserve every existing backup. Mask instance units persistently so an old
+  # installed template cannot resume recurring backups after a reboot.
+  if systemctl cat "$timer" >/dev/null 2>&1; then
+    systemctl disable --now "$timer"
+  fi
+  systemctl mask "$timer" "$service"
+}
+
+require_initial_backup_coverage() {
+  local storage_state="$1"
+  local marker="$(runtime_dir)/last-successful-backup"
+  local metadata="$(runtime_dir)/last-successful-backup.metadata"
+  [[ -s "$marker" ]] \
+    || fail "initial database backup needs the user's explicit approval; run backup-postgres.sh CONFIG BACKUP_ID --confirm-backup, then retry deployment"
+  # A recent historical PostgreSQL dump must not seal a newly created SQLite
+  # wallet. Only the successful, explicitly approved SQLite upload can do so.
+  if [[ "$storage_state" == initialized ]]; then
+    [[ -s "$metadata" ]] && grep -Fxq 'fedow_sqlite=1' "$metadata" \
+      && grep -Fxq "backup_id=$(cat "$marker")" "$metadata" \
+      && grep -Fxq "gala=${GALA_SLUG}" "$metadata" \
+      || fail "new Fedow SQLite storage needs an explicitly approved backup before deployment can be finalized"
+  fi
+}
+
 check_fedow_storage() {
   require_command python3
   python3 "$(dirname "${BASH_SOURCE[0]}")/fedow-sqlite.py" check-storage "$REPO_ROOT" "$(runtime_dir)"

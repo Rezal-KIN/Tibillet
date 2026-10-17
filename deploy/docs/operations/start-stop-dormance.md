@@ -65,10 +65,12 @@ un redémarrage avec exactement la même release.
 
 ## Mise en dormance hors saison
 
-1. Backup à jour obligatoire avant l'arrêt (voir `docs/operations/backup-restore.md`) —
+1. Vérifier le backup existant avant l'arrêt (voir `docs/operations/backup-restore.md`) —
    `preflight.sh` refusera un futur déploiement sans backup récent, mais rien n'empêche
    d'arrêter l'instance sans backup : vérifier `$(runtime_dir)/last-successful-backup`
-   à la main si le doute existe.
+   à la main si le doute existe. Si une nouvelle sauvegarde est nécessaire,
+   demander l'accord de l'utilisateur avant de la créer. L'arrêt d'une instance
+   n'autorise pas implicitement cette création.
 2. `sudo systemctl stop tibillet-gala-stacks@<slug>.service`
 3. Arrêter l'instance EC2 (console ou `aws ec2 stop-instances --instance-ids <id>
    --profile gala-elevated`) — le root EBS et l'EIP restent alloués (coût résiduel assumé,
