@@ -5,21 +5,30 @@ Chaque gala a ses propres sauvegardes, chiffrées (SSE-S3), sous
 entre galas — `BACKUP_BUCKET` et le préfixe viennent de la config privée de chaque instance
 (`tools/runtime/examples/gala.conf.example`).
 
-## Backup automatique
+## Accord ponctuel obligatoire
 
-Le premier déploiement sain crée immédiatement un backup des trois bases
-(deux dumps PostgreSQL pour Lespass/LaBoutik et une copie SQLite pour Fedow),
-vérifie l'upload, puis démarre `systemd/tibillet-gala-backup.timer`. Celui-ci
-déclenche `tibillet-gala-backup@<slug>.service` toutes les 6 heures
-(00h/06h/12h/18h15 UTC, `Persistent=true` — rattrape un backup manqué au
-prochain boot si l'instance était arrêtée à l'heure prévue). Aucun déploiement
-suivant ne peut utiliser `ALLOW_INITIAL_DEPLOY` pour contourner un backup
-absent ou périmé.
+Chaque nouvelle sauvegarde de données réelles exige l'accord préalable de
+l'utilisateur, pour un gala, un contenu et un volume estimé. Une approbation de
+déploiement ou d'arrêt d'EC2 ne vaut pas approbation de sauvegarde. Un accord ne
+permet ni une récurrence ni une deuxième sauvegarde. Les tests avec données
+fictives et une restauration temporaire d'un backup existant restent possibles.
 
-```bash
-sudo systemctl enable --now tibillet-gala-backup@gala-am-aix.timer
-sudo systemctl list-timers 'tibillet-gala-backup*'
-```
+Il n'y a plus de sauvegarde périodique. L'installation du runtime et chaque
+déploiement désactivent et masquent les anciens minuteurs/services, y compris
+sur un hôte où l'ancien modèle toutes les six heures reste installé. Un reboot
+ne doit pas les réactiver. Les sauvegardes existantes sont conservées.
+
+Le script refuse un appel sans `BACKUP_ID --confirm-backup`, ainsi que la
+réutilisation d'un identifiant déjà consommé ou présent dans S3. L'opérateur ne
+passe cette confirmation qu'après accord de l'utilisateur. Un appel échoué ou
+une réponse perdue nécessite l'inspection du même identifiant et de son reçu
+local (`backup-requests/<backup_id>/status`), jamais une nouvelle sauvegarde
+automatique.
+
+Un déploiement ne crée aucun backup implicitement. Il est bloqué si le backup
+préalable est absent ou trop ancien. Le premier déploiement sur base vide peut
+démarrer les services, mais sa finalisation attend une sauvegarde approuvée ;
+un ancien dump PostgreSQL ne peut pas valider un nouveau stockage Fedow SQLite.
 
 `backup-postgres.sh` :
 
@@ -34,17 +43,24 @@ sudo systemctl list-timers 'tibillet-gala-backup*'
    Une copie brute du seul `db.sqlite3` pourrait oublier les écritures du WAL.
 3. Écrit `metadata.txt` (gala, backup_id, platform, date, moteur Fedow, conteneurs et
    images PostgreSQL) et `SHA256SUMS` couvrant tous les dumps et métadonnées.
-4. `aws s3 cp --recursive` vers le préfixe du backup, avec des chemins relatifs
+4. `aws s3 cp --recursive` vers le préfixe du backup, puis téléchargement dans un
+   répertoire temporaire et vérification des checksums. Les chemins sont relatifs
    dans `SHA256SUMS` pour permettre la vérification après téléchargement. Le SQL, les identifiants et le
    contenu des secrets ne passent jamais dans les logs.
-5. Écrit `$(runtime_dir)/last-successful-backup` — c'est ce fichier que
+5. Écrit les métadonnées et `$(runtime_dir)/last-successful-backup` après vérification — c'est ce fichier que
    `tools/runtime/preflight.sh` vérifie avant tout déploiement (refuse si absent, invalide,
    ou plus vieux que `MAX_BACKUP_AGE_SECONDS`).
 
-## Backup manuel (avant une opération risquée)
+## Une sauvegarde après accord de l'utilisateur
+
+Estimer d'abord le volume et vérifier les backups existants. Si un backup
+existant suffit, le contrôler plutôt que créer une copie supplémentaire.
+Après accord pour cette sauvegarde unique, choisir une seule fois son identifiant :
 
 ```bash
-sudo /usr/local/lib/tibillet-gala/backup-postgres.sh /etc/tibillet-gala/<slug>.conf
+BACKUP_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+sudo /usr/local/lib/tibillet-gala/backup-postgres.sh \
+  /etc/tibillet-gala/<slug>.conf "$BACKUP_ID" --confirm-backup
 ```
 
 ## Restauration PostgreSQL sur une cible dédiée
@@ -122,5 +138,8 @@ identifiants partagés entre les trois services.
   promotion/rollback d'une release sont couverts par `docs/operations/incident.md`, mais la
   restauration de données en place reste volontairement hors automatisation. Elle exige une
   décision explicite d'un administrateur et une cible de restauration dédiée.
-- Rétention et purge (`backup_retention_days`, `aws_s3_bucket_lifecycle_configuration` dans
-  `infra/terraform/storage.tf`) — automatique côté S3, aucune action manuelle requise.
+- Rétention et purge : la règle actuelle de `infra/terraform/storage.tf` expire
+  uniquement les anciennes versions d'objets. Les backups portant chacun un nom
+  daté ne sont pas supprimés automatiquement. Toute future politique doit
+  distinguer les sauvegardes courantes des archives finales, sans supprimer une
+  archive nécessaire à la restauration d'un gala dont les disques ont été retirés.

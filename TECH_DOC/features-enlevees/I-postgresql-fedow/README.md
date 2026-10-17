@@ -30,7 +30,7 @@ SHA-256 de l'archive :
 | `deploy/tools/runtime/deploy-release.sh`, `preflight.sh`, `install-runtime-contract.sh` | Ordre d'initialisation, contrôles de sauvegarde et installation des scripts |
 | `deploy/tools/runtime/backup-postgres.sh`, `restore-postgres.sh`, `verify-backup-restore.sh` | Dumps, restauration dédiée et contrôle isolé |
 | `deploy/tools/runtime/examples/gala.conf.example` et `deploy/infra/terraform/modules/gala/bootstrap-runtime.sh.tftpl` | Liste des trois conteneurs PostgreSQL et configuration initiale de l'hôte |
-| `deploy/systemd/tibillet-gala-backup.service` et `.timer` | Déclenchement des sauvegardes périodiques |
+| `deploy/tools/runtime/backup-postgres.sh` | Sauvegarde PostgreSQL/SQLite uniquement après accord explicite pour chaque copie ; anciennes unités périodiques désactivées et masquées |
 | `deploy/source/image-sources.json` | Références fixes des sources Fedow et LaBoutik |
 
 La connexion Fedow archivée utilisait `django.db.backends.postgresql` et les

@@ -9,21 +9,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 CONFIG_PATH="${1:-}"
-[[ -n "$CONFIG_PATH" ]] || fail "usage: $0 /etc/tibillet-gala/<slug>.conf"
+backup_id="${2:-}"
+[[ "$#" == 3 && -n "$CONFIG_PATH" && "$backup_id" =~ ^[0-9]{8}T[0-9]{6}Z$ \
+   && "${3:-}" == --confirm-backup ]] \
+  || fail "each backup requires the user's prior approval: usage: $0 CONFIG BACKUP_ID --confirm-backup"
 load_gala_config "$CONFIG_PATH"
 require_command aws
 require_command docker
 require_command gzip
 require_command sha256sum
 require_command python3
+require_command cmp
 require_var POSTGRES_CONTAINERS
 
-backup_id="$(utc_timestamp)"
 umask 077
 mkdir -p "$(runtime_dir)"
-work_dir="$(mktemp -d "$(runtime_dir)/backup-${backup_id}.XXXXXX")"
 remote_prefix="s3://${BACKUP_BUCKET}/galas/${GALA_SLUG}/postgres/${backup_id}"
-cleanup() { rm -rf "$work_dir"; }
+# Refuse overwriting a previous upload, including an upload whose response was
+# lost. An operator must inspect that exact backup instead of creating a retry.
+existing="$(aws s3api list-objects-v2 --region "$AWS_REGION" --bucket "$BACKUP_BUCKET" \
+  --prefix "galas/${GALA_SLUG}/postgres/${backup_id}/" --max-keys 1 \
+  --query KeyCount --output text)"
+[[ "$existing" == 0 ]] || fail "backup ID already exists or cannot be checked; inspect $remote_prefix before retrying"
+request_root="$(runtime_dir)/backup-requests"
+mkdir -p "$request_root"
+request_dir="$request_root/$backup_id"
+mkdir "$request_dir" 2>/dev/null \
+  || fail "backup approval ID was already used; inspect $remote_prefix and the request receipt before retrying"
+request_status=started
+work_dir="$(mktemp -d "$(runtime_dir)/backup-${backup_id}.XXXXXX")"
+readback_dir=""
+cleanup() {
+  local result=$?
+  if (( result != 0 )); then request_status="failed-${request_status}"; fi
+  printf '%s\n' "$request_status" > "$request_dir/status"
+  rm -rf "$work_dir"
+  if [[ -n "$readback_dir" ]]; then rm -rf "$readback_dir"; fi
+}
 trap cleanup EXIT
 
 IFS=',' read -r -a configured_containers <<< "$POSTGRES_CONTAINERS"
@@ -49,6 +71,7 @@ metadata="$work_dir/metadata.txt"
 printf 'gala=%s\nbackup_id=%s\nplatform=%s\ncreated_at=%s\n' \
   "$GALA_SLUG" "$backup_id" "${PLATFORM:-unknown}" "$(date -u --iso-8601=seconds)" > "$metadata"
 printf 'backup_format=2\nfedow_sqlite=%s\n' "$([[ -n "$fedow_mount" ]] && echo 1 || echo 0)" >> "$metadata"
+printf 'backup_policy=explicit-per-backup\n' >> "$metadata"
 
 for container in "${containers[@]}"; do
   [[ "$container" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$ ]] || fail "unsafe PostgreSQL container name"
@@ -67,6 +90,17 @@ for container in "${containers[@]}"; do
 done
 (cd "$work_dir" && sha256sum metadata.txt >> SHA256SUMS)
 
-aws s3 cp --only-show-errors --recursive "$work_dir/" "$remote_prefix/"
-printf '%s\n' "$backup_id" > "$(runtime_dir)/last-successful-backup"
+aws s3 cp --only-show-errors --recursive "$work_dir/" "$remote_prefix/" --region "$AWS_REGION" --sse AES256
+request_status=uploaded
+readback_dir="$(mktemp -d "$(runtime_dir)/backup-readback-${backup_id}.XXXXXX")"
+aws s3 cp --only-show-errors --recursive "$remote_prefix/" "$readback_dir/" --region "$AWS_REGION"
+cmp -s "$work_dir/SHA256SUMS" "$readback_dir/SHA256SUMS" || fail "uploaded checksum list differs from the approved backup"
+(cd "$readback_dir" && sha256sum -c SHA256SUMS >/dev/null)
+metadata_marker="$(mktemp "$(runtime_dir)/.last-backup-metadata.XXXXXX")"
+cp "$metadata" "$metadata_marker"
+mv -f "$metadata_marker" "$(runtime_dir)/last-successful-backup.metadata"
+backup_marker="$(mktemp "$(runtime_dir)/.last-backup.XXXXXX")"
+printf '%s\n' "$backup_id" > "$backup_marker"
+mv -f "$backup_marker" "$(runtime_dir)/last-successful-backup"
+request_status=verified-upload
 printf 'Database backup uploaded: gala=%s backup_id=%s postgres=%s sqlite=%s\n' "$GALA_SLUG" "$backup_id" "${#containers[@]}" "$([[ -n "$fedow_mount" ]] && echo 1 || echo 0)"
