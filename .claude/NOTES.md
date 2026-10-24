@@ -305,3 +305,17 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   `sources-*` de ce fork. Les dépôts `TiBillet/Fedow` et `TiBillet/LaBoutik` ne sont pas
   attachables à une session (droits d'écriture requis). Le proxy de session refuse tout push
   hors de la branche de session (403, y compris tags et suppressions).
+
+## Branche `main-fedow-import` : intégration Fedow/LaBoutik partielle (2026-10-24)
+
+- **Système concerné** : base « version intégrée » (tag `archive/main-fedow-import`) envisagée pour le multi-gala.
+- **Symptôme** : `manage.py install` échoue sans serveur Fedow distant (`root_fedow_handshake`
+  → `GET /root_tibillet_handshake/`, puis `FedowAPI.create_place`). La base ne s'amorce pas sans Fedow.
+- **Cause** : `fedow_core` (moteur de portefeuille local) coexiste avec `fedow_connect` (HTTP vers le Fedow
+  « legacy »). `fedow_connect/services.py` : « permettra un jour de débrancher le Fedow legacy » ;
+  `fedow_core/CARTES.md` : « remplace progressivement `fedow_connect/` ». Installation, lieux et cartes
+  passent encore par le Fedow distant ; le POS `laboutik` et `controlvanne` utilisent le moteur local.
+  Aucun historique commun avec `main` (`unrelated histories`) : pas de merge, un report est nécessaire.
+- **Solution / contournement** : pour exécuter les tests il faut une vraie stack (Fedow distant + memcached
+  `memcached:11211` + redis `redis:6379` + PostgreSQL), donc Docker/CI ; pas de Docker dans la session cloud.
+  Ne pas émuler Fedow à la main (trop d'endpoints).
