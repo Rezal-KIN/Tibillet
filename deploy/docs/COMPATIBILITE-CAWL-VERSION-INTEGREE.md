@@ -5,6 +5,25 @@ d'application, environ 1 700 lignes hors `deploy/`) avec le `main` de TiBillet/L
 (`4f135ecfa`, 24 octobre : `fedow_core` local, `laboutik` multi-tenant, moteur de monnaie
 par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
 
+## Avancement (25 octobre 2026)
+
+- **Bloc A (ventes en ligne) : porté**, commit `66a0fd261`. TiBillet écrit la vente et
+  les avoirs (règlements `CW`) comme pour Stripe ; seuls les appels au prestataire changent.
+  Tests : `tests/pytest/test_cawl_ventes.py` (11), `tests/pytest/test_cawl_passerelle.py` (26).
+  Aucun nouvel échec dans les tests de vente, d'avoir, de panier et de réservation de
+  créneaux en mode Stripe (comparaison test par test avec la mesure de l'étape 0).
+- **Bloc D (multi-tenant) : fait.** Un seul contrat CAWL pour toute l'instance (décision du
+  25 octobre) ; les lieux autorisés sont listés dans `CAWL_TENANT_SCHEMAS` (virgules). Chaque
+  nouvel événement = son schéma ajouté à cette variable.
+- **Blocs B et C : à faire.** En mode CAWL, la recharge et le remboursement en ligne du
+  porte-monnaie répondent « pas encore disponible » (rien n'est envoyé au Fedow).
+- **Bloc F : à faire.** E : à retirer de `deploy/`.
+
+Variables d'environnement d'une instance CAWL : `PAYMENT_PROVIDER=cawl`, `CAWL_TEST` (1 =
+préproduction), `CAWL_MERCHANT_ID`, `CAWL_API_KEY_ID`, `CAWL_API_SECRET`,
+`CAWL_WEBHOOK_KEY_ID`, `CAWL_WEBHOOK_SECRET`, `CAWL_TENANT_SCHEMAS`. Le webhook à déclarer
+chez CAWL est celui de chaque lieu : `https://<domaine du lieu>/api/webhook_cawl/`.
+
 ## En bref
 
 | Bloc | Où il vit aujourd'hui | Verdict |
