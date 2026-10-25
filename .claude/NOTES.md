@@ -319,3 +319,23 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
 - **Solution / contournement** : pour exécuter les tests il faut une vraie stack (Fedow distant + memcached
   `memcached:11211` + redis `redis:6379` + PostgreSQL), donc Docker/CI ; pas de Docker dans la session cloud.
   Ne pas émuler Fedow à la main (trop d'endpoints).
+
+## Base de la version intégrée : `main` de TiBillet, pas le tag d'archive (2026-10-25)
+
+- **Constat** : `TiBillet/Lespass` `main` (4f135ecfa, 24/10) est une avance rapide de
+  `main-fedow-import` : `c3bc4879...main` = 359 commits d'avance, 0 de retard. Les
+  empreintes sont identiques à celles de notre tag `archive/main-fedow-import` (seule la
+  lignée de `origin/main` du fork a été réécrite, sans ancêtre commun).
+- **Ce que le tag n'a pas** : `Client.moteur_monnaie` (`legacy` / `v2`, défaut `v2`,
+  migration `Customers/0006_moteur_de_monnaie.py`) et `lieu_en_moteur_legacy()` dans
+  `Customers/models.py` : c'est le choix du moteur **par tenant**, réponse amont au point
+  ouvert « deux moteurs de portefeuille ». Il y a aussi les migrations BaseBillet 0229 à 0238.
+- **Le conteneur Fedow reste obligatoire, même en V2** : `install.py` fait
+  `root_fedow_handshake`, et `BaseBillet/validators.py` (création de tenant, « S6 : TOUS les
+  tenants (V1 et V2) ont un place sur le Fedow », pour l'asset fédéré FED) lève une
+  exception si `can_fedow()` est faux. « Fedow local » = monnaie, cartes et soldes de
+  l'édition dans `fedow_core` (tenant V2) **+ un conteneur `tibillet/fedow` propre à
+  l'instance**, pas le Fedow partagé.
+- **Rebasage** : `git rebase --onto upstream/main archive/main-fedow-import` des 5 commits
+  de `tibillet-local` passe sans conflit (les 360 ajouts ne touchent aucun chemin amont).
+  Remote `upstream` en lecture seule (push désactivé).
