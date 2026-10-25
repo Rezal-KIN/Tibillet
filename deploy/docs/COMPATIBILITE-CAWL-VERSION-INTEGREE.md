@@ -7,9 +7,9 @@ par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
 
 ## Avancement (25 octobre 2026)
 
-- **Bloc A (ventes en ligne) : porté**, commit `66a0fd261`. TiBillet écrit la vente et
+- **Bloc A (ventes en ligne) : porté**, commits `66a0fd261` et `9b73b30d2`. TiBillet écrit la vente et
   les avoirs (règlements `CW`) comme pour Stripe ; seuls les appels au prestataire changent.
-  Tests : `tests/pytest/test_cawl_ventes.py` (11), `tests/pytest/test_cawl_passerelle.py` (26).
+  Tests : `tests/pytest/test_cawl_ventes.py` (15), `tests/pytest/test_cawl_passerelle.py` (26).
   Aucun nouvel échec dans les tests de vente, d'avoir, de panier et de réservation de
   créneaux en mode Stripe (comparaison test par test avec la mesure de l'étape 0).
 - **Bloc D (multi-tenant) : fait.** Un seul contrat CAWL pour toute l'instance (décision du
@@ -23,6 +23,21 @@ Variables d'environnement d'une instance CAWL : `PAYMENT_PROVIDER=cawl`, `CAWL_T
 préproduction), `CAWL_MERCHANT_ID`, `CAWL_API_KEY_ID`, `CAWL_API_SECRET`,
 `CAWL_WEBHOOK_KEY_ID`, `CAWL_WEBHOOK_SECRET`, `CAWL_TENANT_SCHEMAS`. Le webhook à déclarer
 chez CAWL est celui de chaque lieu : `https://<domaine du lieu>/api/webhook_cawl/`.
+
+Vérifié le 25 octobre (pile locale démarrée en `PAYMENT_PROVIDER=cawl`, identifiants
+factices) : accueil, événement, adhésions, compte, solde, admin et ajout de produit
+répondent 200 ; `/api/webhook_cawl/` non signé → 400 ; `/api/webhook_stripe/` → 410.
+Suite complète en mode Stripe : aucun nouvel échec par rapport à l'étape 0. Ce signal
+reste faible pour le chemin Stripe : sans clé Stripe, ses tests échouent avant d'arriver
+au code modifié.
+
+Pièges rencontrés :
+- le SDK `onlinepayments` doit être dans l'image (`poetry.lock`) : installé à la main
+  dans un conteneur, il disparaît quand le conteneur est recréé ;
+- après la recréation de `lespass_django`, redémarrer `lespass_nginx` (sinon 502 : nginx
+  garde l'ancienne adresse du conteneur) ;
+- `reconcile_cawl_refunds --schema <lieu>` est à planifier (cron ou Celery beat) : le
+  minuteur systemd de `deploy/` était propre à AWS.
 
 ## En bref
 
