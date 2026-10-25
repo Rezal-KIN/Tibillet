@@ -2056,16 +2056,14 @@ class MyAccount(viewsets.ViewSet):
 
     #### REFILL STRIPE PRIMARY ####
 
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=['GET', 'POST'])
     def refill_wallet(self, request):
-        # Instance CAWL : la recharge en ligne sur la monnaie du lieu (fedow_core)
-        # n'est pas encore branchée. Rien n'est demandé au Fedow (ni à Stripe).
-        # / CAWL instance: online refill on the venue currency is not wired yet.
+        # Instance CAWL : recharge de la monnaie locale du lieu (PaiementCawl/recharges.py),
+        # pas de la monnaie fédérée. Rien n'est demandé au Fedow ni à Stripe.
+        # / CAWL instance: top-up of the venue's local currency, not the federated one.
         from PaiementCawl.services import enabled as cawl_enabled
         if cawl_enabled():
-            messages.add_message(request, messages.WARNING,
-                                 _("La recharge en ligne n'est pas encore disponible."))
-            return HttpResponseClientRedirect('/my_account/')
+            return self._recharger_par_cawl(request)
         user = request.user
         fedowAPI = FedowAPI()
         # C'est fedow qui génère la demande de paiement à Stripe.
@@ -2079,12 +2077,68 @@ class MyAccount(viewsets.ViewSet):
             messages.add_message(request, messages.ERROR, _("Not available. Contact an admin."))
             return HttpResponseClientRedirect('/my_account/')
 
+    def _recharger_par_cawl(self, request):
+        """
+        GET : le formulaire du montant. POST : la vente et la page de paiement CAWL.
+        / GET: the amount form. POST: the sale and the CAWL payment page.
+        """
+        from PaiementCawl.recharges import (
+            MONTANT_MAXIMUM, MONTANT_MINIMUM, creer_la_recharge_en_ligne, recharge_en_ligne_disponible,
+        )
+        if not recharge_en_ligne_disponible():
+            messages.add_message(request, messages.WARNING,
+                                 _("La recharge en ligne n'est pas disponible pour cet événement."))
+            return HttpResponseClientRedirect('/my_account/') if request.htmx else redirect('/my_account/')
+        if request.method == 'GET':
+            if request.htmx:
+                # Le bouton « Recharger » appelle cette route en htmx : on navigue vers
+                # la page du formulaire. / The htmx button navigates to the form page.
+                return HttpResponseClientRedirect('/my_account/refill_wallet/')
+            context = get_context(request)
+            context['account_tab'] = 'balance'
+            context['montant_minimum'] = MONTANT_MINIMUM // 100
+            context['montant_maximum'] = MONTANT_MAXIMUM // 100
+            from pages.services import gabarit_skin
+            return render(request, gabarit_skin("vues/compte/recharge_en_ligne.html",
+                                                context.get("skin_preview")), context=context)
+        try:
+            montant_en_centimes = int((Decimal(request.POST.get('montant', '')) * 100).to_integral_value())
+            adresse_de_paiement = creer_la_recharge_en_ligne(
+                request.user, montant_en_centimes, connection.tenant.get_primary_domain().domain,
+            )
+        except (ArithmeticError, ValueError, TypeError, serializers.ValidationError) as erreur:
+            detail = erreur.detail[0] if isinstance(erreur, serializers.ValidationError) else _("Montant de recharge invalide.")
+            messages.add_message(request, messages.ERROR, str(detail))
+            return redirect('/my_account/refill_wallet/')
+        return redirect(adresse_de_paiement)
+
     @action(detail=True, methods=['GET'])
     def return_refill_wallet(self, request, pk=None):
         # On demande confirmation à Fedow qui a du recevoir la validation en webhook POST
         # Fedow vérifie la signature du paiement dans les metada Stripe
         # C'est Fedow entré le metadata signé, c'est lui qui vérifie.
         user = request.user
+
+        # Instance CAWL : le paiement de la recharge est relu chez CAWL, la monnaie
+        # du lieu est créditée une seule fois (webhook ou retour, le premier arrivé).
+        # / CAWL instance: the top-up payment is read at CAWL, credited once.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            paiement = get_object_or_404(Paiement_stripe, uuid=pk, user=user)
+            try:
+                statut = paiement.update_checkout_status()
+            except Exception as erreur:
+                logger.error(f"return_refill_wallet CAWL {pk} : {type(erreur).__name__}")
+                statut = None
+            if statut in [Paiement_stripe.PAID, Paiement_stripe.VALID]:
+                messages.add_message(request, messages.SUCCESS, _("Refilled wallet"))
+            elif statut == Paiement_stripe.PENDING:
+                messages.add_message(request, messages.WARNING, _(
+                    "Paiement en cours de confirmation : votre solde sera crédité dans quelques instants."))
+            else:
+                messages.add_message(request, messages.ERROR, _("Payment verification error"))
+            return redirect('/my_account/')
+
         fedowAPI = FedowAPI()
 
         try:

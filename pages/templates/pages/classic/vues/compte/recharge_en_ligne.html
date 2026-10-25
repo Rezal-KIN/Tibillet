@@ -1,0 +1,35 @@
+{% extends 'fonctionnel/account_base.html' %}
+{% load i18n %}
+
+{% comment %}
+RECHARGE EN LIGNE (CAWL) de la monnaie de l'événement
+/ Online top-up (CAWL) of the event currency
+
+LOCALISATION : pages/templates/pages/classic/vues/compte/recharge_en_ligne.html
+Vue : BaseBillet/views.py MyAccount._recharger_par_cawl (/my_account/refill_wallet/)
+Contexte : montant_minimum, montant_maximum (euros).
+{% endcomment %}
+
+{% block title %}{% translate "Recharger mon solde" %}{% endblock %}
+
+{% block account_page %}
+    <section class="card pt-3">
+        <div class="card-body">
+            <h1 class="card-title">{% translate "Recharger mon solde" %}</h1>
+            <p class="lead">
+                {% blocktranslate %}Ce solde ne se dépense que pendant cet événement.{% endblocktranslate %}
+            </p>
+            <p class="text-muted">
+                {% blocktranslate %}Le montant rechargé en ligne pourra vous être remboursé en ligne, sur la carte bancaire qui a payé, tant qu'il n'est pas dépensé.{% endblocktranslate %}
+            </p>
+            <form method="post" action="/my_account/refill_wallet/">
+                {% csrf_token %}
+                <label for="montant" class="form-label">{% translate "Montant (€)" %}</label>
+                <input type="number" class="form-control mb-3" id="montant" name="montant"
+                       min="{{ montant_minimum }}" max="{{ montant_maximum }}" step="0.01" required>
+                <button type="submit" class="btn btn-primary">{% translate "Payer en ligne" %}</button>
+                <a href="/my_account/" class="btn btn-secondary">{% translate "Cancel" %}</a>
+            </form>
+        </div>
+    </section>
+{% endblock %}

@@ -426,3 +426,125 @@ class TestEnregistrementHorsTransaction:
             monkeypatch.setattr(Paiement_stripe, "save", save_observe)
             paiement.update_checkout_status()
         assert dans_une_transaction and dans_une_transaction[0] is False
+
+
+def utilisateur_avec_portefeuille(tenant):
+    """Une personne avec son portefeuille local (sans appel au Fedow).
+    / A person with a local wallet (no Fedow call)."""
+    from fabriques_panier import creer_utilisateur
+    from AuthBillet.models import Wallet
+    personne = creer_utilisateur()
+    personne.wallet = Wallet.objects.create(origin=tenant)
+    personne.save(update_fields=["wallet"])
+    return personne
+
+
+class TestRechargeEnLigneCawl:
+
+    def test_la_recharge_credite_la_monnaie_du_lieu_une_seule_fois(self, cawl, tenant):
+        """Recharge de 12,50 € payée chez CAWL : 1250 centimes de la monnaie LOCALE du lieu
+        (celle de son produit « Recharge euros »), une seule transaction même rejouée ;
+        vente REGLEE au moyen CAWL, article de recharge hors chiffre d'affaires.
+        / 12.50 € top-up: 1250 cents of the venue's LOCAL currency, credited once."""
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models import LigneArticle, Paiement_stripe, PaymentMethod
+        from BaseBillet.models_vente import Vente
+        from fedow_core.models import Asset, Transaction
+        from fedow_core.services import WalletService
+        from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+        from PaiementCawl.recharges import creer_la_recharge_en_ligne, crediter_la_recharge
+
+        with tenant_context(tenant):
+            produit, _tarif = trouver_le_produit_de_recharge_de_la_borne()
+            monnaie = produit.asset
+            assert monnaie.category == Asset.TLF and monnaie.tenant_origin_id == tenant.pk
+            personne = utilisateur_avec_portefeuille(tenant)
+            solde_avant = WalletService.obtenir_solde(personne.wallet, monnaie)
+
+            adresse = creer_la_recharge_en_ligne(personne, 1250, tenant.get_primary_domain().domain)
+            paiement = Paiement_stripe.objects.get(user=personne)
+            assert adresse == paiement.cawl_payment.checkout_url
+            assert paiement.cawl_payment.amount == 1250
+            cawl.capturer(paiement)
+
+            assert paiement.update_checkout_status() == Paiement_stripe.VALID
+            paiement.update_checkout_status()
+            crediter_la_recharge(paiement)
+
+            recharges = Transaction.objects.filter(checkout_stripe=paiement.uuid, action=Transaction.REFILL)
+            assert recharges.count() == 1
+            assert recharges.get().receiver_id == personne.wallet.pk
+            assert recharges.get().asset_id == monnaie.pk
+            assert WalletService.obtenir_solde(personne.wallet, monnaie) == solde_avant + 1250
+
+            vente = Vente.objects.get(pk=paiement.vente_id)
+            assert vente.statut == Vente.Statut.REGLEE
+            assert [r.montant for r in reglements(vente, PaymentMethod.CAWL)] == [1250]
+            ligne = LigneArticle.objects.get(paiement_stripe=paiement)
+            assert ligne.hors_chiffre_affaires and ligne.status == LigneArticle.VALID
+
+    def test_une_recharge_non_capturee_ne_credite_rien(self, cawl, tenant):
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models import Paiement_stripe
+        from fedow_core.models import Transaction
+        from PaiementCawl.recharges import creer_la_recharge_en_ligne
+
+        with tenant_context(tenant):
+            personne = utilisateur_avec_portefeuille(tenant)
+            creer_la_recharge_en_ligne(personne, 1000, tenant.get_primary_domain().domain)
+            paiement = Paiement_stripe.objects.get(user=personne)
+            cawl.capturer(paiement, statut="REJECTED")
+            assert paiement.update_checkout_status() == Paiement_stripe.CANCELED
+            assert not Transaction.objects.filter(checkout_stripe=paiement.uuid).exists()
+
+    @pytest.mark.parametrize("montant", [0, 99, 50001, 12.5])
+    def test_un_montant_hors_bornes_est_refuse(self, cawl, tenant, montant):
+        from django_tenants.utils import tenant_context
+        from rest_framework import serializers
+        from PaiementCawl.recharges import creer_la_recharge_en_ligne
+
+        with tenant_context(tenant):
+            personne = utilisateur_avec_portefeuille(tenant)
+            with pytest.raises(serializers.ValidationError):
+                creer_la_recharge_en_ligne(personne, montant, tenant.get_primary_domain().domain)
+            assert cawl.pages == {}
+
+    def test_le_parcours_par_le_compte(self, cawl, tenant):
+        """Formulaire du compte → page CAWL → retour navigateur → solde crédité.
+        / Account form → CAWL page → browser return → balance credited."""
+        from django_tenants.utils import tenant_context
+        from fabriques_panier import client_connecte, taches_celery_enregistrees
+        from BaseBillet.models import Paiement_stripe
+        from fedow_core.services import WalletService
+        from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+
+        with tenant_context(tenant):
+            with taches_celery_enregistrees():
+                personne = utilisateur_avec_portefeuille(tenant)
+                client = client_connecte(personne)
+                monnaie = trouver_le_produit_de_recharge_de_la_borne()[0].asset
+                assert client.get("/my_account/refill_wallet/").status_code == 200
+                reponse = client.post("/my_account/refill_wallet/", {"montant": "7.50"})
+                paiement = Paiement_stripe.objects.get(user=personne)
+                assert reponse.status_code == 302 and reponse["Location"] == paiement.cawl_payment.checkout_url
+                cawl.capturer(paiement)
+                retour = client.get(f"/my_account/{paiement.uuid}/return_refill_wallet/")
+                assert retour.status_code == 302
+                assert WalletService.obtenir_solde(personne.wallet, monnaie) == 750
+
+    def test_la_monnaie_rechargee_ne_se_depense_que_dans_son_lieu(self, cawl, tenant):
+        """La monnaie de la recharge est celle du lieu : un autre lieu ne l'accepte pas
+        (hors fédération), le lieu lui-même l'accepte.
+        / The top-up currency belongs to the venue: another venue does not accept it."""
+        from django_tenants.utils import tenant_context
+        from Customers.models import Client
+        from fedow_core.models import Federation
+        from fedow_core.services import AssetService
+        from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+
+        with tenant_context(tenant):
+            monnaie = trouver_le_produit_de_recharge_de_la_borne()[0].asset
+        assert not Federation.objects.filter(assets=monnaie).exists()
+        assert monnaie in AssetService.obtenir_assets_accessibles(tenant)
+        autre_lieu = Client.objects.exclude(pk=tenant.pk).exclude(schema_name="public").first()
+        assert monnaie not in AssetService.obtenir_assets_accessibles(autre_lieu)

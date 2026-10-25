@@ -15,8 +15,19 @@ par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
 - **Bloc D (multi-tenant) : fait.** Un seul contrat CAWL pour toute l'instance (décision du
   25 octobre) ; les lieux autorisés sont listés dans `CAWL_TENANT_SCHEMAS` (virgules). Chaque
   nouvel événement = son schéma ajouté à cette variable.
-- **Blocs B et C : à faire.** En mode CAWL, la recharge et le remboursement en ligne du
-  porte-monnaie répondent « pas encore disponible » (rien n'est envoyé au Fedow).
+- **Bloc B (recharge en ligne) : fait** (`PaiementCawl/recharges.py`). Décision du
+  25 octobre : UNE monnaie par événement, la monnaie locale (TLF) du lieu, hors
+  fédération, donc dépensable seulement dans ce lieu. La recharge en ligne vend le
+  produit « Recharge euros » du lieu (créé avec sa monnaie, celui de la borne) par CAWL,
+  puis crédite la monnaie avec `TransactionService.creer_recharge`, une fois par paiement
+  (transaction REFILL portant l'uuid du paiement). Pas de FED, pas d'appel au Fedow pour
+  le crédit. Page : `/my_account/refill_wallet/` (gabarit
+  `pages/classic/vues/compte/recharge_en_ligne.html`).
+- **Bloc C (remboursement en ligne du solde) : à faire.** Règle décidée (option B) :
+  remboursable en ligne = min(solde, recharges CAWL pas encore remboursées), réparti sur
+  les paiements CAWL d'origine ; le reste (rechargé sur place) se rembourse au stand en
+  espèces (`rembourser_en_especes`, existant). En attendant, le bouton répond « pas encore
+  disponible ».
 - **Bloc F : à faire.** E : à retirer de `deploy/`.
 
 Variables d'environnement d'une instance CAWL : `PAYMENT_PROVIDER=cawl`, `CAWL_TEST` (1 =

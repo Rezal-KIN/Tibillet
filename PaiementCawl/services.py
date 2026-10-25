@@ -324,7 +324,12 @@ def mettre_a_jour_le_statut(paiement, snapshot=None):
 
     paiement.refresh_from_db()
     if paiement.status in [Paiement_stripe.PAID, Paiement_stripe.VALID]:
-        finaliser_la_contribution_crowds(paiement)
+        from PaiementCawl.recharges import crediter_la_recharge, est_une_recharge_en_ligne
+        if est_une_recharge_en_ligne(paiement):
+            crediter_la_recharge(paiement)
+        else:
+            finaliser_la_contribution_crowds(paiement)
+        paiement.refresh_from_db()
     return paiement.status
 
 
