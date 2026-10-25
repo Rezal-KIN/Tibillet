@@ -286,6 +286,7 @@ TENANT_APPS = (
     'ApiBillet',
     'api_v2',
     'PaiementStripe',
+    'PaiementCawl',
     'wsocket',
     'tibrss',
     'fedow_connect',
@@ -305,6 +306,13 @@ TENANT_APPS = (
     # / Newsletter: drives a self-hosted Ghost instance from TiBillet.
     'newsletter',
 )
+
+# Prestataire de paiement en ligne de l'instance : 'stripe' (défaut) ou 'cawl'.
+# La bascule est explicite ; les paiements historiques gardent leur prestataire.
+# / Online payment provider of the instance; historical payments keep theirs.
+PAYMENT_PROVIDER = os.environ.get('PAYMENT_PROVIDER', 'stripe')
+if PAYMENT_PROVIDER not in {'stripe', 'cawl'}:
+    raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 TENANT_MODEL = "Customers.Client"  # app.Model

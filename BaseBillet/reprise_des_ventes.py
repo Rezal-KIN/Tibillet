@@ -116,6 +116,7 @@ MOYENS_VUS_EN_PRODUCTION = [
     PaymentMethod.STRIPE_NOFED,
     PaymentMethod.STRIPE_SEPA_NOFED,
     PaymentMethod.STRIPE_RECURENT,
+    PaymentMethod.CAWL,
     PaymentMethod.LOCAL_EURO,
 ]
 
@@ -127,6 +128,7 @@ MOYENS_D_UNE_LIGNE_STRIPE = [
     PaymentMethod.STRIPE_NOFED,
     PaymentMethod.STRIPE_SEPA_NOFED,
     PaymentMethod.STRIPE_RECURENT,
+    PaymentMethod.CAWL,
 ]
 
 # Les moyens d'une ligne dont la quantité non entière, hors QR, en fait une part (QO-12).

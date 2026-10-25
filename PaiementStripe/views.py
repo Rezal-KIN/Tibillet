@@ -6,7 +6,7 @@ from decimal import Decimal
 import stripe
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -88,6 +88,14 @@ class CreationPaiementStripe():
         self.absolute_domain = absolute_domain
         self.success_url = success_url
         self.cancel_url = cancel_url
+
+        # Instance CAWL : le paiement est créé chez CAWL, avec les mêmes attributs.
+        # / CAWL instance: the payment is created at CAWL, with the same attributes.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            from PaiementCawl.services import creer_le_paiement
+            creer_le_paiement(self)
+            return
 
         # On instancie Stripe et entre en db le paiement en state Pending
         self.stripe_api_key = self._stripe_api_key()
@@ -495,6 +503,9 @@ class StripeConnectOnboardingViewSet(viewsets.ViewSet):
         redirects. On InvalidRequestError (account expired/removed at
         Stripe), reset and retry.
         """
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            raise serializers.ValidationError(_("Le compte CAWL se configure avec le contrat Crédit Agricole."))
         config = Configuration.get_solo()
         id_acc_connect = config.get_stripe_connect_account()
         tenant = connection.tenant
@@ -588,6 +599,9 @@ class StripeConnectOnboardingViewSet(viewsets.ViewSet):
         and `payouts_enabled` via Stripe API, then updates
         `Configuration.stripe_payouts_enabled`.
         """
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            raise Http404
         details_submitted = False
 
         stripe.api_key = RootConfiguration.get_solo().get_stripe_api()

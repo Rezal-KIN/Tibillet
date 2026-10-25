@@ -1856,6 +1856,13 @@ class MyAccount(viewsets.ViewSet):
 
     @action(detail=False, methods=['GET'])
     def refund_online(self, request):
+        # Instance CAWL : le remboursement en ligne du solde n'est pas encore branché.
+        # / CAWL instance: online balance refund is not wired yet.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            messages.add_message(request, messages.WARNING,
+                                 _("Le remboursement en ligne n'est pas encore disponible."))
+            return HttpResponseClientRedirect('/my_account/')
         user = request.user
         fedowAPI = FedowAPI()
         wallet = fedowAPI.wallet.cached_retrieve_by_signature(user).validated_data
@@ -2051,6 +2058,14 @@ class MyAccount(viewsets.ViewSet):
 
     @action(detail=False, methods=['GET'])
     def refill_wallet(self, request):
+        # Instance CAWL : la recharge en ligne sur la monnaie du lieu (fedow_core)
+        # n'est pas encore branchée. Rien n'est demandé au Fedow (ni à Stripe).
+        # / CAWL instance: online refill on the venue currency is not wired yet.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            messages.add_message(request, messages.WARNING,
+                                 _("La recharge en ligne n'est pas encore disponible."))
+            return HttpResponseClientRedirect('/my_account/')
         user = request.user
         fedowAPI = FedowAPI()
         # C'est fedow qui génère la demande de paiement à Stripe.
@@ -5113,12 +5128,9 @@ class MembershipMVT(viewsets.ViewSet):
             try:
                 # Interroger l'API Stripe pour connaitre l'etat reel de la session
                 # / Query Stripe API to get the real session status
-                stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
-                config = Configuration.get_solo()
-                session_stripe = stripe.checkout.Session.retrieve(
-                    paiement_stripe_existant.checkout_session_id_stripe,
-                    stripe_account=config.get_stripe_connect_account(),
-                )
+                # (Stripe ou CAWL : get_checkout_session lit le bon prestataire.)
+                # / (Stripe or CAWL: get_checkout_session reads the right provider.)
+                session_stripe = paiement_stripe_existant.get_checkout_session()
 
                 # Cas 1 : Session encore ouverte — on reutilise l'URL
                 # L'utilisateur n'a pas encore rempli le formulaire de paiement

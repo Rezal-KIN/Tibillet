@@ -54,6 +54,12 @@ class RootConfiguration(SingletonModel):
     fedow_primary_pub_pem = models.CharField(max_length=500, blank=True, null=True, editable=False)
 
     def get_stripe_api(self):
+        # Instance CAWL : pas de clé Stripe. Un appel Stripe oublié échoue sans clé,
+        # donc sans déplacer d'argent.
+        # / CAWL instance: no Stripe key; a stray Stripe call fails, moving no money.
+        from django.conf import settings
+        if getattr(settings, 'PAYMENT_PROVIDER', 'stripe') == 'cawl':
+            return None
         if self.stripe_mode_test:
             return os.environ.get('STRIPE_KEY_TEST')
         else:

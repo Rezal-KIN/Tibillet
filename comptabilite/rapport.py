@@ -139,6 +139,7 @@ MOYENS_STRIPE = [
     PaymentMethod.STRIPE_NOFED,
     PaymentMethod.STRIPE_SEPA_NOFED,
     PaymentMethod.STRIPE_RECURENT,
+    PaymentMethod.CAWL,
 ]
 
 # Les noms des deux produits système d'écart d'encaissement (D26).

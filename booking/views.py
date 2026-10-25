@@ -1203,12 +1203,9 @@ class BookingViewSet(viewsets.ViewSet):
 
         if paiement_stripe_existant:
             try:
-                stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
-                config = Configuration.get_solo()
-                session_stripe = stripe.checkout.Session.retrieve(
-                    paiement_stripe_existant.checkout_session_id_stripe,
-                    stripe_account=config.get_stripe_connect_account(),
-                )
+                # Stripe ou CAWL : get_checkout_session lit le bon prestataire.
+                # / Stripe or CAWL: get_checkout_session reads the right provider.
+                session_stripe = paiement_stripe_existant.get_checkout_session()
             except Exception as erreur_stripe:
                 # En cas de doute, on NE recrée PAS de session : ce pourrait être un
                 # deuxième paiement. La personne réessaiera plus tard.

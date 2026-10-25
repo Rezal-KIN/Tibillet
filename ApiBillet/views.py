@@ -1175,6 +1175,11 @@ class Wallet(DeprecatedV1Mixin, viewsets.ViewSet):
 class Webhook_stripe(APIView):
 
     def post(self, request):
+        # Instance CAWL : Stripe n'encaisse rien ici, ses webhooks sont refusés.
+        # / CAWL instance: Stripe collects nothing here; its webhooks are refused.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            return Response('Stripe désactivé sur cette instance.', status=status.HTTP_410_GONE)
         payload = request.data
         logger.info(f" ")
         # logger.info(f"Webhook_stripe --> {payload}")

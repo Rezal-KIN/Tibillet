@@ -114,11 +114,18 @@ def partial_refund_payment(paiement, config, ligne_articles, specified_quantity=
     # le paiement (session expirée ou paiement sans session).
     # / The PaymentIntent to refund: from the Checkout session, else the stored one.
     paiement: Paiement_stripe
-    try:
-        checkout = paiement.get_checkout_session()
-        payment_intent = checkout.payment_intent
-    except Exception:
-        payment_intent = paiement.payment_intent_id
+    # Paiement CAWL : seul l'appel de remboursement change (point 4), tout le reste
+    # (verrous, vente d'avoir, règlements, transitions) est le même.
+    # / CAWL payment: only the refund call changes (step 4); the rest is the same.
+    from PaiementCawl.services import est_un_paiement_cawl
+    paiement_cawl = est_un_paiement_cawl(paiement)
+    payment_intent = None
+    if not paiement_cawl:
+        try:
+            checkout = paiement.get_checkout_session()
+            payment_intent = checkout.payment_intent
+        except Exception:
+            payment_intent = paiement.payment_intent_id
 
     # La quantité rendue de chaque ligne remboursable.
     # / The quantity given back for each refundable line.
@@ -241,13 +248,19 @@ def partial_refund_payment(paiement, config, ligne_articles, specified_quantity=
                 cle_d_idempotence = (
                     f"remboursement-{paiement.uuid}-{nombre_de_remboursements_deja_ecrits}"
                 )
-                refund = stripe.Refund.create(
-                    payment_intent=payment_intent,
-                    reason='requested_by_customer',
-                    amount=montant_demande_a_stripe,
-                    stripe_account=config.get_stripe_connect_account(),
-                    idempotency_key=cle_d_idempotence,
-                )
+                if paiement_cawl:
+                    from PaiementCawl.services import rembourser
+                    refund = rembourser(
+                        paiement_verrouille, montant_demande_a_stripe, cle_d_idempotence
+                    )
+                else:
+                    refund = stripe.Refund.create(
+                        payment_intent=payment_intent,
+                        reason='requested_by_customer',
+                        amount=montant_demande_a_stripe,
+                        stripe_account=config.get_stripe_connect_account(),
+                        idempotency_key=cle_d_idempotence,
+                    )
                 logger.info(f"Remboursement Stripe {refund.id} : {refund.status}")
 
             # Désormais, l'argent est peut-être parti chez Stripe : toute erreur est

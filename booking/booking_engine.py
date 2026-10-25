@@ -1008,7 +1008,17 @@ def expirer_la_session_stripe_ouverte(booking):
     stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
     config = Configuration.get_solo()
 
+    from PaiementCawl.services import est_un_paiement_cawl
     for paiement in paiements_en_cours:
+        # Paiement CAWL : la page de paiement ne se ferme pas par l'API. Tant qu'elle
+        # n'est pas payée, le paiement passe EXPIRE ; un paiement payé plus tard ne
+        # réactive pas la réservation (trigger_C), comme avec Stripe.
+        # / CAWL: the page cannot be closed through the API; an unpaid one turns EXPIRE.
+        if est_un_paiement_cawl(paiement):
+            if paiement.get_checkout_session().status != "complete":
+                paiement.status = Paiement_stripe.EXPIRE
+                paiement.save(update_fields=["status"])
+            continue
         try:
             stripe.checkout.Session.expire(
                 paiement.checkout_session_id_stripe,

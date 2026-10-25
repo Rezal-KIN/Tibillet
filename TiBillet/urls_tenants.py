@@ -59,6 +59,7 @@ urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
 
     path('api/webhook_stripe/', Webhook_stripe.as_view()),
+    path('api/', include('PaiementCawl.urls')),
 
 
     # New semantic API v2

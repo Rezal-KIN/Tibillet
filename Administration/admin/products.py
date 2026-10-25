@@ -1181,7 +1181,18 @@ class ProductAdminCustomForm(ModelForm):
         # Vérification que la clé Stripe est opérationnelle :
         if categorie != Product.FREERES:
             config = Configuration.get_solo()
-            if not config.stripe_payouts_enabled:
+            from PaiementCawl.services import enabled as cawl_enabled
+            if cawl_enabled():
+                # Instance CAWL : le lieu doit être autorisé sur le compte CAWL.
+                # / CAWL instance: the venue must be allowed on the CAWL account.
+                from PaiementCawl.services import gateway
+                try:
+                    gateway()
+                except Exception:
+                    raise forms.ValidationError(
+                        _("Le paiement en ligne CAWL n'est pas configuré pour cette organisation.")
+                    )
+            elif not config.stripe_payouts_enabled:
                 raise forms.ValidationError(
                     _(
                         "Your Stripe account is not activated. To create paid items, please go to Settings/Stripe/Onboard."
@@ -1264,12 +1275,14 @@ class ResourcePriceInline(BasePriceInline):
 @register_component
 class CheckStripeComponent(BaseComponent):
     def get_context_data(self, **kwargs):
+        from PaiementCawl.services import enabled as cawl_enabled
         config = Configuration.get_solo()
         context = super().get_context_data(**kwargs)
         context["children"] = render_to_string(
             "admin/product/checkstripe_component.html",
             {
                 "stripe_payouts_enabled": config.stripe_payouts_enabled,
+                "cawl_enabled": cawl_enabled(),
             },
         )
         return context

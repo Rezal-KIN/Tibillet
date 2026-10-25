@@ -101,6 +101,9 @@ class PaymentMethod(models.TextChoices):
     STRIPE_NOFED = "SN", _("Online: Stripe CC")
     STRIPE_SEPA_NOFED = "SP", _("Online: Stripe SEPA")
     STRIPE_RECURENT = "SR", _("Recurring: Stripe")
+    # Paiement en ligne par CAWL (Crédit Agricole), quand PAYMENT_PROVIDER=cawl.
+    # / Online payment through CAWL (Crédit Agricole), when PAYMENT_PROVIDER=cawl.
+    CAWL = "CW", _("En ligne : CAWL")
     LOCAL_EURO = 'LE', _("Asset local fiat")
     LOCAL_GIFT = 'LG', _("Asset local gift")
     # Points de fidelite (FID) ou heures (TIM) : ce n'est pas de l'argent.
@@ -114,7 +117,7 @@ class PaymentMethod(models.TextChoices):
         """Renvoie uniquement les choix de type 'en ligne'"""
         return [
             (choice, label) for choice, label in cls.choices if
-            choice in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT]
+            choice in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT, cls.CAWL]
         ]
 
     @classmethod
@@ -122,7 +125,7 @@ class PaymentMethod(models.TextChoices):
         """Renvoie uniquement les choix de type 'en ligne'"""
         return [
             (choice, label) for choice, label in cls.choices if
-            choice not in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT]
+            choice not in [cls.STRIPE_FED, cls.STRIPE_NOFED, cls.STRIPE_RECURENT, cls.CAWL]
         ]
 
     @classmethod
@@ -963,6 +966,11 @@ class Configuration(SingletonModel):
         return RootConfiguration.get_solo().get_stripe_api()
 
     def get_stripe_connect_account(self):
+        # Instance CAWL : pas de compte Stripe Connect (et aucun appel pour en créer un).
+        # / CAWL instance: no Stripe Connect account (and no call to create one).
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            return None
         # Si la procédure a déja été démmaré, le numero stripe connect a déja été créé.
         # Sinon, on en cherche un nouveau
         id_acc_connect = self.stripe_connect_account_test if self.stripe_mode_test else self.stripe_connect_account
@@ -982,6 +990,16 @@ class Configuration(SingletonModel):
         return id_acc_connect
 
     def onboard_stripe(self):
+        # Instance CAWL : le compte marchand est celui du contrat CAWL de l'instance.
+        # / CAWL instance: the merchant account is the instance's CAWL contract.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            from PaiementCawl.services import gateway
+            try:
+                gateway()
+                return _("Compte CAWL configuré")
+            except Exception:
+                return _("Compte CAWL à configurer")
         try:
             # on vérifie que le compte soit toujours lié et qu'il peut recevoir des paiements :
             if not self.stripe_payouts_enabled:
@@ -3152,6 +3170,11 @@ class PriceSold(models.Model):
         return str_name
 
     def get_id_price_stripe(self, force=False):
+        # Instance CAWL : aucun tarif n'est créé chez Stripe.
+        # / CAWL instance: no price is created at Stripe.
+        from PaiementCawl.services import enabled as cawl_enabled
+        if cawl_enabled():
+            return None
         logger.info("get_id_price_stripe")
         if self.id_price_stripe and not force:
             return self.id_price_stripe
@@ -4169,6 +4192,7 @@ class Paiement_stripe(models.Model):
             (PaymentMethod.STRIPE_NOFED.value, PaymentMethod.STRIPE_NOFED.label),
             (PaymentMethod.STRIPE_SEPA_NOFED.value, PaymentMethod.STRIPE_SEPA_NOFED.label),
             (PaymentMethod.STRIPE_RECURENT.value, PaymentMethod.STRIPE_RECURENT.label),
+            (PaymentMethod.CAWL.value, PaymentMethod.CAWL.label),
         ],
         null=True,
         blank=True,
@@ -4233,6 +4257,12 @@ class Paiement_stripe(models.Model):
         return " - ".join(textes_des_articles)
 
     def get_checkout_session(self):
+        # Paiement CAWL : l'état de la session est lu chez CAWL.
+        # / CAWL payment: the session state is read at CAWL.
+        from PaiementCawl.services import est_un_paiement_cawl
+        if est_un_paiement_cawl(self):
+            from PaiementCawl.services import checkout_session
+            return checkout_session(self)
         self.config = Configuration.get_solo()
         # stripe.api_key = config.get_stripe_api()
         stripe.api_key = RootConfiguration.get_solo().get_stripe_api()
@@ -4254,6 +4284,13 @@ class Paiement_stripe(models.Model):
 
         if self.traitement_en_cours:
             return self.status
+
+        # Paiement CAWL : constaté chez CAWL, même transition vers PAID.
+        # / CAWL payment: read at CAWL, same transition to PAID.
+        from PaiementCawl.services import est_un_paiement_cawl
+        if est_un_paiement_cawl(self):
+            from PaiementCawl.services import mettre_a_jour_le_statut
+            return mettre_a_jour_le_statut(self)
 
         checkout_session = self.get_checkout_session()
         metadata = checkout_session.metadata
