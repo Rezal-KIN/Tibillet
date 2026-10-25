@@ -209,6 +209,7 @@ CORRESPONDANCES_DES_MOYENS_PAR_DEFAUT = [
     {"moyen": "SN", "libelle": "Stripe (en ligne)", "numero": "517100"},
     {"moyen": "SP", "libelle": "Stripe SEPA", "numero": "517100"},
     {"moyen": "SR", "libelle": "Stripe (paiement récurrent)", "numero": "517100"},
+    {"moyen": "CW", "libelle": "CAWL (en ligne)", "numero": "517100"},
     {"moyen": "TR", "libelle": "Virement bancaire", "numero": "512000"},
     {"moyen": "LE", "libelle": "Monnaie locale du lieu", "numero": "419100"},
     {"moyen": "LG", "libelle": "Jetons offerts", "numero": "419100"},

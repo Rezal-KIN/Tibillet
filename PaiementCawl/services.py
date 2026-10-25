@@ -243,9 +243,15 @@ def mettre_a_jour_le_statut(paiement, snapshot=None):
     / Same path as Stripe: PAID, amount captured read at CAWL, method CAWL, then one
     save() that triggers TiBillet's transitions (tickets, membership, settled sale).
 
-    Le retour navigateur et le webhook peuvent arriver ensemble : la ligne du paiement
-    est verrouillée, et l'état relu sous verrou fait foi.
-    / Browser return and webhook may arrive together: the payment row is locked.
+    Le retour navigateur et le webhook peuvent arriver ensemble. La décision est prise
+    sous verrou, et un paiement capturé est RÉSERVÉ (`traitement_en_cours`) avant que le
+    verrou ne soit rendu : le second passage voit la réservation et s'arrête.
+    Le `save()` final est fait HORS transaction, comme sur le chemin Stripe : certaines
+    tâches Celery des déclencheurs (mail des billets) partent sans attendre le commit,
+    elles doivent lire un état déjà écrit.
+    / Decision under lock; a captured payment is CLAIMED before the lock is released.
+    The final save() runs OUTSIDE a transaction, like the Stripe path: some trigger
+    Celery tasks are sent without on_commit and must read committed state.
     """
     from BaseBillet.models import Paiement_stripe, PaymentMethod
     from PaiementCawl.models import CawlPayment
@@ -262,6 +268,9 @@ def mettre_a_jour_le_statut(paiement, snapshot=None):
     if snapshot is not None:
         snapshot.check_order(paiement.uuid, record.amount)
 
+    statuts_deja_encaisses = {Paiement_stripe.PAID, Paiement_stripe.REFUNDED,
+                              Paiement_stripe.PARTIALLY_REFUNDED, Paiement_stripe.NOTSYNC}
+    capture = False
     with transaction.atomic():
         verrouille = Paiement_stripe.objects.select_for_update().get(pk=paiement.pk)
         record = CawlPayment.objects.select_for_update().get(payment=verrouille)
@@ -270,37 +279,48 @@ def mettre_a_jour_le_statut(paiement, snapshot=None):
             return verrouille.status
 
         if snapshot is None:
-            if checkout_expired(record, checkout_status):
-                verrouille.status = Paiement_stripe.EXPIRE
-            else:
-                verrouille.status = Paiement_stripe.PENDING
-            verrouille.save()
-            paiement.refresh_from_db()
-            return verrouille.status
-
-        statuts_deja_encaisses = {Paiement_stripe.PAID, Paiement_stripe.REFUNDED,
-                                  Paiement_stripe.PARTIALLY_REFUNDED, Paiement_stripe.NOTSYNC}
-        if verrouille.status not in statuts_deja_encaisses:
-            record.provider_payment_id = snapshot.id
-        record.provider_status = snapshot.status
-        record.save(update_fields=["provider_payment_id", "provider_status"])
-        if verrouille.status in statuts_deja_encaisses:
-            paiement.refresh_from_db()
-            return verrouille.status
-
-        if snapshot.captured:
-            verrouille.status = Paiement_stripe.PAID
-            verrouille.last_action = timezone.now()
-            verrouille.traitement_en_cours = True
-            # Posés AVANT le save() : la transition vers PAID écrit la vente avec eux.
-            # / Set BEFORE save(): the PAID transition writes the sale with them.
-            verrouille.montant_encaisse = snapshot.amount
-            verrouille.moyen = PaymentMethod.CAWL
-        elif snapshot.status in FAILED_PAYMENT_STATES:
-            verrouille.status = Paiement_stripe.CANCELED
+            nouveau_statut = (Paiement_stripe.EXPIRE if checkout_expired(record, checkout_status)
+                              else Paiement_stripe.PENDING)
         else:
-            verrouille.status = Paiement_stripe.PENDING
-        verrouille.save()
+            if verrouille.status not in statuts_deja_encaisses:
+                record.provider_payment_id = snapshot.id
+            record.provider_status = snapshot.status
+            record.save(update_fields=["provider_payment_id", "provider_status"])
+            if verrouille.status in statuts_deja_encaisses:
+                paiement.refresh_from_db()
+                return verrouille.status
+            if snapshot.captured:
+                capture = True
+                nouveau_statut = Paiement_stripe.PAID
+                # Réservé sous verrou : un passage simultané s'arrête au garde ci-dessus.
+                # / Claimed under lock: a concurrent pass stops at the guard above.
+                Paiement_stripe.objects.filter(pk=verrouille.pk).update(traitement_en_cours=True)
+            elif snapshot.status in FAILED_PAYMENT_STATES:
+                nouveau_statut = Paiement_stripe.CANCELED
+            else:
+                nouveau_statut = Paiement_stripe.PENDING
+
+    # Hors transaction, comme le chemin Stripe. / Outside a transaction, like Stripe.
+    paiement.refresh_from_db()
+    paiement.status = nouveau_statut
+    if capture:
+        paiement.last_action = timezone.now()
+        paiement.traitement_en_cours = True
+        # Posés AVANT le save() : la transition vers PAID écrit la vente avec eux.
+        # / Set BEFORE save(): the PAID transition writes the sale with them.
+        paiement.montant_encaisse = snapshot.amount
+        paiement.moyen = PaymentMethod.CAWL
+    try:
+        paiement.save()
+    except Exception:
+        # La réservation est rendue : un prochain passage (webhook relivré, retour
+        # navigateur) pourra reprendre le paiement.
+        # / Release the claim so a later pass can process the payment again.
+        if capture:
+            Paiement_stripe.objects.filter(pk=paiement.pk, status__in=[
+                Paiement_stripe.PENDING, Paiement_stripe.OPEN, Paiement_stripe.EXPIRE,
+            ]).update(traitement_en_cours=False)
+        raise
 
     paiement.refresh_from_db()
     if paiement.status in [Paiement_stripe.PAID, Paiement_stripe.VALID]:

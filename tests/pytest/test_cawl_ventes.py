@@ -342,3 +342,87 @@ class TestStripeDesactive:
         assert RootConfiguration.get_solo().get_stripe_api() is None
         with tenant_context(tenant):
             assert Configuration.get_solo().get_stripe_connect_account() is None
+
+
+class TestAdhesionCawl:
+
+    def test_une_adhesion_payee_par_cawl_est_active_et_encaissee(self, cawl, tenant):
+        """Adhésion prise par le formulaire (sans panier), payée chez CAWL, retour
+        navigateur : adhésion active, vente REGLEE avec un règlement CAWL de 15 €.
+        / Membership through the form, paid at CAWL, browser return: active, settled."""
+        from django_tenants.utils import tenant_context
+        from fabriques_panier import client_connecte, creer_adhesion, creer_utilisateur, taches_celery_enregistrees
+        from test_caracterisation_en_ligne import adherer_sans_panier
+        from BaseBillet.models import Membership, PaymentMethod
+        from BaseBillet.models_vente import Vente
+
+        with tenant_context(tenant):
+            with taches_celery_enregistrees():
+                acheteur = creer_utilisateur()
+                client = client_connecte(acheteur)
+                adhesion = creer_adhesion(prix="15.00")
+                adherer_sans_panier(client, acheteur, adhesion.tarif)
+                membership = Membership.objects.get(user=acheteur, price=adhesion.tarif)
+                paiement = membership.stripe_paiement.get()
+                assert paiement.cawl_payment.amount == 1500
+                membership.refresh_from_db()
+                assert membership.payment_method == PaymentMethod.CAWL
+
+                cawl.capturer(paiement)
+                client.get(f"/memberships/{paiement.uuid}/stripe_return/")
+
+                membership.refresh_from_db()
+                assert membership.is_valid()
+                vente = Vente.objects.get(pk=paiement.vente_id)
+                assert vente.statut == Vente.Statut.REGLEE
+                assert [r.montant for r in reglements(vente, PaymentMethod.CAWL)] == [1500]
+
+
+class TestComptabiliteCawl:
+
+    def test_le_plan_comptable_par_defaut_a_un_compte_pour_cawl(self, cawl, evenement, tenant):
+        """Une vente CAWL réglée ne bloque pas l'export comptable : CW a son compte.
+        / A settled CAWL sale does not block the accounting export: CW has an account."""
+        from django_tenants.utils import tenant_context
+        from laboutik.plan_comptable import (
+            ce_qui_manque_pour_exporter, charger_le_plan_comptable_par_defaut, compte_pour_reglement,
+        )
+
+        with tenant_context(tenant):
+            charger_le_plan_comptable_par_defaut()
+            assert compte_pour_reglement("CW", None).numero_de_compte == "517100"
+            reservation, paiement = reservation_payee_par_cawl(cawl, evenement, qty=1)
+            manques_cawl = [m for m in ce_qui_manque_pour_exporter()
+                            if "CW" in m["phrase"] or "CAWL" in m["phrase"]]
+            assert manques_cawl == []
+
+    def test_cawl_compte_dans_les_paiements_en_ligne_du_rapport(self):
+        from comptabilite.services import CATEGORIES_PAIEMENT_AFFICHAGE
+        en_ligne = dict((cle, codes) for cle, _libelle, codes in CATEGORIES_PAIEMENT_AFFICHAGE)["en_ligne"]
+        assert "CW" in en_ligne
+
+
+class TestEnregistrementHorsTransaction:
+
+    def test_le_passage_a_paid_est_enregistre_hors_transaction(self, cawl, evenement, tenant, monkeypatch):
+        """Comme le chemin Stripe : le save() qui passe le paiement à PAID n'est pas dans
+        une transaction (le mail des billets part sans attendre le commit).
+        / Like Stripe: the save() that turns the payment PAID is outside a transaction."""
+        from django.db import connection
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models import Paiement_stripe
+
+        dans_une_transaction = []
+        save_d_origine = Paiement_stripe.save
+
+        def save_observe(self, *args, **kwargs):
+            if self.status == Paiement_stripe.PAID:
+                dans_une_transaction.append(connection.in_atomic_block)
+            return save_d_origine(self, *args, **kwargs)
+
+        with tenant_context(tenant):
+            reservation, paiement = commander(evenement, qty=1)
+            cawl.capturer(paiement)
+            monkeypatch.setattr(Paiement_stripe, "save", save_observe)
+            paiement.update_checkout_status()
+        assert dans_une_transaction and dans_une_transaction[0] is False

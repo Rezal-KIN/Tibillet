@@ -460,7 +460,7 @@ def aplatir_detail_ventes(rapport_json: dict) -> list:
 CATEGORIES_PAIEMENT_AFFICHAGE = [
     ("especes", _("Espèces"), ["CA"]),
     ("cb", _("Carte bancaire (terminal POS)"), ["CC"]),
-    ("en_ligne", _("Paiements en ligne"), ["SF", "SN", "SP", "SR", "TR"]),
+    ("en_ligne", _("Paiements en ligne"), ["SF", "SN", "SP", "SR", "CW", "TR"]),
     ("cashless", _("Cashless (NFC / monnaie locale)"), ["LE", "LG", "QR"]),
     ("autres", _("Autres"), ["CH", "NA", "UK"]),
 ]
