@@ -1,0 +1,180 @@
+# Gala actif, IP publique unique et secrets partagés
+
+**Statut : secrets communs migrés et droits IAM appliqués le 14 octobre 2026.** Smoke
+lit les clés Stripe test et les galas réels les clés live du même compte, dans
+des secrets différents. L'EC2 Smoke ne reçoit pas le droit de lire les clés
+live.
+
+## Source de vérité
+
+- Toutes les instances Gala restent indépendantes : EC2, bases, clés Fernet,
+  clés Django et mots de passe PostgreSQL propres à chacune.
+- Les noms publics sont communs : `galas-am-aix.rezal.fr`,
+  `fedow.galas-am-aix.rezal.fr` et `cashless.galas-am-aix.rezal.fr`.
+  `shared_public_domain` et le catalogue Foundation les fixent ; le DNS n'est
+  modifié qu'une fois pour pointer vers l'IP élastique partagée.
+- Smoke utilise ces mêmes noms lorsqu'il est sélectionné comme gala actif.
+  La pipeline de bascule peut déplacer l'IP vers Smoke puis la remettre sur
+  un gala réel ; les autres EC2 restent hors trafic public, sans être arrêtées
+  par défaut, et le DNS reste inchangé après la première migration.
+- Terraform conserve l'allocation de cette IP, initialement l'ancienne IP Aix.
+  Il n'en gère pas l'association après la première migration. Le paramètre SSM
+  `/tibillet-gala-paris/active-gala` indique quel gala détient le trafic ; seul
+  le workflow manuel `...-active-gala` le modifie après vérification.
+- Le groupe de sécurité HTTP/HTTPS est attaché uniquement à l'instance active.
+  Les autres EC2 gardent leur accès sortant et SSM, avec une adresse publique
+  temporaire attribuée par AWS après la perte de leur EIP.
+
+## Secrets Manager : un secret par gala et deux secrets communs
+
+Chaque gala conserve son propre objet
+`tibillet-gala-paris/galas/<slug>/generated` : clés Django et Fernet,
+mots de passe PostgreSQL et token interne Fedow/Lespass. Ces valeurs sont
+différentes pour chaque gala. Foundation les initialise une seule fois et
+préserve les versions existantes.
+
+Les identifiants communs sont regroupés par environnement dans deux objets.
+Les noms historiques sont conservés pour garder les mêmes ARN :
+
+- **dev** : `tibillet-gala-paris/shared/integrations-stripe-test` ;
+- **prod** : `tibillet-gala-paris/shared/integrations-stripe-live`.
+
+Chaque objet commun contient Stripe, CAWL, le courrier, les domaines et
+l'administration. Il ne contient aucune clé propre à un gala. Les deux Smoke
+lisent uniquement dev ; les galas réels utilisent prod. Chaque rôle EC2 peut
+lire uniquement son propre secret généré et le secret commun de son
+environnement. Il ne peut lire ni les secrets propres aux autres galas ni
+les intégrations de l'autre environnement.
+
+Exemple de structure commune dev, avec des valeurs fictives :
+
+```json
+{
+  "schema_version": 2,
+  "environment": "dev",
+  "stripe": {
+    "mode": "test",
+    "secret_key": "sk_test_EXAMPLE",
+    "publishable_key": "pk_test_EXAMPLE",
+    "fedow_webhook_secret": "whsec_EXAMPLE"
+  },
+  "cawl": {
+    "mode": "test",
+    "merchant_id": "",
+    "api_key_id": "",
+    "api_secret": "",
+    "webhook_key_id": "",
+    "webhook_secret": ""
+  },
+  "mail": {
+    "host": "smtp.example.invalid",
+    "port": 587,
+    "username": "EXAMPLE",
+    "password": "EXAMPLE",
+    "from": "contact@example.invalid",
+    "admin_email": "admin@example.invalid"
+  },
+  "test_recipient": "smoke@example.invalid",
+  "site": {
+    "lespass_domain": "galas-am-aix.rezal.fr",
+    "fedow_domain": "fedow.galas-am-aix.rezal.fr",
+    "laboutik_domain": "cashless.galas-am-aix.rezal.fr",
+    "public_name": "Gala",
+    "tenant_subdomain": "festival",
+    "meta_subdomain": "agenda"
+  },
+  "admin": {
+    "username": "admin",
+    "password_hash": "EMPREINTE_DJANGO_PBKDF2_SHA256"
+  }
+}
+```
+
+Prod utilise `environment: prod` et `mode: live` dans les deux fournisseurs.
+Les identifiants sont saisis directement dans Secrets Manager, jamais dans Git.
+`PAYMENT_PROVIDER` sélectionne Stripe ou CAWL ; les champs CAWL vides bloquent
+uniquement le démarrage CAWL. Les deux Smoke utilisent le même backend SMTP
+`gala_mail.TestRecipientEmailBackend` : tous les destinataires (To, Cc, Bcc)
+sont redirigés vers `test_recipient`. Les liens et le contenu des mails natifs
+sont conservés. Sans destinataire de test valide, le backend refuse de démarrer.
+La production garde le backend SMTP Django natif et les vrais destinataires.
+
+Pour activer le transport sur les Smoke existants, lancer Foundation avec
+`GalaName = Enable Smoke Mail`. Son contrôle de plan autorise uniquement
+l'ajout de TCP 587 sortant sur les deux groupes de sécurité Smoke Paris ;
+aucune instance, IP, règle entrante ou ressource Stockholm n'est modifiée.
+
+Foundation initialise uniquement les objets `galas/<slug>/generated`.
+Elle ne reçoit ni `GetSecretValue` ni le droit d'écrire les valeurs des
+intégrations communes. Aucun identifiant externe n'est nécessaire pour
+initialiser les clés d'un nouveau gala.
+
+Le runtime fait deux lectures : son secret propre et le secret commun de son
+environnement. Il produit `fedow.env`, `laboutik.env`, `lespass.env` et
+`admin.json` en mode `0600`. Le courrier et l'empreinte administrateur sont dans
+le même JSON ; la version séparée `GALA_ADMIN` n'est plus nécessaire. Les trois
+variables de configuration historiques `GENERATED_SECRET_ARN`,
+`SHARED_STRIPE_SECRET_ARN` et `SHARED_MAIL_SECRET_ARN` sont conservées : la
+première pointe vers le secret propre au gala ; les deux autres vers le secret
+commun dev ou prod. Le lecteur reste compatible avec l'ancien format pendant
+la migration.
+
+Avant de retirer le seul ancien objet commun `integrations-mail`, installer le
+nouveau lecteur sur les deux Smoke, copier le courrier et l'administration dans
+les deux objets communs, puis vérifier l'identité des fichiers Stripe et la
+sélection CAWL. Les objets propres aux galas restent en place ; aucun mot de
+passe ou clé de chiffrement n'est changé. La restauration de l'ancienne archive
+Aix utilise toujours son secret `galas/gala-am-aix/generated`.
+
+Les trois galas conservés correspondent désormais à cinq objets AWS actifs :
+trois secrets propres et deux secrets communs. Le secret historique
+`integrations-mail` a été retiré après copie de ses valeurs. Les configurations
+Stripe produites sont strictement identiques avant et après la migration ; les
+versions des trois secrets propres aux galas sont inchangées. Les deux Smoke
+ont reçu le lecteur compatible, également présent sur la branche CAWL. Les
+identifiants CAWL restent à renseigner.
+
+## Déploiement et bascule du trafic
+
+1. La pipeline Test publie une image Lespass immuable et déploie la stack
+   épinglée sur Smoke. Après succès, elle écrit un marqueur immuable ; la
+   validation Production exige que son manifeste corresponde exactement à ce
+   marqueur avant de présenter l'approbation humaine.
+2. Le healthcheck Production résout les trois noms publics vers `127.0.0.1`
+   sur **cette EC2**. Il ne peut pas valider par erreur le gala déjà actif.
+3. Démarrer manuellement `tibillet-gala-paris-production-active-gala` avec
+   `TargetGalaSlug`. Son plan liste l'instance cible, l'instance actuelle,
+   l'IP et les groupes de sécurité. Revoir puis approuver.
+4. L'apply vérifie que le plan est encore exact, teste localement l'EC2 cible
+   via SSM, déplace l'IP et le groupe public, vérifie les trois URL en HTTPS
+   avec leur certificat, puis écrit `active-gala`. En cas d'échec, il restaure
+   l'association et les groupes précédents.
+
+Le premier passage depuis Stockholm demande **une seule** modification DNS
+vers l'IP Paris partagée. Il faut coordonner cette modification avec la
+première activation, puis vérifier le certificat et les trois URL publiques.
+Les changements de gala suivants n'exigent plus de modification DNS.
+
+## Mise à jour des EC2 existantes
+
+Le premier boot installe Docker, AWS CLI, SSM et le dépôt au commit approuvé.
+`deploy/tools/runtime/install-runtime-contract.sh` réinstalle les scripts et
+unités systemd depuis ce même dépôt, sans démarrer les applications. Il peut
+être rejoué via SSM après un `git fetch` du nouveau commit. La configuration
+de chaque EC2 doit alors contenir les deux ARN non secrets
+`GENERATED_SECRET_ARN`, `SHARED_STRIPE_SECRET_ARN` et
+`SHARED_MAIL_SECRET_ARN`.
+
+Avant de supprimer l'ancienne EIP Smoke, le plan Terraform doit confirmer
+qu'elle n'est visée par aucun DNS. Après libération, vérifier l'IPv4 temporaire
+et SSM `Online`. L'EIP Aix devient l'unique adresse fixe du Gala Paris.
+Si l'ancienne EC2 Smoke, lancée avec son EIP propre, ne reçoit pas d'adresse
+IPv4 temporaire après cette libération, utiliser le script versionné
+`deploy/tools/reconcile-inactive-gala-outbound.py` avec son ID exact et
+`--gala gala-smoke`. Il refuse l'instance active, vérifie les tags Terraform,
+active l'auto-attribution IPv4 sur son interface primaire (sans modification
+dans l'invité). Si SSM reste hors ligne après le retour de l'IP, il redémarre
+une seule fois cette EC2 inactive. Il exige ensuite une adresse temporaire et SSM
+`Online`. Ce rattrapage concerne la migration des
+anciennes EC2 ; les nouveaux galas sont créés directement avec une IPv4
+temporaire et sans EIP dédiée.

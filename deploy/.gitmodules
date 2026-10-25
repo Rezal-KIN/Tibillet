@@ -1,0 +1,6 @@
+[submodule "Lespass/app"]
+	path = Lespass/app
+	url = https://github.com/TiBillet/TiBillet.git
+[submodule "Lespass-v2/app"]
+	path = Lespass-v2/app
+	url = https://github.com/TiBillet/TiBillet.git

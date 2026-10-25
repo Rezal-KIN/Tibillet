@@ -1,0 +1,13 @@
+{
+  "release_id": "gala-am-aix-v1.0.4",
+  "gala_slug": "gala-am-aix",
+  "platform": "v1",
+  "application_repository": "Rezal-KIN/Tibillet",
+  "fork_commit": "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5",
+  "tibillet_upstream_commit": "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/lespass@sha256:de421a040927e00011bf71991699ee5907c9990c7ac3f3311f2e3f1e067882f4",
+  "fedow_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+  "laboutik_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+  "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+  "schema_generation": "v1"
+}

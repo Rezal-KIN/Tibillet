@@ -1,0 +1,19 @@
+--- TiBillet/LaBoutik/webview/templates/login.html
++++ deploy/Laboutik/source_templates/login.html
+@@ -106,7 +106,7 @@
+           background: linear-gradient(to left, #2b3647, #354052);
+           font-family: "Roboto", sans-serif;
+           -webkit-font-smoothing: antialiased;
+-          -moz-osx-font-smoothing: grayscale;      
++          -moz-osx-font-smoothing: grayscale;
+         }
+     </style>
+ 
+@@ -136,5 +136,7 @@
+ </div>
+ 
+ 
++<!-- AM-Rezal modification, 2026-10-03. Original TiBillet authors retained; AGPLv3. Source: /source/ -->
++<footer style="text-align:center;padding:1rem;background:#fff;color:#20242a"><a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a></footer>
+ </body>
+ </html>

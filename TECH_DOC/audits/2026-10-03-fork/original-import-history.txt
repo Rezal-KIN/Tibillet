@@ -1,0 +1,12 @@
+a7e496ce4b2be4a672406eadf65c627a13696c65 2026-05-17T14:59:42+02:00 feat: améliorations UI tirelire, remboursement et page d'accueil
+
+30c571bc33f34f67b73349fb7f8ca87c83b17483 2026-05-03T22:53:56+02:00 Initial configuration — stack TiBillet Rezal (Guinche 508-225)
+5ead94989170337b7ca3837adb6fe34b785b6f8b 2026-05-04T03:41:45+02:00 feat: recharge cashless sans compte (guest checkout via QR code)
+122b7c5f35a4e6cd0974ec3444a4ee9a01d3eebe 2026-05-04T18:51:13+02:00 feat(dashboard): add Laboutik instance deletion UI
+dd7071027917a9789f32fa0feced5f04a657de08 2026-05-12T20:12:20+02:00 refactor(main): retour au comportement TiBillet classique — domaine galas-am-aix.fr
+
+30c571bc33f34f67b73349fb7f8ca87c83b17483 2026-05-03T22:53:56+02:00 Initial configuration — stack TiBillet Rezal (Guinche 508-225)
+
+30c571bc33f34f67b73349fb7f8ca87c83b17483 2026-05-03T22:53:56+02:00 Initial configuration — stack TiBillet Rezal (Guinche 508-225)
+
+30c571bc33f34f67b73349fb7f8ca87c83b17483 2026-05-03T22:53:56+02:00 Initial configuration — stack TiBillet Rezal (Guinche 508-225)

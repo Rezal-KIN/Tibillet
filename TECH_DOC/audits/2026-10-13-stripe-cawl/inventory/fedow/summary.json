@@ -1,0 +1,19 @@
+{
+  "source": "Fedow-1668d94fb2391cd1b9fef28abf857c356e13207c",
+  "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24",
+  "files_with_stripe": 69,
+  "matched_lines": 1133,
+  "sdk_call_sites": 13,
+  "parse_errors": [],
+  "scope": "Tous les fichiers texte UTF-8 de l’archive épinglée ; les extensions de cette branche sont un périmètre supplémentaire.",
+  "limits": [
+    "Recherche de la chaîne stripe, incluant noms CSS tels que striped, documentation et historique.",
+    "Analyse syntaxique Python ; aucun graphe dynamique ni accès aux secrets du marchand."
+  ],
+  "sha256": {
+    "references.tsv": "cea53625199035cc0f5733bfc8e78e63fd7ac939cea026c1f1449f21fdecddb4",
+    "sdk-calls.tsv": "05e60607c4c67b50fae56a3b2895a0a438e087fd1b5145d06e272aee9e7b825f",
+    "files.tsv": "d009fba718a43170996f9d01e39c0c9cc54d6e702662883e22403a54d9797e9e",
+    "symbols.tsv": "fa0f55c827fcc603feaff741447f2e81c1661026a98ac33043bbcb149ab844db"
+  }
+}

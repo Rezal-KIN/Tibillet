@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GALA_SLUG="${gala_slug}"
+PLATFORM="${platform}"
+PAYMENT_PROVIDER="${payment_provider}"
+LESPASS_PUBLIC_DOMAIN="${domain}"
+FEDOW_PUBLIC_DOMAIN="fedow.${domain}"
+LABOUTIK_PUBLIC_DOMAIN="cashless.${domain}"
+AWS_REGION="${aws_region}"
+BACKUP_BUCKET="${backup_bucket_name}"
+GENERATED_SECRET_ARN="${generated_secret_arn}"
+SHARED_STRIPE_SECRET_ARN="${shared_stripe_secret_arn}"
+SHARED_MAIL_SECRET_ARN="${shared_mail_secret_arn}"
+REPOSITORY_URL="${repository_url}"
+REPOSITORY_REF="${repository_ref}"
+REPOSITORY_ROOT="/opt/tibillet-gala/repository"
+RUNTIME_LIBRARY="/usr/local/lib/tibillet-gala"
+CONFIG_PATH="/etc/tibillet-gala/$${GALA_SLUG}.conf"
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install --yes ca-certificates curl docker-compose-v2 docker.io git python3 unzip
+
+# Ubuntu 24.04 does not publish awscli in the enabled APT repositories. Install
+# AWS CLI v2 from its official distribution; it is needed only by the runtime
+# scripts to read this instance's own secret and to authenticate to the Gala ECR.
+if ! command -v aws >/dev/null 2>&1; then
+  aws_cli_zip="$(mktemp)"
+  aws_cli_dir="$(mktemp -d)"
+  cleanup_aws_cli() { rm -f "$aws_cli_zip"; rm -rf "$aws_cli_dir"; }
+  trap cleanup_aws_cli EXIT
+  curl --fail --silent --show-error --location \
+    "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+    --output "$aws_cli_zip"
+  unzip -q "$aws_cli_zip" -d "$aws_cli_dir"
+  "$aws_cli_dir/aws/install" --update
+  trap - EXIT
+  cleanup_aws_cli
+fi
+
+command -v aws >/dev/null 2>&1 || { echo "approved AMI must include AWS CLI" >&2; exit 1; }
+# Ubuntu images commonly install the SSM agent through Snap. The service is
+# usable in that layout even though its executable is not on PATH or /snap/bin.
+if ! command -v amazon-ssm-agent >/dev/null 2>&1 \
+  && ! systemctl cat snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1; then
+  echo "approved AMI must include Amazon SSM Agent" >&2
+  exit 1
+fi
+systemctl enable --now amazon-ssm-agent.service \
+  || systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service
+systemctl enable --now docker
+
+install -d -m 0755 /etc/tibillet-gala "$RUNTIME_LIBRARY" /var/lib/tibillet-gala
+install -d -m 0755 /opt/tibillet-gala
+if [[ ! -d "$REPOSITORY_ROOT/.git" ]]; then
+  git init "$REPOSITORY_ROOT"
+  git -C "$REPOSITORY_ROOT" remote add origin "$REPOSITORY_URL"
+fi
+git -C "$REPOSITORY_ROOT" fetch --depth 1 origin "$REPOSITORY_REF"
+git -C "$REPOSITORY_ROOT" checkout --detach FETCH_HEAD
+
+cat > "$CONFIG_PATH" <<EOF
+GALA_SLUG="$${GALA_SLUG}"
+AWS_REGION="$${AWS_REGION}"
+PLATFORM="$${PLATFORM}"
+PAYMENT_PROVIDER="$${PAYMENT_PROVIDER}"
+FEDOW_PUBLIC_DOMAIN="$${FEDOW_PUBLIC_DOMAIN}"
+LABOUTIK_PUBLIC_DOMAIN="$${LABOUTIK_PUBLIC_DOMAIN}"
+LESPASS_PUBLIC_DOMAIN="$${LESPASS_PUBLIC_DOMAIN}"
+BACKUP_BUCKET="$${BACKUP_BUCKET}"
+RELEASE_BUCKET="$${BACKUP_BUCKET}"
+GENERATED_SECRET_ARN="$${GENERATED_SECRET_ARN}"
+SHARED_STRIPE_SECRET_ARN="$${SHARED_STRIPE_SECRET_ARN}"
+SHARED_MAIL_SECRET_ARN="$${SHARED_MAIL_SECRET_ARN}"
+REPO_ROOT="$${REPOSITORY_ROOT}"
+COMPOSE_FILES="$${REPOSITORY_ROOT}/deploy/traefik/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/traefik/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Fedow/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Fedow/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Laboutik/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Laboutik/docker-compose.release.yml:$${REPOSITORY_ROOT}/deploy/Lespass/docker-compose.yml;$${REPOSITORY_ROOT}/deploy/Lespass/docker-compose.release.yml"
+POSTGRES_CONTAINERS="lespass_postgres,laboutik_postgres"
+HEALTHCHECK_URLS="https://$${FEDOW_PUBLIC_DOMAIN}/,https://$${LABOUTIK_PUBLIC_DOMAIN}/,https://$${LESPASS_PUBLIC_DOMAIN}/"
+DEPLOYMENT_LOCKED=false
+ALLOW_INITIAL_DEPLOY=true
+MAX_BACKUP_AGE_SECONDS=86400
+MIN_FREE_SPACE_KIB=10485760
+ALLOW_RESTORE=false
+EOF
+chmod 0600 "$CONFIG_PATH"
+
+bash "$REPOSITORY_ROOT/deploy/tools/runtime/install-runtime-contract.sh" "$CONFIG_PATH"

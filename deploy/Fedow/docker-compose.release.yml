@@ -1,0 +1,12 @@
+# Applied on top of docker-compose.yml only during a pipeline-driven release
+# deploy (see tools/runtime/deploy-release.sh and gala.conf.example
+# COMPOSE_FILES). Pins fedow_django to the exact digest recorded in the
+# release manifest instead of the floating ${FEDOW_VERSION:-latest} tag.
+# Running docker-compose.yml alone (local/dev) is unaffected.
+services:
+  fedow_django:
+    image: ${FEDOW_IMAGE}
+    # Native membership callbacks must return to this Gala's Lespass, even
+    # while another Gala holds the shared public IP. Keep normal TLS checks.
+    extra_hosts:
+      - "${LESPASS_PUBLIC_DOMAIN}:host-gateway"

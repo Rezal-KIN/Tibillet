@@ -1,0 +1,395 @@
+# Protocole de déploiement d'un gala et de livraison quotidienne
+
+**Statut vérifié le 6 octobre 2026 : Foundation, Test et Production exécutées avec
+succès sur une EC2 neuve, avec validation avant approbation.** Les preuves et les limites
+de l'essai sur une EC2 neuve figurent dans
+[l'audit du premier lancement](first-launch-validation-2026-10-05.md).
+L'essai utilise les commits explicites d'une branche : leur intégration dans
+`main` et la bascule publique sont des étapes distinctes.
+
+Ce document décrit deux flux distincts : la création d'un nouveau gala, puis
+la livraison normale d'une évolution applicative. Ils ne doivent pas être
+confondus : un push applicatif ne crée jamais une EC2, ne modifie jamais le
+DNS et ne déploie jamais directement en production.
+
+```text
+Nouveau gala
+Nom du gala → Foundation (plan contrôlé et apply automatique)
+→ EC2 et pipeline Production dédiées → release validée → approbation Production
+→ pipeline Gala actif → IP unique → contrôle public
+
+Évolution normale
+Branche → PR → main → build et déploiement sur gala-smoke
+→ manifeste Production à digests figés → validation → approbation humaine
+→ déploiement SSM sur la seule EC2 du gala concerné
+```
+
+## Principes non négociables
+
+- Une EC2, des clés générées stables et un préfixe de sauvegarde par gala.
+- Stripe test, Stripe live et SMTP utilisent des secrets communs dans Secrets
+  Manager ; les droits IAM de Smoke n'autorisent pas la lecture de Stripe live.
+- Une seule IP élastique et les mêmes noms publics servent le gala actif.
+- Paris (`eu-west-3`) est la seule région runtime autorisée.
+- Les secrets ne sont ni dans Git, ni dans Terraform, ni dans CodeBuild.
+- Les images de production et les manifestes sont immuables : aucun `latest`.
+- Le DNS n'est modifié qu'après une release déployée et vérifiée.
+- Une suppression d'ancienne infrastructure n'intervient qu'après validation
+  de la remplaçante et restauration testée.
+
+## A. Création d'un nouveau gala
+
+### 1. Nommer le gala et utiliser les paramètres permanents
+
+L'opérateur saisit le **nom du gala** dans Foundation. Celle-ci en dérive un
+identifiant technique sûr (*slug*, par exemple `gala-am-aix`) et refuse une
+collision avec un autre gala. Si un nom est repris pour une autre édition,
+l'opérateur inclut l'édition ou l'année dans le nom saisi.
+
+Ces paramètres sont permanents ou versionnés dans la configuration Foundation ;
+ils ne sont pas ressaisis à chaque création :
+
+| Valeur | Exemple | Source |
+| --- | --- | --- |
+| Domaine apex partagé | `galas-am-aix.rezal.fr` | Configuration commune ; le même pour tous les galas. |
+| Plateforme | `v1` | Version standard approuvée de la fondation. |
+| Capacité | `t3.medium`, disque 40 GiB | Valeurs standard versionnées, révisables par PR d'infrastructure. |
+| Réseau et AMI | VPC, subnet public, AMI approuvée | Configuration commune versionnée ; aucune AMI flottante. |
+| Stripe et courrier | Comptes communs | Secrets partagés par usage dans Secrets Manager ; aucune nouvelle saisie par gala. |
+
+Le domaine cible les services suivants :
+
+```text
+galas-am-aix.rezal.fr          → Lespass
+fedow.galas-am-aix.rezal.fr    → Fedow
+cashless.galas-am-aix.rezal.fr → Laboutik
+```
+
+### 2. Créer la fondation
+
+1. Vérifier l'identité AWS, le compte Gala et la région.
+2. Créer une fois le bucket de state Paris avec
+   `infra/terraform-bootstrap/`.
+3. Configurer un `backend.hcl` privé pour l'état Terraform du gala.
+4. Lancer manuellement la pipeline **Foundation** depuis CodePipeline avec le
+   nom du nouveau gala ; un push Git ne la lance jamais.
+5. La pipeline vérifie l'identité AWS et ses paramètres permanents, calcule un
+   plan et refuse automatiquement les destructions, remplacements ou
+   modifications inattendues d'un gala déjà présent. Pour une création
+   normale, elle applique sans demander d'approbation manuelle du plan.
+6. Attendre **l'exécution CodePipeline complète `Succeeded`** et les contrôles
+   détaillés en section C ; la réussite de l'étape Terraform seule ne suffit
+   pas. En cas d'échec partiel, corriger le code versionné puis relancer le
+   même gala sans réparer son EC2 à la main.
+
+La pipeline AWS vérifiée demande seulement `GalaName`. Les actions
+`PlanNewGala`, `ApplyCheckedPlan` et `InitializeGalaSecrets` ont été exécutées
+pour la nouvelle instance de l'audit, sans remplacement d'Aix ou Smoke.
+
+Le premier bootstrap de cette pipeline reste une action Terraform manuelle :
+une pipeline ne peut pas se créer avant d'exister. Son rôle CodeBuild élevé est
+fourni par un administrateur et ne sert qu'à cette pipeline Infrastructure.
+
+La fondation crée notamment :
+
+- EC2 Paris, groupe réseau privé et rôle SSM ; l'IP et l'accès HTTP/HTTPS sont communs au seul gala actif ;
+- buckets de state, backups/releases et artefacts ;
+- conteneur de clés générées par gala, initialisé une fois après l'apply ;
+- secrets d'intégration communs Stripe test, Stripe live et SMTP, à renseigner séparément ;
+- ECR Lespass ;
+- pipeline Test et CodeBuild ;
+- journalisation et politiques IAM minimales.
+
+L'ID réel de l'EC2 doit ensuite être ajouté à
+`ops/policy/runtime-allowlist.yaml` et validé avec
+`tools/validate-runtime-scope.py`.
+
+### 3. Bootstrap automatique de l'EC2
+
+L'AMI reste une image Ubuntu officielle standard, avec SSM. Elle n'est pas une
+« golden AMI » applicative à maintenir.
+
+Au premier démarrage, le bootstrap versionné installe de manière idempotente :
+
+- Docker et Docker Compose v2 ;
+- AWS CLI v2 ;
+- le dépôt et les scripts runtime ;
+- les unités systemd de démarrage et de backup.
+
+Le même installateur doit être rejouable via SSM pour mettre à jour une EC2
+existante. Cloud-init lance la première installation, mais ne doit pas être le
+seul mécanisme d'upgrade : son user-data est figé au lancement de l'instance.
+
+### 4. Renseigner les intégrations partagées
+
+Foundation crée automatiquement les clés applicatives et mots de passe propres
+à chaque gala, une seule fois. Un administrateur renseigne seulement les vrais
+identifiants Stripe et SMTP dans les secrets communs. Le format complet et le
+chargement des trois fichiers `0600` figurent dans
+[Gala actif et secrets partagés](active-gala-and-shared-integrations.md).
+
+### 5. Valider la chaîne Test partagée
+
+La pipeline installée dispose d'un déclencheur sur **`main`**. Celle-ci
+construit et contrôle les images nécessaires puis les
+déploie **automatiquement sur l'unique EC2 `gala-smoke`**, sans numéro de
+release métier ni approbation. Le SHA Git et les digests restent consignés :
+
+```text
+sha-<commit Git> → digest sha256:…
+```
+
+Les étapes installées construisent Lespass puis déploient la candidate par
+SSM sur Smoke. L'essai a vérifié ce déploiement depuis un commit explicite de
+la branche. Il exige le statut final `Succeeded` et un contrôle de l'application
+réellement exécutée : un build ECR réussi seul ne vaut pas validation du test.
+Smoke utilise les clés Stripe **test** du même compte que les clés **live**
+des galas réels. Le déploiement Test ne déplace jamais l'IP publique ; la
+pipeline « Gala actif » peut néanmoins attribuer volontairement cette IP à
+Smoke pour les essais publics de fin de préparation.
+
+### 6. Produire une release immuable
+
+Le [stock de cartes](card-stock-import.md) sélectionné dans
+`deploy/card-stock.json` est figé dans le manifeste Smoke et importé avec la
+commande native Fedow. Une nouvelle base reçoit les associations physiques,
+sans soldes ni comptes d'un ancien gala. Aucun nouveau montage de code ou de CSV
+n'est nécessaire. Le catalogue sélectionne actuellement **7 020 cartes** :
+G1 (3 510, génération 1), blanc (1 755, génération 2) et noir (1 755, génération 3).
+L'ordre NFC D des deux lots Excel est confirmé par les relevés physiques du
+7 octobre 2026 ; les trois CSV privés sont publiés et vérifiés par SHA-256.
+
+G1 est présent et vérifié sur Smoke depuis l'import ponctuel du 6 octobre 2026 ;
+les lots blanc/noir ont été ajoutés et vérifiés le 7 octobre.
+Le 7 octobre, Foundation a livré le contrat d'import et créé
+`gala-import-cartes-2026-10-07`. La pipeline Test a reconnu les 7 020 cartes
+existantes sur Smoke sans doublon ; la pipeline Production dédiée a ensuite
+créé automatiquement les 7 020 cartes sur une base neuve, sans import manuel.
+Cet essai porte sur les commits explicites de la
+[PR #104](https://github.com/Rezal-KIN/Tibillet/pull/104), encore non fusionnée :
+les prochains lancements standard depuis `main` exigent cette fusion.
+Voir [l'audit cartes](../../../TECH_DOC/audits/2026-10-06-import-cartes-usine.md).
+
+Une release Production est un manifeste revu qui fixe les digests exacts de :
+
+- Lespass depuis l'ECR Gala ;
+- Fedow ;
+- Laboutik ;
+- Traefik.
+
+Le manifeste est conservé sous `releases/<slug>/` et porte un `release_id`
+unique, un `fork_commit` (commit applicatif testé) et les quatre références
+`image@sha256:…`. Le numéro de release sert à nommer et retrouver la version ;
+**il ne prouve pas à lui seul qu'elle a été testée et ne déclenche aucun
+déploiement.** Il faut relier chaque digest et le commit applicatif à la
+candidate réellement validée sur Smoke. Le commit Git contenant le manifeste
+peut être plus récent que le commit applicatif : les deux doivent être visibles
+et ne doivent pas être confondus.
+
+### 7. Utiliser la chaîne Production du gala
+
+L'apply Infrastructure crée automatiquement une pipeline Production dédiée au
+nouveau gala. Terraform y enregistre l'ID réel de son EC2, son slug et son
+document SSM. Une pipeline Aix ne peut donc pas viser l'EC2 d'un autre gala.
+Elle comporte obligatoirement une approbation humaine **même lorsqu'un numéro
+de release a été attribué**. Le déroulement cible est :
+
+```text
+Choix ReleaseManifestPath + commit source Git figé
+→ validation du gala, du commit applicatif testé et des 4 digests
+→ résumé exact soumis à l'approbateur
+→ approbation humaine → déploiement de cet artefact exact par SSM
+```
+
+La pipeline CodePipeline est lancée manuellement pour le gala voulu ; son
+exécution fixe la révision Git source et le chemin du manifeste. Avant
+d'approuver, vérifier l'ID d'exécution, le commit source du manifeste, le
+`release_id`, le `fork_commit`, les quatre digests, le résultat du test Smoke
+et l'ID de l'EC2 cible. Une nouvelle révision ou un autre manifeste exige une
+**nouvelle exécution et une nouvelle approbation**. Le manifeste envoyé à S3
+doit être en écriture unique et correspondre octet pour octet à l'artefact
+validé ; aucun `latest` ni remplacement silencieux après l'approbation.
+
+La pipeline vérifiée place `ValidatePromotion` avant `ApprovePromotion`.
+La validation compare le commit applicatif, les quatre images et le catalogue
+`card_stock` complet au marqueur
+immuable du déploiement Smoke réussi. Le déploiement reçoit ensuite cet
+artefact, vérifie son SHA256 approuvé et refuse de remplacer un objet S3
+de release par des octets différents. L'audit conserve l'artefact téléchargé
+et l'ID d'exécution contrôlés avant l'approbation.
+
+La commande SSM ne vise que l'instance définie par Terraform. Elle vérifie le manifeste,
+le secret, l'espace disque et les conditions de backup avant le démarrage des
+stacks. Une première mise en ligne exige une décision explicite : elle ne doit
+pas contourner le garde-fou de backup initial sans être documentée.
+
+### 8. Ouvrir publiquement le gala
+
+Après un déploiement réussi et des healthchecks valides :
+
+1. lancer manuellement la pipeline distincte **Gala actif** et choisir le
+   gala cible (`gala-smoke` ou un gala réel) ; elle vérifie l'EC2 et déplace
+   l'unique Elastic IP après
+   confirmation. La création Foundation ne fait pas cette sélection ;
+2. lors de la première migration seulement, pointer les trois noms DNS vers
+   l'IP Paris partagée ;
+3. vérifier le certificat TLS et tester Lespass, Fedow et Laboutik depuis
+   l'extérieur ;
+4. mettre le registre privé du gala à l'état `live`.
+
+Une sauvegarde puis une restauration isolée validée sont requises avant de
+supprimer une ancienne cible.
+Après cette première migration, les bascules **Production → Smoke → Production**
+se font en relançant la pipeline Gala actif avec le nom de la cible ; les noms
+DNS ne changent plus. Le gala qui perd l'IP ne reçoit plus de trafic public.
+Pour permettre un retour rapide, son EC2 reste en marche par défaut :
+« inactif » ne signifie pas « arrêté ».
+
+## B. Flux de développement normal
+
+### Développer et intégrer
+
+1. Créer une branche dédiée à la modification.
+2. Lancer les tests pertinents localement.
+3. Ouvrir une PR, faire relire puis fusionner dans `main`.
+4. La pipeline Test construit la candidate liée au commit de fusion et la
+   déploie sur l'unique EC2 Smoke. Elle ne
+   modifie aucune EC2 Production.
+
+Les changements applicatifs ne modifient pas l'infrastructure. Les changements
+dans `deploy/`, Terraform, IAM, secret, DNS ou la politique d'allowlist suivent
+un plan revu séparé.
+
+### Promouvoir une version
+
+1. Choisir les digests effectivement validés sur Smoke et les dépendances
+   exactes, puis composer le manifeste de release.
+2. Déclencher manuellement la pipeline Production du gala concerné. La seule
+   variable saisissable est le chemin du manifeste ; l'EC2 n'est jamais un
+   paramètre utilisateur.
+3. Laisser la pipeline valider automatiquement le manifeste et sa provenance.
+4. Vérifier le résumé pré-approbation, approuver, puis suivre le preflight,
+   le déploiement SSM et les healthchecks.
+5. Enregistrer le `release_id` effectivement déployé dans le registre privé.
+
+Un rollback applicatif n'est tenté qu'après avoir vérifié la compatibilité
+des données et des migrations. Il consiste alors à promouvoir un manifeste
+immuable précédent ; il ne consiste pas à réutiliser `latest` ou à reconstruire
+sur l'EC2. Il suit lui aussi l'approbation manuelle Production.
+
+## C. Essai obligatoire de Foundation, effectué et surveillé par l'agent
+
+Ce test est distinct de la pipeline Test applicative. Il sert à prouver que
+**Foundation crée vraiment un nouveau gala et sa pipeline Production** depuis
+une demande neuve. L'utilisateur autorise l'agent à lancer les exécutions et
+à donner l'approbation manuelle Production pendant cet essai ; cela ne dispense
+pas de vérifier les prérequis ni de laisser une trace de l'artefact approuvé.
+
+1. Avant le lancement : vérifier le compte AWS et la région, l'état Terraform
+   distant, le catalogue des galas, les permissions, la connexion GitHub, les
+   secrets communs et le coût/la durée de vie de l'EC2 de démonstration
+   **Gala Validation** (`gala-validation`). Les valeurs Stripe/mail
+   doivent être présentes avant les essais applicatifs, sans être lues dans
+   les logs. Confirmer que la pipeline
+   installée correspond bien au code d'architecture validé.
+2. Démarrer **soi-même** Foundation depuis CodePipeline. Relever l'ID
+   d'exécution et le commit source. Suivre chaque étape jusqu'au statut final
+   via CodePipeline, les journaux CodeBuild et les événements Terraform.
+3. Après l'apply : vérifier que la nouvelle EC2 seule a été créée (pas de
+   remplacement d'Aix ou Smoke), qu'elle est `running` et SSM `Online`, que
+   cloud-init a installé les dépendances et les scripts du commit prévu, et
+   que ses groupes réseau n'ouvrent pas le gala au public par erreur.
+4. Vérifier sans lire les valeurs sensibles que les conteneurs Secrets Manager
+   existent, que les clés propres au gala ont une version `AWSCURRENT`, que le
+   secrets communs Stripe/SMTP sont référencés avec les droits IAM adaptés,
+   et que les préfixes de sauvegarde et permissions IAM sont limités au gala.
+5. Vérifier que Foundation a créé la pipeline Production et CodeBuild de ce
+   gala, connectés au bon dépôt et à la bonne branche, avec le document SSM
+   et **l'ID exact de cette nouvelle EC2**. Vérifier qu'elle ne peut cibler Aix ou
+   Smoke. Le résultat final Foundation doit être `Succeeded`.
+6. Prouver le parcours applicatif : push sur `main`,
+   exécution Test `Succeeded` et code actif sur Smoke ; manifeste lié aux
+   digests testés ; validation Production avant approbation ; approbation
+   manuelle par l'agent pour l'essai ; déploiement `Succeeded` et healthchecks
+   sur la seule nouvelle EC2. Après validation des prérequis de mise en ligne,
+   tester la pipeline Gala actif dans les deux sens entre Smoke et Production,
+   sans changement DNS entre ces bascules.
+7. À chaque échec, conserver l'ID d'exécution et relever **l'étape et la cause
+   exactes** dans les logs. Corriger la définition versionnée (Terraform,
+   buildspec, bootstrap, installateur ou application), puis relancer le flux
+   reproductible pour le même gala. Une commande SSM de diagnostic en lecture
+   seule est permise ; installer un paquet, modifier un fichier ou démarrer
+   manuellement un service sur l'EC2 n'est pas une correction acceptable.
+   Ne conclure qu'après un nouveau succès complet, sans correctif local.
+8. Après le test, si l'EC2 de démonstration n'est pas le gala actif, l'arrêter
+   pour limiter le coût de calcul et conserver ses ressources pour inspection.
+   Ne la supprimer que par un flux Terraform de retrait explicite et vérifié.
+
+## D. Chaîne CAWL parallèle (paiement Crédit Agricole)
+
+La chaîne CAWL duplique l'architecture Stripe sans la modifier. Un gala est
+**soit Stripe, soit CAWL**, fixé à sa création par le champ
+`payment_provider` du catalogue (absent = Stripe).
+
+| Élément | Stripe (existant) | CAWL |
+| --- | --- | --- |
+| Branche applicative | `main` | `migration/cawl-payments` (`var.cawl_source_branch`) |
+| Pipeline Test | `…-test` → `gala-smoke` | `…-test-cawl` → `gala-smoke-cawl` |
+| Images | ECR `lespass`, `fedow`, `laboutik` | ECR `cawl/lespass`, `cawl/fedow`, `cawl/laboutik` |
+| Preuve Smoke | `test-validated/smoke-*.json` | `test-validated-cawl/smoke-*.json` |
+| Création d'un gala | Pipeline `…-foundation` | Pipeline `…-foundation-cawl` (même code, `PAYMENT_PROVIDER=cawl`) |
+| Production du gala | Manifeste sur `main` | Manifeste sur la branche CAWL |
+| Secrets de paiement | Section `stripe` de `integrations-stripe-test/live` | Section `cawl` des mêmes secrets test/live |
+
+Un gala Stripe ne peut pas être promu avec une preuve CAWL, ni l'inverse.
+Les préfixes de preuve sont distincts et la politique IAM de chaque
+validation ne lit que celui de son fournisseur.
+
+### Activation (une seule fois)
+
+1. Fusionner dans `main` la PR d'infrastructure CAWL, puis fusionner `main`
+   dans `migration/cawl-payments`. Les scripts runtime et les outils Smoke
+   s'exécutent depuis le commit déployé : la branche CAWL doit les contenir.
+2. Lancer la pipeline **Foundation** standard avec `GalaName` =
+   `Enable CAWL Platform`. Le contrôle du plan n'accepte que la création des
+   ressources de `cawl-delivery.tf`, de l'EC2 `gala-smoke-cawl` et de son
+   document SSM. Les galas existants ne sont pas modifiés.
+3. Mettre à jour le lecteur runtime sur chaque EC2 Stripe conservée avant
+   d’ajouter la section `cawl` aux secrets existants `integrations-stripe-test`
+   et `integrations-stripe-live` (format dans `active-gala-and-shared-integrations.md`).
+   **Tant que les cinq identifiants CAWL test sont vides, le déploiement sur
+   `gala-smoke-cawl` est bloqué avant le démarrage des applications.**
+4. Pousser sur `migration/cawl-payments` : la pipeline Test CAWL construit et
+   déploie `gala-smoke-cawl`.
+
+### Créer puis livrer un gala CAWL
+
+Lancer **Foundation CAWL** avec le nom du gala : même contrôle de plan, même
+EC2 dédiée, pipeline Production propre. Ensuite, comme pour Stripe :
+manifeste `releases/<slug>/production.json` sur la branche CAWL, avec les
+digests validés sur `gala-smoke-cawl`, puis validation, approbation humaine et
+déploiement SSM. Les retours CAWL et les webhooks ne peuvent être essayés de
+bout en bout que lorsque le gala reçoit l'IP publique (pipeline Gala actif).
+
+## État actuel de l'outillage
+
+Les définitions AWS de Foundation, Test et Production ont été relues pendant
+l'essai du premier lancement. Foundation crée une EC2 dédiée depuis un nom ;
+Test déploie réellement sur Smoke ; Production exige une preuve de Test avant
+l'approbation et cible l'EC2 du gala concerné. Consulter l'audit daté pour les
+statuts finaux, les défauts corrigés et les contrôles exécutés.
+
+Le déclencheur `main` est configuré, mais cet essai utilise des commits
+explicites de la branche de travail. Il ne prouve pas une fusion dans `main`,
+une bascule Gala actif, un paiement ou la réception d'un email réel. Le DNS et l'IP publique
+d'Aix sont conservés pendant cet essai.
+
+## Références
+
+- [Fondation AWS](../../infra/README.md)
+- [Accès AWS](../aws-access.md)
+- [Périmètre et portes de changement](../platform/scope-and-change-gates.md)
+- [Registre d'un gala](gala-registry.md)
+- [Bootstrap de la pipeline Infrastructure](foundation-pipeline-bootstrap.md)
+- [Démarrage, arrêt et dormance](start-stop-dormance.md)
+- [Sauvegarde et restauration](backup-restore.md)

@@ -1,0 +1,130 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import unittest
+from types import SimpleNamespace
+from pathlib import Path
+from unittest.mock import patch
+
+
+MODULE_PATH = Path(__file__).resolve().parents[1] / "tools" / "verify-gala-bootstrap.py"
+SPEC = importlib.util.spec_from_file_location("verify_gala_bootstrap", MODULE_PATH)
+assert SPEC and SPEC.loader
+module = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(module)
+
+
+class BootstrapGateTests(unittest.TestCase):
+    def test_validation_retirement_checks_both_instances_and_volumes(self) -> None:
+        slugs = ("gala-validation", "gala-validation-2")
+        plan = {"resource_changes": [
+            {"address": f'module.gala["{slug}"].aws_instance.retirable[0]',
+             "change": {"before": {"id": f"i-{index:017x}",
+                                   "root_block_device": [{"volume_id": f"vol-{index:017x}"}]}}}
+            for index, slug in enumerate(slugs, start=1)
+        ]}
+
+        def prepared(*args: str) -> dict[str, object]:
+            if args[:2] == ("ssm", "get-parameter"):
+                return {"Parameter": {"Value": "gala-am-aix"}}
+            if args[:2] == ("ec2", "describe-instances"):
+                slug = slugs[int(args[3][-1], 16) - 1]
+                return {"Reservations": [{"Instances": [{
+                    "State": {"Name": "running"},
+                    "Tags": [{"Key": "Project", "Value": "tibillet-gala-paris"},
+                             {"Key": "Gala", "Value": slug},
+                             {"Key": "ManagedBy", "Value": "terraform"}],
+                    "BlockDeviceMappings": [{"Ebs": {
+                        "VolumeId": f"vol-{slugs.index(slug) + 1:017x}",
+                        "DeleteOnTermination": True,
+                    }}],
+                }]}]}
+            if args[:2] == ("ec2", "describe-instance-attribute"):
+                return {"DisableApiTermination": {"Value": False}}
+            raise AssertionError(args)
+
+        with patch.object(module, "aws", side_effect=prepared):
+            module.verify_validation_retirement(plan, "prepare", "tibillet-gala-paris")
+
+        def retired(*args: str) -> dict[str, object]:
+            if args[:2] == ("ssm", "get-parameter"):
+                return {"Parameter": {"Value": "gala-am-aix"}}
+            if args[:2] == ("ec2", "describe-instances"):
+                return {"Reservations": [{"Instances": [{"State": {"Name": "terminated"}}]}]}
+            if args[:2] == ("ec2", "describe-volumes"):
+                return {"Volumes": []}
+            raise AssertionError(args)
+
+        with patch.object(module, "aws", side_effect=retired):
+            module.verify_validation_retirement(plan, "retire", "tibillet-gala-paris")
+
+    def test_only_historical_validation_maintenance_skips_runtime_gate(self) -> None:
+        unchanged = {"resource_changes": [
+            {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',
+             "change": {"actions": ["no-op"]}},
+            {"address": 'aws_iam_role_policy.test_deploy[0]',
+             "change": {"actions": ["update"]}},
+        ]}
+        self.assertTrue(module.is_delivery_retirement(unchanged, "gala-validation"))
+        self.assertTrue(module.is_delivery_retirement(unchanged, "gala-smoke"))
+        self.assertFalse(module.is_delivery_retirement(unchanged, "gala-am-aix"))
+        changed_host = {"resource_changes": [
+            {"address": 'module.gala["gala-validation"].aws_instance.runtime[0]',
+             "change": {"actions": ["create"]}},
+        ]}
+        self.assertFalse(module.is_delivery_retirement(changed_host, "gala-validation"))
+        changed_smoke = {"resource_changes": [
+            {"address": 'module.gala["gala-smoke"].aws_instance.runtime[0]',
+             "change": {"actions": ["update"]}},
+        ]}
+        self.assertFalse(module.is_delivery_retirement(changed_smoke, "gala-smoke"))
+        with self.assertRaises(ValueError):
+            module.is_delivery_retirement({}, "gala-validation")
+
+    def test_selects_only_exact_tagged_instance(self) -> None:
+        instance = {
+            "InstanceId": "i-0123456789abcdef0",
+            "Tags": [
+                {"Key": "Project", "Value": "tibillet-gala-paris"},
+                {"Key": "Gala", "Value": "gala-validation"},
+                {"Key": "ManagedBy", "Value": "terraform"},
+            ],
+        }
+        with patch.object(module, "aws", return_value={"Reservations": [{"Instances": [instance]}]}):
+            self.assertEqual(module.selected_instance("tibillet-gala-paris", "gala-validation"), instance["InstanceId"])
+
+        with patch.object(module, "aws", return_value={"Reservations": [{"Instances": [instance, instance]}]}):
+            with self.assertRaisesRegex(RuntimeError, "exactly one"):
+                module.selected_instance("tibillet-gala-paris", "gala-validation")
+
+    def test_failed_cloud_init_command_fails_foundation(self) -> None:
+        responses = [
+            {"Command": {"CommandId": "command-1"}},
+            {"Status": "Failed"},
+        ]
+        with patch.object(module, "aws", side_effect=responses) as aws:
+            with self.assertRaisesRegex(RuntimeError, "bootstrap check failed"):
+                module.verify_command("i-0123456789abcdef0", "gala-validation")
+        parameters = aws.call_args_list[0].args
+        self.assertIn("cloud-init status --wait", " ".join(parameters))
+
+    def test_existing_catalog_entry_skips_only_historical_cloud_init(self) -> None:
+        catalog = {"version": 1, "galas": {"gala-am-aix": {}}}
+        with patch.dict(module.os.environ, {"FOUNDATION_CATALOG_URI":
+                     "s3://gala-backups/foundation-inputs/galas.json"}), \
+             patch.object(module.subprocess, "run", return_value=SimpleNamespace(stdout=json.dumps(catalog))):
+            self.assertTrue(module.previously_registered("gala-am-aix"))
+            self.assertFalse(module.previously_registered("gala-new"))
+
+        responses = [{"Command": {"CommandId": "command-2"}}, {"Status": "Success"}]
+        with patch.object(module, "aws", side_effect=responses) as aws:
+            module.verify_command("i-0123456789abcdef0", "gala-am-aix", require_clean_cloud_init=False)
+        parameters = " ".join(aws.call_args_list[0].args)
+        self.assertNotIn("cloud-init status --wait", parameters)
+        self.assertIn("systemctl is-enabled", parameters)
+        self.assertIn("test -f /etc/tibillet-gala/gala-am-aix.conf", parameters)
+
+
+if __name__ == "__main__":
+    unittest.main()

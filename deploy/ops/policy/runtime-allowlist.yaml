@@ -1,0 +1,7 @@
+aws_account_id: "318629836660"
+runtime_region: eu-west-3
+instances:
+  - id: i-0037b98572fccdff2
+    name: tibillet-gala-paris-gala-smoke
+  - id: i-0ee4f5b43eed4cf8b
+    name: tibillet-gala-paris-gala-smoke-cawl

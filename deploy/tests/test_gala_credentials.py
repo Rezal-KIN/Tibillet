@@ -1,0 +1,238 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import stat
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+generator = load_module("gala_secret_generator", ROOT / "tools/initialize-gala-credentials.py")
+renderer = load_module("gala_env_renderer", ROOT / "tools/runtime/materialize-runtime-env.py")
+
+
+STRIPE_TEST = {
+    "schema_version": 1,
+    "stripe": {
+        "mode": "test",
+        "secret_key": "sk_test_example",
+        "publishable_key": "pk_test_example",
+        "fedow_webhook_secret": "whsec_example",
+    },
+}
+CAWL_TEST = {
+    "schema_version": 1,
+    "cawl": {
+        "mode": "test",
+        "merchant_id": "qa-merchant",
+        "api_key_id": "qa-key",
+        "api_secret": "qa-api-secret",
+        "webhook_key_id": "qa-hook",
+        "webhook_secret": "qa-hook-secret",
+    },
+}
+SHARED_MAIL = {
+    "schema_version": 1,
+    "mail": {
+        "host": "smtp.example.fr",
+        "port": 587,
+        "username": "mail-user",
+        "password": "sample$#'password",
+        "from": "contact@example.fr",
+        "admin_email": "admin@example.fr",
+    },
+    "test_recipient": "smoke@example.fr",
+    "site": {
+        "lespass_domain": "galas-am-aix.rezal.fr",
+        "fedow_domain": "fedow.galas-am-aix.rezal.fr",
+        "laboutik_domain": "cashless.galas-am-aix.rezal.fr",
+        "public_name": "Gala Example",
+        "tenant_subdomain": "festival",
+        "meta_subdomain": "agenda",
+    },
+}
+
+
+class GeneratedGalaSecretTests(unittest.TestCase):
+    def test_mail_transport_is_shared_by_providers_and_production_keeps_native_smtp(self):
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        for provider, secret in (("stripe", STRIPE_TEST), ("cawl", CAWL_TEST)):
+            with self.subTest(provider=provider):
+                smoke = renderer.assemble(generated, secret, SHARED_MAIL, *domains, True)
+                live_secret = {**secret, provider: {**secret[provider], "mode": "live"}}
+                if provider == "stripe":
+                    live_secret[provider].update(secret_key="sk_live_example", publishable_key="pk_live_example")
+                live = renderer.assemble(generated, live_secret, SHARED_MAIL, *domains, False)
+                for application in ("lespass", "laboutik"):
+                    self.assertIn("EMAIL_BACKEND='gala_mail.TestRecipientEmailBackend'", smoke[f"{application}.env"])
+                    self.assertIn("GALA_TEST_MAIL_RECIPIENT='smoke@example.fr'", smoke[f"{application}.env"])
+                    self.assertNotIn("EMAIL_BACKEND=", live[f"{application}.env"])
+                    self.assertNotIn("GALA_TEST_MAIL_RECIPIENT=", live[f"{application}.env"])
+
+    def test_cawl_credentials_stay_in_payment_services_and_preserve_gala_keys(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        files = renderer.assemble(generated, CAWL_TEST, SHARED_MAIL, *domains, True)
+        for filename in ("fedow.env", "lespass.env"):
+            self.assertIn("PAYMENT_PROVIDER='cawl'", files[filename])
+            self.assertIn("CAWL_TEST='1'", files[filename])
+            self.assertIn("CAWL_TENANT_SCHEMA='festival'", files[filename])
+            self.assertIn("CAWL_API_SECRET='qa-api-secret'", files[filename])
+            self.assertNotIn("STRIPE_", files[filename])
+        self.assertIn("PAYMENT_PROVIDER='cawl'", files["laboutik.env"])
+        self.assertNotIn("CAWL_API_", files["laboutik.env"])
+        self.assertNotIn("CAWL_WEBHOOK_", files["laboutik.env"])
+        self.assertIn(generated["fedow_fernet_key"], files["fedow.env"])
+        self.assertIn(generated["lespass_postgres_password"], files["lespass.env"])
+
+    def test_cawl_test_and_live_modes_cannot_cross_environments(self) -> None:
+        live = {**CAWL_TEST, "cawl": {**CAWL_TEST["cawl"], "mode": "live"}}
+        self.assertEqual(renderer.payment_environment(live, False, "festival")["CAWL_TEST"], "0")
+        for secret, smoke in ((live, True), (CAWL_TEST, False)):
+            with self.assertRaisesRegex(ValueError, "mode"):
+                renderer.payment_environment(secret, smoke, "festival")
+
+    def test_cawl_rejects_incomplete_or_unknown_credentials(self) -> None:
+        account = CAWL_TEST["cawl"]
+        invalid = [
+            {**CAWL_TEST, "unexpected": {}},
+            {**CAWL_TEST, "cawl": {key: value for key, value in account.items() if key != "webhook_secret"}},
+            {**CAWL_TEST, "cawl": {**account, "api_secret": " secret "}},
+            {**CAWL_TEST, "cawl": {**account, "api_secret": "secret\nnext-line"}},
+        ]
+        for secret in invalid:
+            with self.assertRaises(ValueError):
+                renderer.payment_environment(secret, True, "festival")
+
+    def test_first_boot_requires_admin_hash_without_exposing_it_to_apps(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        admin = {"username": "admin", "password_hash": "pbkdf2_sha256$390000$sampleSalt$" + "A" * 43 + "="}
+        with self.assertRaisesRegex(ValueError, "admin credentials"):
+            renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, require_admin=True)
+        files = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, admin_secret=admin, require_admin=True)
+        self.assertEqual(json.loads(files["admin.json"]), admin)
+        for filename in ("fedow.env", "laboutik.env", "lespass.env"):
+            self.assertNotIn(admin["password_hash"], files[filename])
+        with tempfile.TemporaryDirectory() as directory:
+            renderer.write_files(Path(directory), files)
+            self.assertEqual(stat.S_IMODE(os.stat(Path(directory) / "admin.json").st_mode), 0o600)
+        for bad in ({**admin, "password_hash": "plaintext"}, {**admin, "username": "../admin"}):
+            with self.assertRaisesRegex(ValueError, "invalid"):
+                renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True, admin_secret=bad)
+
+    def test_laboutik_bootstrap_uses_this_galas_local_services(self) -> None:
+        compose = (ROOT / "Laboutik/docker-compose.yml").read_text(encoding="utf-8")
+        release = (ROOT / "tools/runtime/deploy-release.sh").read_text(encoding="utf-8")
+        self.assertIn('"${LESPASS_PUBLIC_DOMAIN}:host-gateway"', compose)
+        self.assertIn('"${FEDOW_PUBLIC_DOMAIN}:host-gateway"', compose)
+        self.assertLess(release.index("configure_gala_apex"), release.index("docker exec -e DEBUG=1 laboutik_django"))
+
+    def test_generated_keys_have_the_required_shapes(self) -> None:
+        payload = generator.generated_payload()
+        self.assertEqual(set(payload), renderer.GENERATED_FIELDS)
+        self.assertEqual(len(payload["fedow_secret_key"]), 50)
+        self.assertEqual(len(payload["laboutik_django_secret"]), 50)
+        self.assertEqual(len(payload["lespass_django_secret"]), 50)
+        for name in ("fedow_fernet_key", "laboutik_fernet_key", "lespass_fernet_key"):
+            self.assertEqual(len(renderer.fernet_field(payload, name)), 44)
+        self.assertEqual(len({payload["fedow_fernet_key"], payload["laboutik_fernet_key"], payload["lespass_fernet_key"]}), 3)
+
+    def test_an_existing_current_version_is_never_replaced(self) -> None:
+        with mock.patch.object(generator, "current_version_exists", return_value=True), mock.patch.object(generator, "aws") as aws:
+            generator.initialize("example/generated", "gala-example")
+        aws.assert_not_called()
+
+    def test_sqlite_fedow_omits_postgres_and_accepts_existing_secrets(self) -> None:
+        generated = generator.generated_payload()
+        self.assertNotIn("fedow_postgres_password", generated)
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        files = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True)
+        legacy_files = renderer.assemble(
+            {**generated, "fedow_postgres_password": "unused-legacy-password"},
+            STRIPE_TEST, SHARED_MAIL, *domains, True,
+        )
+        self.assertEqual(legacy_files, files)
+        self.assertNotIn("POSTGRES_", files["fedow.env"])
+        for application in ("lespass", "laboutik"):
+            self.assertIn(f"POSTGRES_DB='{application}'", files[f"{application}.env"])
+            self.assertIn(f"POSTGRES_PASSWORD='{generated[f'{application}_postgres_password']}'", files[f"{application}.env"])
+
+    def test_shared_credentials_and_domains_are_assembled_without_overwriting_gala_keys(self) -> None:
+        generated = generator.generated_payload()
+        files = renderer.assemble(
+            generated, STRIPE_TEST, SHARED_MAIL,
+            "fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr", True,
+        )
+        self.assertIn("DOMAIN='fedow.galas-am-aix.rezal.fr'", files["fedow.env"])
+        self.assertIn("STRIPE_KEY_TEST='sk_test_example'", files["fedow.env"])
+        self.assertIn("FEDOW_URL='https://fedow.galas-am-aix.rezal.fr/'", files["laboutik.env"])
+        self.assertIn("MAIN_ASSET_NAME='Gala Example'", files["laboutik.env"])
+        self.assertIn("EMAIL_HOST_PASSWORD='sample$#\\'password'", files["lespass.env"])
+        self.assertIn("EMAIL_USE_TLS='1'", files["lespass.env"])
+        self.assertIn("EMAIL_USE_SSL='0'", files["lespass.env"])
+        for application in ("lespass", "laboutik"):
+            self.assertIn("EMAIL_BACKEND='gala_mail.TestRecipientEmailBackend'", files[f"{application}.env"])
+            self.assertIn("GALA_TEST_MAIL_RECIPIENT='smoke@example.fr'", files[f"{application}.env"])
+        self.assertIn("SUB='festival'", files["lespass.env"])
+        self.assertIn("GALA_APEX_TENANT='1'", files["lespass.env"])
+        self.assertIn("GALA_LOCAL_FEDOW='1'", files["lespass.env"])
+        self.assertIn(f"ACTIVE_GALA_API_TOKEN='{generated['active_gala_api_token']}'", files["fedow.env"])
+        self.assertIn(f"ACTIVE_GALA_API_TOKEN='{generated['active_gala_api_token']}'", files["lespass.env"])
+        with tempfile.TemporaryDirectory() as directory:
+            renderer.write_files(Path(directory), files)
+            for filename in files:
+                self.assertEqual(stat.S_IMODE(os.stat(Path(directory) / filename).st_mode), 0o600)
+
+    def test_combined_secret_selects_only_the_configured_provider(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        empty_cawl = {field: "" for field in ("merchant_id", "api_key_id", "api_secret", "webhook_key_id", "webhook_secret")}
+        combined = {**STRIPE_TEST, "cawl": {"mode": "test", **empty_cawl}}
+        before = renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, True)
+        after = renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="stripe")
+        self.assertEqual(before, after)
+        self.assertNotIn("CAWL_", after["fedow.env"])
+        with self.assertRaisesRegex(ValueError, "merchant_id|api_key_id|api_secret"):
+            renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+        combined["cawl"] = {"mode": "test", **{field: "cawl-example" for field in empty_cawl}}
+        cawl = renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+        for filename in ("fedow.env", "laboutik.env", "lespass.env"):
+            self.assertIn("PAYMENT_PROVIDER='cawl'", cawl[filename])
+            if filename != "laboutik.env":
+                self.assertIn("CAWL_API_SECRET='cawl-example'", cawl[filename])
+            self.assertNotIn("STRIPE_", cawl[filename])
+        combined["cawl"]["mode"] = "live"
+        with self.assertRaisesRegex(ValueError, "mode"):
+            renderer.assemble(generated, combined, SHARED_MAIL, *domains, True, payment_provider="cawl")
+
+    def test_rejects_bad_shared_mode_and_generated_schema(self) -> None:
+        generated = generator.generated_payload()
+        domains = ("fedow.galas-am-aix.rezal.fr", "cashless.galas-am-aix.rezal.fr", "galas-am-aix.rezal.fr")
+        with self.assertRaisesRegex(ValueError, "schema"):
+            renderer.assemble({**generated, "unexpected": "value"}, STRIPE_TEST, SHARED_MAIL, *domains, True)
+        with self.assertRaisesRegex(ValueError, "mode"):
+            renderer.assemble(generated, {**STRIPE_TEST, "stripe": {**STRIPE_TEST["stripe"], "mode": "live"}}, SHARED_MAIL, *domains, True)
+        with self.assertRaisesRegex(ValueError, "shared domains"):
+            renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, "fedow.other.example.fr", *domains[1:], True)
+        with self.assertRaisesRegex(ValueError, "mode"):
+            renderer.assemble(generated, STRIPE_TEST, SHARED_MAIL, *domains, False)
+
+
+if __name__ == "__main__":
+    unittest.main()

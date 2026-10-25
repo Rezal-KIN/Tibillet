@@ -1,0 +1,496 @@
+[
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/settings.py",
+    "target": "fedowallet_django/settings.py",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedowallet_django__settings.py.diff",
+    "added_lines": 12,
+    "removed_lines": 11
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_core/serializers.py",
+    "target": "fedow_core/serializers.py",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "CardRefundOrVoidValidator.validate",
+        "status": "modified"
+      },
+      {
+        "name": "TransactionRefilFromLespassSerializer.validate",
+        "status": "modified"
+      },
+      {
+        "name": "TransactionRefilFromLespassSerializer.validate_metadata",
+        "status": "modified"
+      },
+      {
+        "name": "TransactionW2W.__init__",
+        "status": "deleted"
+      },
+      {
+        "name": "TransactionW2W._ecrire_la_paire",
+        "status": "deleted"
+      },
+      {
+        "name": "TransactionW2W._verifie_carte_primaire_du_lieu",
+        "status": "deleted"
+      },
+      {
+        "name": "TransactionW2W.validate",
+        "status": "modified"
+      },
+      {
+        "name": "TransactionW2W.validate_primary_card",
+        "status": "modified"
+      },
+      {
+        "name": "TransactionW2W.validate_primary_card_fisrtTagId",
+        "status": "modified"
+      },
+      {
+        "name": "WalletGetOrCreate.validate",
+        "status": "modified"
+      }
+    ],
+    "diff": ".context/fork-audit/fedow-fedow_core__serializers.py.diff",
+    "added_lines": 86,
+    "removed_lines": 231
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/urls.py",
+    "target": "fedow_dashboard/urls.py",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__urls.py.diff",
+    "added_lines": 5,
+    "removed_lines": 2
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/views.py",
+    "target": "fedow_dashboard/views.py",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "_bar_label_from_raw_name",
+        "status": "added"
+      },
+      {
+        "name": "_calcul_cycle_de_vie",
+        "status": "deleted"
+      },
+      {
+        "name": "_calcul_monnaie_fondante",
+        "status": "deleted"
+      },
+      {
+        "name": "_calcul_temporel",
+        "status": "deleted"
+      },
+      {
+        "name": "_charge_courbe_survie",
+        "status": "deleted"
+      },
+      {
+        "name": "_dormance_fed",
+        "status": "deleted"
+      },
+      {
+        "name": "_extract_bar_name_from_metadata",
+        "status": "added"
+      },
+      {
+        "name": "_masse_par_monnaie",
+        "status": "deleted"
+      },
+      {
+        "name": "_match_selected_bar",
+        "status": "added"
+      },
+      {
+        "name": "_money_snapshot_and_series",
+        "status": "added"
+      },
+      {
+        "name": "_normalize_bar_name",
+        "status": "added"
+      },
+      {
+        "name": "_parse_suivi_filters",
+        "status": "added"
+      },
+      {
+        "name": "_parse_time_flexible",
+        "status": "added"
+      },
+      {
+        "name": "_pouls_reseau",
+        "status": "deleted"
+      },
+      {
+        "name": "_read_suivi_session_start",
+        "status": "added"
+      },
+      {
+        "name": "_to_eur",
+        "status": "added"
+      },
+      {
+        "name": "_top_lieux",
+        "status": "deleted"
+      },
+      {
+        "name": "_unite_categorie",
+        "status": "deleted"
+      },
+      {
+        "name": "asset_view",
+        "status": "modified"
+      },
+      {
+        "name": "get_dashboard_asset",
+        "status": "deleted"
+      },
+      {
+        "name": "get_dashboard_reseau",
+        "status": "deleted"
+      },
+      {
+        "name": "index",
+        "status": "modified"
+      },
+      {
+        "name": "place_view",
+        "status": "modified"
+      },
+      {
+        "name": "suivi",
+        "status": "added"
+      },
+      {
+        "name": "suivi_data",
+        "status": "added"
+      }
+    ],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__views.py.diff",
+    "added_lines": 313,
+    "removed_lines": 555
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/index.html",
+    "target": "fedow_dashboard/templates/index/index.html",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__templates__index__index.html.diff",
+    "added_lines": 30,
+    "removed_lines": 242
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/suivi.html",
+    "target": "fedow_dashboard/templates/index/suivi.html",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": false,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__templates__index__suivi.html.diff",
+    "added_lines": 182,
+    "removed_lines": 0
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/base.html",
+    "target": "fedow_dashboard/templates/base.html",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__templates__base.html.diff",
+    "added_lines": 2,
+    "removed_lines": 0
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/Fedow/custom_patches/fedow_dashboard/public_index.html",
+    "target": "fedow_dashboard/templates/index.html",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-fedow_dashboard__templates__index.html.diff",
+    "added_lines": 2,
+    "removed_lines": 0
+  },
+  {
+    "component": "fedow",
+    "source": "deploy/source/admin-templates/admin/base_site.html",
+    "target": "source_templates/admin/base_site.html",
+    "upstream_commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "upstream_exists": false,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/fedow-source_templates__admin__base_site.html.diff",
+    "added_lines": 8,
+    "removed_lines": 0
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/settings.py",
+    "target": "Cashless/settings.py",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/laboutik-Cashless__settings.py.diff",
+    "added_lines": 6,
+    "removed_lines": 3
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/install.py",
+    "target": "administration/management/commands/install.py",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "Command.handle",
+        "status": "modified"
+      }
+    ],
+    "diff": ".context/fork-audit/laboutik-administration__management__commands__install.py.diff",
+    "added_lines": 42,
+    "removed_lines": 12
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/source_templates/login.html",
+    "target": "webview/templates/login.html",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/laboutik-webview__templates__login.html.diff",
+    "added_lines": 3,
+    "removed_lines": 1
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/source_templates/kiosk_base.html",
+    "target": "htmxview/templates/kiosk/base.html",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/laboutik-htmxview__templates__kiosk__base.html.diff",
+    "added_lines": 2,
+    "removed_lines": 0
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/source_templates/infos.html",
+    "target": "htmxview/templates/appsettings/infos.html",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/laboutik-htmxview__templates__appsettings__infos.html.diff",
+    "added_lines": 4,
+    "removed_lines": 0
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/source/admin-templates/admin/base_site.html",
+    "target": "source_templates/admin/base_site.html",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": false,
+    "changed": true,
+    "functions": [],
+    "diff": ".context/fork-audit/laboutik-source_templates__admin__base_site.html.diff",
+    "added_lines": 8,
+    "removed_lines": 0
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/views.py",
+    "target": "webview/views.py",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "Commande.methode_AD",
+        "status": "modified"
+      },
+      {
+        "name": "Commande.methode_BI",
+        "status": "deleted"
+      },
+      {
+        "name": "Commande.methode_VT",
+        "status": "modified"
+      },
+      {
+        "name": "_apply_happy_hour_prices_to_pdv_payload",
+        "status": "added"
+      },
+      {
+        "name": "_enforce_active_terminal_user",
+        "status": "added"
+      },
+      {
+        "name": "_get_hh_price",
+        "status": "added"
+      },
+      {
+        "name": "_is_admin_bypass_terminal",
+        "status": "added"
+      },
+      {
+        "name": "_is_happy_hour_active",
+        "status": "added"
+      },
+      {
+        "name": "_limit_cash_register_connections",
+        "status": "added"
+      },
+      {
+        "name": "_load_happy_hour_prices",
+        "status": "added"
+      },
+      {
+        "name": "_normalize_txt",
+        "status": "added"
+      },
+      {
+        "name": "_parse_hhmm",
+        "status": "added"
+      },
+      {
+        "name": "check_carte",
+        "status": "modified"
+      },
+      {
+        "name": "index",
+        "status": "modified"
+      },
+      {
+        "name": "paiement",
+        "status": "modified"
+      },
+      {
+        "name": "preparation",
+        "status": "modified"
+      }
+    ],
+    "diff": ".context/fork-audit/laboutik-webview__views.py.diff",
+    "added_lines": 309,
+    "removed_lines": 222
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/fedow_api.py",
+    "target": "fedow_connect/fedow_api.py",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "FedowAPI.send_assets_from_cashless",
+        "status": "modified"
+      },
+      {
+        "name": "NFCCard.badge",
+        "status": "modified"
+      },
+      {
+        "name": "NFCCard.create",
+        "status": "modified"
+      },
+      {
+        "name": "NFCCard.retrieve",
+        "status": "modified"
+      },
+      {
+        "name": "Subscription.create_sub",
+        "status": "modified"
+      },
+      {
+        "name": "Transaction.refill_wallet",
+        "status": "modified"
+      },
+      {
+        "name": "Transaction.to_place",
+        "status": "modified"
+      },
+      {
+        "name": "_get",
+        "status": "modified"
+      },
+      {
+        "name": "_post",
+        "status": "modified"
+      }
+    ],
+    "diff": ".context/fork-audit/laboutik-fedow_connect__fedow_api.py.diff",
+    "added_lines": 29,
+    "removed_lines": 88
+  },
+  {
+    "component": "laboutik",
+    "source": "deploy/Laboutik/validators.py",
+    "target": "webview/validators.py",
+    "upstream_commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "upstream_exists": true,
+    "changed": true,
+    "functions": [
+      {
+        "name": "DataAchatDepuisClientValidator.validate_articles",
+        "status": "modified"
+      },
+      {
+        "name": "DataAchatDepuisClientValidator.validate_tag_id",
+        "status": "modified"
+      },
+      {
+        "name": "_get_hh_price_for_article",
+        "status": "added"
+      },
+      {
+        "name": "_is_happy_hour_active",
+        "status": "added"
+      },
+      {
+        "name": "_load_hh_price_map",
+        "status": "added"
+      },
+      {
+        "name": "_normalize_txt",
+        "status": "added"
+      },
+      {
+        "name": "_parse_hhmm",
+        "status": "added"
+      }
+    ],
+    "diff": ".context/fork-audit/laboutik-webview__validators.py.diff",
+    "added_lines": 106,
+    "removed_lines": 5
+  }
+]

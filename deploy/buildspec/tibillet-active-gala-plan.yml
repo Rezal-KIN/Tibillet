@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - python3 --version
+      - aws --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_RESOLVED_SOURCE_VERSION:-}"
+      - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
+  build:
+    commands:
+      - set -euo pipefail
+      - python3 deploy/tools/switch-active-gala.py plan --target "$TARGET_GALA_SLUG" --output switch-plan.json
+artifacts:
+  files:
+    - switch-plan.json

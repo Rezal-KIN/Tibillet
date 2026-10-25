@@ -1,0 +1,49 @@
+{
+  "collected_at": "2026-09-21",
+  "scope": {
+    "aws_account_id": "318629836660",
+    "region": "eu-north-1",
+    "instance_id": "i-0cd4e52913c8ae928",
+    "instance_name": "TibilletBapts"
+  },
+  "instance": {
+    "state": "running",
+    "instance_type": "t3.medium",
+    "image_id": "ami-0e50288dcbe6ca9c1",
+    "launch_time": "2026-09-20T11:19:59Z",
+    "public_ip": "13.61.201.166",
+    "eip_allocation_id": "eipalloc-04851c1d274ecb3ff",
+    "vpc_id": "vpc-025a24ec0cc2b7d7f",
+    "subnet_id": "subnet-0e7a028cb98202b9b",
+    "security_group_ids": ["sg-0869a2698f14ef938"],
+    "instance_profile": null,
+    "ssm_registered": false,
+    "imds_v2_required": true
+  },
+  "root_volume": {
+    "id": "vol-0b5272ca7cf9ae98d",
+    "size_gib": 64,
+    "type": "gp3",
+    "encrypted": false,
+    "delete_on_termination": false
+  },
+  "host": {
+    "operating_system": "Ubuntu 24.04",
+    "docker_version": "29.3.0",
+    "docker_compose_version": "5.1.0",
+    "checkout_commit": "25cbc91c8217a0e34b6285394ec52c4696748b94",
+    "boot_unit": "tibillet-stacks.service"
+  },
+  "stacks": [
+    {"name": "traefik", "state": "active", "automation_status": "preserve"},
+    {"name": "fedow", "state": "active", "automation_status": "pending-approval"},
+    {"name": "lespass", "state": "active", "automation_status": "pending-approval"},
+    {"name": "laboutik_100-jours-225", "state": "active", "automation_status": "preserve-pending-decision"},
+    {"name": "lespass-v2", "state": "active-local-preview", "automation_status": "excluded"},
+    {"name": "Laboutik", "state": "inactive-template", "automation_status": "unknown"}
+  ],
+  "legacy_backup": {
+    "cron_present": true,
+    "automation_status": "excluded"
+  }
+}

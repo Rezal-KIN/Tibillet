@@ -1,0 +1,8 @@
+# Applied on top of docker-compose.yml only during a pipeline-driven release
+# deploy (see tools/runtime/deploy-release.sh and gala.conf.example
+# COMPOSE_FILES). Pins traefik to the exact tag recorded in the release
+# manifest instead of the floating `traefik:latest` tag. Running
+# docker-compose.yml alone (local/dev) is unaffected.
+services:
+  traefik:
+    image: ${TRAEFIK_IMAGE}

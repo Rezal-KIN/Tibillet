@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "fedow": {
+    "image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+    "repository": "TiBillet/Fedow",
+    "commit": "1668d94fb2391cd1b9fef28abf857c356e13207c",
+    "archive_sha256": "4532584ea066d01b9d69874f2285fa9a983ce49cb3e3ade84f76692a2d22bd24"
+  },
+  "laboutik": {
+    "image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+    "repository": "TiBillet/LaBoutik",
+    "commit": "3fdba313c2dea172bfaa6a06ebab05e1caf62490",
+    "archive_sha256": "9cb955f13e545b883ca86c65baf73d8ff53b82d1c563d8fe7e8aab0274763dfd",
+    "image_overlays": {
+      "docker_push_update.sh": {
+        "original_sha256": "9f68399fbcf4a5554934038487f4abf04d2232fbb9a568426d8847c0222ffa57",
+        "replacements": [
+          [
+            "VERSION=\"1.4\"",
+            "VERSION=\"1.7\""
+          ]
+        ]
+      }
+    }
+  }
+}

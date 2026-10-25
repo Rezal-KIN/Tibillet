@@ -1,0 +1,56 @@
+services:
+  fedow_memcached:
+    image: memcached:1.6
+    container_name: fedow_memcached
+    hostname: fedow_memcached
+    restart: always
+    networks:
+      - fedow_backend
+  fedow_django:
+    image: ${FEDOW_IMAGE:-gala-fedow:local}
+    build:
+      context: ../..
+      dockerfile: deploy/Fedow/Dockerfile
+    container_name: fedow_django
+    hostname: fedow_django
+    restart: always
+    env_file: ${FEDOW_RUNTIME_ENV_FILE:-.env}
+    user: fedow
+    links:
+      - fedow_memcached:memcached
+    volumes:
+      - ./sqlite-database:/home/fedow/Fedow/database
+      - ./www:/home/fedow/Fedow/www
+      - ./logs:/home/fedow/Fedow/logs
+    networks:
+      - fedow_backend
+    extra_hosts:
+      - "fedow.tibillet.localhost:172.17.0.1"
+      - "lespass.tibillet.localhost:172.17.0.1"
+      - "cashless.tibillet.localhost:172.17.0.1"
+  fedow_nginx:
+    image: nginx:latest
+    restart: always
+    container_name: fedow_nginx
+    hostname: fedow_nginx
+    volumes:
+      - ./www:/www
+      - ./logs:/logs
+      - ./nginx:/etc/nginx/conf.d
+      - ../source/public:/source:ro
+    depends_on:
+      - fedow_django
+    links:
+      - fedow_django:fedow_django
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=frontend
+      - traefik.http.routers.fedow_nginx.tls.certresolver=myresolver
+      - traefik.http.routers.fedow_nginx.rule=Host(`${FEDOW_PUBLIC_DOMAIN:-${DOMAIN}}`)
+    networks:
+      - frontend
+      - fedow_backend
+networks:
+  frontend:
+    external: true
+  fedow_backend:

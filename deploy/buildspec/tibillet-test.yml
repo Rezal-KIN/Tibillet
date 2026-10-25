@@ -1,0 +1,36 @@
+version: 0.2
+
+# The source connection must target the Rezal fork of TiBillet/Lespass, never
+# the production Gala EC2 checkout. CodeBuild receives a fixed source revision.
+# Output pins the three application images built from that exact revision.
+# A complete release manifest is assembled and tested before promotion.
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      - docker --version
+      - aws --version
+      - python3 --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -f dockerfile
+      - test -n "${CODEBUILD_RESOLVED_SOURCE_VERSION:-}"
+      - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
+      - python3 -m compileall -q TiBillet BaseBillet ApiBillet Administration AuthBillet
+  build:
+    commands:
+      - |
+        set -euo pipefail
+        registry="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+        password_file="$(mktemp)"
+        cleanup() { rm -f "$password_file"; }
+        trap cleanup EXIT
+
+        aws ecr get-login-password --region "$AWS_DEFAULT_REGION" > "$password_file"
+        docker login --username AWS --password-stdin "$registry" < "$password_file"
+
+        python3 deploy/tools/build-application-images.py
+artifacts:
+  files:
+    - release-candidate.json

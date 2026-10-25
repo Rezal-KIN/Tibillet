@@ -1,0 +1,52 @@
+version: 0.2
+
+# The pipeline supplies only non-secret Gala metadata. The persistent catalog
+# retains every existing Gala so a new request can never make Terraform forget
+# an older one. It must be seeded once during the manual pipeline bootstrap.
+phases:
+  install:
+    commands:
+      - set -euo pipefail
+      # The standard CodeBuild image intentionally does not ship Terraform.
+      # Pin and verify the CLI so the plan and apply jobs use the same binary.
+      - export TERRAFORM_VERSION=1.10.5
+      - export TERRAFORM_SHA256=0566a24f5332098b15716ebc394be503f4094acba5ba529bf5eb0698ed5e2a90
+      - curl --fail --silent --show-error --location "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" --output /tmp/terraform.zip
+      - printf '%s  %s\n' "$TERRAFORM_SHA256" /tmp/terraform.zip | sha256sum --check --status
+      - unzip -q /tmp/terraform.zip -d /usr/local/bin
+      - rm /tmp/terraform.zip
+      - terraform version
+      - python3 --version
+      - aws --version
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - test -n "${CODEBUILD_RESOLVED_SOURCE_VERSION:-}"
+      - git rev-parse --verify "${CODEBUILD_RESOLVED_SOURCE_VERSION}^{commit}"
+      - export FOUNDATION_SOURCE_COMMIT="$(git rev-parse HEAD)"
+      - export FOUNDATION_TFVARS="$CODEBUILD_SRC_DIR/foundation.auto.tfvars.json"
+      - export FOUNDATION_CATALOG="$CODEBUILD_SRC_DIR/foundation-gala-catalog.json"
+      - export FOUNDATION_CATALOG_PROPOSAL="$CODEBUILD_SRC_DIR/foundation-gala-catalog-proposal.json"
+      - aws s3 cp --only-show-errors "$FOUNDATION_CATALOG_URI" "$FOUNDATION_CATALOG"
+      - python3 deploy/tools/validate-foundation-inputs.py "$FOUNDATION_TFVARS" --catalog "$FOUNDATION_CATALOG" --catalog-output "$FOUNDATION_CATALOG_PROPOSAL"
+      - terraform -chdir=deploy/infra/terraform init -reconfigure -input=false -backend-config="bucket=$TERRAFORM_STATE_BUCKET" -backend-config="key=$TERRAFORM_STATE_KEY" -backend-config="region=$AWS_DEFAULT_REGION"
+      - terraform -chdir=deploy/infra/terraform validate
+  build:
+    commands:
+      - set -euo pipefail
+      - terraform -chdir=deploy/infra/terraform plan -input=false -lock-timeout=5m -out="$CODEBUILD_SRC_DIR/foundation.tfplan" -var-file="$FOUNDATION_TFVARS"
+      - terraform -chdir=deploy/infra/terraform show -no-color "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.txt"
+      - terraform -chdir=deploy/infra/terraform show -json "$CODEBUILD_SRC_DIR/foundation.tfplan" > "$CODEBUILD_SRC_DIR/foundation-plan.json"
+      - |
+        set -euo pipefail
+        # The exact requested slug is derived from the operator's name by the
+        # same validator that produced the plan, not from an editable plan file.
+        slug="$(python3 -c 'import importlib.util,os; s=importlib.util.spec_from_file_location("v", "deploy/tools/validate-foundation-inputs.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.gala_slug(os.environ["GALA_NAME"]))')"
+        python3 deploy/tools/verify-foundation-plan.py "$CODEBUILD_SRC_DIR/foundation-plan.json" --slug "$slug"
+artifacts:
+  files:
+    - foundation.auto.tfvars.json
+    - foundation-gala-catalog-proposal.json
+    - foundation.tfplan
+    - foundation-plan.txt
+    - foundation-plan.json

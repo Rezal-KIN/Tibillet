@@ -1,0 +1,18 @@
+[Unit]
+Description=Start TiBillet Gala stacks for %i
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Group=root
+ExecStart=/usr/local/lib/tibillet-gala/fetch-runtime-secret.sh /etc/tibillet-gala/%i.conf
+ExecStart=/usr/local/lib/tibillet-gala/start-stacks.sh /etc/tibillet-gala/%i.conf
+ExecStop=/usr/local/lib/tibillet-gala/stop-stacks.sh /etc/tibillet-gala/%i.conf
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,146 @@
+[
+  {
+    "path": "BaseBillet/templates/reunion/views/home.html",
+    "first_parent_history": [
+      "35786671f916b65902c11b355c462b02a9c574e1\t2026-09-26T16:44:23+02:00\tRetrouver le guide cashless de la page d’accueil 100J (#72)"
+    ]
+  },
+  {
+    "path": "BaseBillet/views_qr_card.py",
+    "first_parent_history": [
+      "6a1d7b873e832d59c6c3c28c99acfe7927246a69\t2026-09-26T16:35:06+02:00\tPort 100J QR card onboarding safely into V2 (#71)"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_core/serializers.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/base.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/index.html",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/public_index.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/suivi.html",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/urls.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/custom_patches/fedow_dashboard/views.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Fedow/settings.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/fedow_api.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/install.py",
+    "first_parent_history": [
+      "a58a15f8837fc2ab2d8e1844f5dfac3cda0e26b5\t2026-09-26T19:14:09+02:00\tMake Laboutik bootstrap resumable after partial pairing (#82)",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/settings.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "d0720e428a3d77f525accb4dc7157e015bced1b8\t2026-09-25T18:41:56+02:00\tMerge pull request #25 from Rezal-KIN/statut-deploiement",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "91941740979afecce0b99b4314545664ed4be413\t2026-10-03T18:23:55+02:00\tMerge pull request #95 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/source_templates/infos.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/source_templates/kiosk_base.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/source_templates/login.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/validators.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/Laboutik/views.py",
+    "first_parent_history": [
+      "bc5b1a85a59872faf885c3916698042abe91f0d0\t2026-09-21T17:24:12-04:00\tMerge pull request #1 from Rezal-KIN/merge-gala-deploy",
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  },
+  {
+    "path": "deploy/source/admin-templates/admin/base_site.html",
+    "first_parent_history": [
+      "01ca834903d5a93d3a740f154637e008abaf0ec2\t2026-10-03T18:13:05+02:00\tMerge pull request #94 from Rezal-KIN/Vaporik/vaporik/licences-code-public",
+      "16a80d348e3adb9e1b262dd4c41f2114c9affcfd\t2026-10-03T19:27:09+02:00\tMerge pull request #98 from Rezal-KIN/Vaporik/vaporik/licences-code-public"
+    ]
+  }
+]

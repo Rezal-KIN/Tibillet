@@ -1,0 +1,11 @@
+--- TiBillet/LaBoutik/source_templates/admin/base_site.html
++++ deploy/source/admin-templates/admin/base_site.html
+@@ -0,0 +1,8 @@
++{% extends "admin/base_site.html" %}
++{% comment %}AM-Rezal modification, 2026-10-03. GNU AGPLv3; original admin template retained through inheritance.{% endcomment %}
++{% block footer %}
++{{ block.super }}
++<footer style="padding:1rem;text-align:center">
++    <a href="/source/" target="_blank" rel="noopener">Code source de cette instance — AGPLv3</a>
++</footer>
++{% endblock %}

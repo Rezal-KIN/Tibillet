@@ -1,0 +1,22 @@
+{
+  "fedow": [
+    [
+      "    'fedow_core',\n",
+      "    # Django gives commands from earlier apps precedence over later apps.\n    'cawl_fedow',\n    'fedow_core',\n"
+    ],
+    [
+      "ROOT_URLCONF = 'fedowallet_django.urls'\n",
+      "ROOT_URLCONF = 'fedowallet_django.urls'\nPAYMENT_PROVIDER = os.environ.get('PAYMENT_PROVIDER', 'stripe')\nif PAYMENT_PROVIDER not in {'stripe', 'cawl'}:\n    raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')\nif PAYMENT_PROVIDER == 'cawl':\n    ROOT_URLCONF = 'cawl_fedow.urls'\n"
+    ],
+    [
+      "if not STRIPE_KEY_TEST and not STRIPE_KEY and not DEBUG:\n",
+      "# CAWL environments receive no Stripe key at all (see materialize-runtime-env.py).\nif PAYMENT_PROVIDER != 'cawl' and not STRIPE_KEY_TEST and not STRIPE_KEY and not DEBUG:\n"
+    ]
+  ],
+  "laboutik": [
+    [
+      "INSTALLED_APPS = [\n",
+      "INSTALLED_APPS = [\n    'cawl_laboutik',\n"
+    ]
+  ]
+}

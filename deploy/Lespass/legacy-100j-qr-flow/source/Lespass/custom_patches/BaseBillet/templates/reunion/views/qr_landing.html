@@ -1,0 +1,53 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% block main %}
+<main style="min-height:100vh; background:#0d1b2a; display:flex; align-items:center; justify-content:center; padding:1.5rem;">
+    <div style="width:100%; max-width:480px;">
+
+        <div style="text-align:center; margin-bottom:2.5rem;">
+            <div style="font-size:3rem; margin-bottom:0.5rem;">💳</div>
+            <h1 style="color:#fff; font-size:1.6rem; font-weight:700; margin:0 0 0.5rem;">
+                Carte liée !
+            </h1>
+            <p style="color:rgba(255,255,255,0.6); font-size:1rem; margin:0;">
+                Bonjour {{ user.first_name|default:user.email }}, que voulez-vous faire ?
+            </p>
+        </div>
+
+        <!-- Bouton Recharger -->
+        <a href="#" hx-get="/my_account/refill_wallet/" hx-indicator="#tibillet-spinner"
+           style="display:flex; align-items:center; justify-content:center; gap:1rem;
+                  background:#2563eb; color:#fff; border-radius:1rem;
+                  padding:1.5rem 2rem; text-decoration:none; margin-bottom:1rem;
+                  font-size:1.3rem; font-weight:700; box-shadow:0 4px 24px rgba(37,99,235,0.4);
+                  transition:transform 0.1s, box-shadow 0.1s;"
+           onmouseover="this.style.transform='scale(1.02)'"
+           onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size:2rem;">⚡</span>
+            <div>
+                <div>Recharger ma carte</div>
+                <div style="font-size:0.85rem; font-weight:400; opacity:0.85;">Paiement en ligne via Stripe</div>
+            </div>
+        </a>
+
+        <!-- Bouton Mon espace -->
+        <a href="/my_account/"
+           style="display:flex; align-items:center; justify-content:center; gap:1rem;
+                  background:rgba(255,255,255,0.08); color:#fff; border-radius:1rem;
+                  padding:1.5rem 2rem; text-decoration:none;
+                  font-size:1.3rem; font-weight:700;
+                  border:1px solid rgba(255,255,255,0.15);
+                  transition:transform 0.1s, background 0.1s;"
+           onmouseover="this.style.background='rgba(255,255,255,0.14)'"
+           onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+            <span style="font-size:2rem;">👤</span>
+            <div>
+                <div>Accéder à mon espace</div>
+                <div style="font-size:0.85rem; font-weight:400; opacity:0.85;">Solde, historique, remboursement</div>
+            </div>
+        </a>
+
+    </div>
+</main>
+{% endblock %}
