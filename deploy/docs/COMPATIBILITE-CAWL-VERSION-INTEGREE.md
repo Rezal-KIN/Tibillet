@@ -32,7 +32,17 @@ par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
   positif (jetons repris) et règlement CW négatif (argent rendu, référence CAWL).
   **Clôture** : une monnaie désactivée ou archivée n'est plus remboursée ni créditée, en
   ligne comme au stand (garde ajoutée à `rembourser_en_especes`, en mode CAWL seulement).
-- **Bloc F : à faire.** E : à retirer de `deploy/`.
+- **Bloc F (cartes et QR) : rien à réécrire, on prend le parcours de TiBillet.** Sur la
+  version intégrée, le Fedow de l'instance reste la référence de l'IDENTITÉ des cartes
+  (numéro, QR, liaison) et Lespass en garde un miroir local (`QrcodeCashless`,
+  `fabriquer_le_miroir_de_la_carte`, `CarteService.lier_a_user`) ; les SOLDES sont dans
+  `fedow_core`. Le scan `/qr/<uuid>/` de TiBillet a été vérifié sur la pile locale (carte
+  anonyme → formulaire d'email). Nos pages QR du gala (`views_qr_card.py` et 4 gabarits
+  `reunion/`, jamais branchées ici) sont retirées. L'import des 7 020 cartes reste
+  `deploy/tools/runtime/import_card_stock_fedow.py`, qui pilote la commande d'origine du
+  Fedow (`import_cards`) : compatible avec l'image Fedow non modifiée, son lanceur est à
+  adapter à la VM (il visait AWS).
+- **E : à retirer de `deploy/`** (LaBoutik V1, Fedow patché `cawl_fedow`).
 
 Variables d'environnement d'une instance CAWL : `PAYMENT_PROVIDER=cawl`, `CAWL_TEST` (1 =
 préproduction), `CAWL_MERCHANT_ID`, `CAWL_API_KEY_ID`, `CAWL_API_SECRET`,

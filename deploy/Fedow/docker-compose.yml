@@ -7,10 +7,9 @@ services:
     networks:
       - fedow_backend
   fedow_django:
-    image: ${FEDOW_IMAGE:-gala-fedow:local}
-    build:
-      context: ../..
-      dockerfile: deploy/Fedow/Dockerfile
+    # Image d'origine de TiBillet : la recharge et le remboursement CAWL sont dans Lespass.
+    # / Vanilla TiBillet image: CAWL top-up and refund live in Lespass.
+    image: ${FEDOW_IMAGE:-tibillet/fedow:latest}
     container_name: fedow_django
     hostname: fedow_django
     restart: always
