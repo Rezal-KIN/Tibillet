@@ -615,6 +615,15 @@ class WalletService:
                 )
                 .select_related("asset", "asset__tenant_origin")
             )
+            # Instance CAWL : la monnaie d'un événement clôturé (désactivée ou archivée)
+            # n'est plus remboursée, sa comptabilité est close.
+            # / CAWL instance: a closed event's currency is no longer refunded.
+            from PaiementCawl.services import enabled as cawl_enabled
+            if cawl_enabled():
+                tokens_eligibles = [
+                    token for token in tokens_eligibles
+                    if token.asset.active and not token.asset.archive
+                ]
 
         # La vidange se fait des qu'un des deux Fedow a quelque chose a reprendre.
         # Une carte vide partout mais deliee sur l'ancien Fedow (« vider et delier »,

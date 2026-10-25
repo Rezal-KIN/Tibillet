@@ -570,3 +570,163 @@ class TestRechargeEnLigneCawl:
                 assert not Transaction.objects.filter(checkout_stripe=paiement.uuid).exists()
             finally:
                 Asset.objects.filter(pk=monnaie.pk).update(active=True)
+
+
+def recharger_en_ligne(cawl, tenant, personne, montant):
+    """Une recharge CAWL payée et créditée. / A paid and credited CAWL top-up."""
+    from BaseBillet.models import Paiement_stripe
+    from PaiementCawl.recharges import creer_la_recharge_en_ligne
+    creer_la_recharge_en_ligne(personne, montant, tenant.get_primary_domain().domain)
+    paiement = Paiement_stripe.objects.filter(user=personne).order_by("-order_date").first()
+    cawl.capturer(paiement)
+    assert paiement.update_checkout_status() == Paiement_stripe.VALID
+    return paiement
+
+
+def monnaie_du_lieu():
+    from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+    return trouver_le_produit_de_recharge_de_la_borne()[0].asset
+
+
+def depenser(personne, monnaie, montant, tenant):
+    from fedow_core.models import Transaction
+    from fedow_core.services import TransactionService
+    TransactionService.creer(sender=personne.wallet, receiver=monnaie.wallet_origin, asset=monnaie,
+                             montant_en_centimes=montant, action=Transaction.SALE, tenant=tenant)
+
+
+def recharger_sur_place(personne, monnaie, montant, tenant):
+    from fedow_core.services import TransactionService
+    TransactionService.creer_recharge(sender_wallet=monnaie.wallet_origin, receiver_wallet=personne.wallet,
+                                      asset=monnaie, montant_en_centimes=montant, tenant=tenant)
+
+
+class TestRemboursementDuSoldeCawl:
+
+    def test_le_solde_recharge_en_ligne_est_rembourse_sur_la_carte(self, cawl, tenant):
+        """20 € en ligne, 5 € dépensés : 15 € rendus par CAWL sur la recharge, solde à 0,
+        vente VIDAGE_CARTE réglée (LE +1500, CW −1500).
+        / 20 € online, 5 € spent: 15 € refunded through CAWL, VIDAGE_CARTE sale settled."""
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models import Paiement_stripe, PaymentMethod
+        from BaseBillet.models_vente import Reglement, Vente
+        from fedow_core.services import WalletService
+        from PaiementCawl.remboursements import calculer_le_remboursable, rembourser_le_solde_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = monnaie_du_lieu()
+            personne = utilisateur_avec_portefeuille(tenant)
+            paiement = recharger_en_ligne(cawl, tenant, personne, 2000)
+            depenser(personne, monnaie, 500, tenant)
+            assert calculer_le_remboursable(personne).en_ligne == 1500
+
+            rendu, reste = rembourser_le_solde_en_ligne(personne)
+            assert rendu == 1500 and reste.solde == 0
+            assert [r["amount"] for r in cawl.remboursements] == [1500]
+            assert WalletService.obtenir_solde(personne.wallet, monnaie) == 0
+            paiement.refresh_from_db()
+            assert paiement.status == Paiement_stripe.PARTIALLY_REFUNDED
+
+            vente = Vente.objects.filter(client=personne, nature=Vente.Nature.VIDAGE_CARTE).get()
+            assert vente.statut == Vente.Statut.REGLEE
+            montants = {(r.moyen, r.montant) for r in Reglement.objects.filter(vente=vente)}
+            assert montants == {(PaymentMethod.LOCAL_EURO, 1500), (PaymentMethod.CAWL, -1500)}
+
+            # Une seconde demande ne rend rien de plus. / A second request gives nothing more.
+            assert rembourser_le_solde_en_ligne(personne)[0] == 0
+            assert len(cawl.remboursements) == 1
+
+    def test_la_part_rechargee_sur_place_reste_pour_le_stand(self, cawl, tenant):
+        """20 € en ligne + 10 € sur place : 20 € rendus en ligne, 10 € restent au stand.
+        / 20 € online + 10 € on site: 20 € refunded online, 10 € left for the stand."""
+        from django_tenants.utils import tenant_context
+        from fedow_core.services import WalletService
+        from PaiementCawl.remboursements import calculer_le_remboursable, rembourser_le_solde_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = monnaie_du_lieu()
+            personne = utilisateur_avec_portefeuille(tenant)
+            recharger_en_ligne(cawl, tenant, personne, 2000)
+            recharger_sur_place(personne, monnaie, 1000, tenant)
+            avant = calculer_le_remboursable(personne)
+            assert (avant.solde, avant.en_ligne, avant.sur_place) == (3000, 2000, 1000)
+
+            rendu, reste = rembourser_le_solde_en_ligne(personne)
+            assert rendu == 2000
+            assert (reste.solde, reste.en_ligne, reste.sur_place) == (1000, 0, 1000)
+            assert WalletService.obtenir_solde(personne.wallet, monnaie) == 1000
+
+    def test_chaque_recharge_est_rendue_sur_son_paiement_de_la_plus_recente(self, cawl, tenant):
+        """Recharges de 10 € puis 15 €, 5 € dépensés : 15 € rendus sur la seconde, puis 5 € sur
+        la première. Jamais plus qu'un paiement n'a encaissé.
+        / 10 € then 15 €, 5 € spent: 15 € on the newer, then 5 € on the older."""
+        from django_tenants.utils import tenant_context
+        from PaiementCawl.remboursements import rembourser_le_solde_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = monnaie_du_lieu()
+            personne = utilisateur_avec_portefeuille(tenant)
+            premiere = recharger_en_ligne(cawl, tenant, personne, 1000)
+            seconde = recharger_en_ligne(cawl, tenant, personne, 1500)
+            depenser(personne, monnaie, 500, tenant)
+
+            rendu, _reste = rembourser_le_solde_en_ligne(personne)
+            assert rendu == 2000
+            par_paiement = [(r["payment_id"], r["amount"]) for r in cawl.remboursements]
+            assert par_paiement == [
+                (seconde.cawl_payment.provider_payment_id, 1500),
+                (premiere.cawl_payment.provider_payment_id, 500),
+            ]
+
+    def test_un_refus_de_cawl_ne_touche_pas_au_solde(self, cawl, tenant):
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models_vente import Vente
+        from fedow_core.services import WalletService
+        from PaiementCawl.remboursements import rembourser_le_solde_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = monnaie_du_lieu()
+            personne = utilisateur_avec_portefeuille(tenant)
+            recharger_en_ligne(cawl, tenant, personne, 1000)
+            cawl.refuser_les_remboursements = True
+            with pytest.raises(CawlError):
+                rembourser_le_solde_en_ligne(personne)
+            assert WalletService.obtenir_solde(personne.wallet, monnaie) == 1000
+            assert not Vente.objects.filter(client=personne, nature=Vente.Nature.VIDAGE_CARTE).exists()
+
+    def test_un_gala_cloture_n_est_plus_rembourse(self, cawl, tenant):
+        """Monnaie désactivée (gala clôturé) : plus rien de remboursable, aucun appel à CAWL.
+        / Inactive currency (closed event): nothing refundable, no CAWL call."""
+        from django_tenants.utils import tenant_context
+        from fedow_core.models import Asset
+        from PaiementCawl.remboursements import calculer_le_remboursable, rembourser_le_solde_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = monnaie_du_lieu()
+            personne = utilisateur_avec_portefeuille(tenant)
+            recharger_en_ligne(cawl, tenant, personne, 1000)
+            Asset.objects.filter(pk=monnaie.pk).update(active=False)
+            try:
+                assert calculer_le_remboursable(personne).en_ligne == 0
+                assert rembourser_le_solde_en_ligne(personne)[0] == 0
+                assert cawl.remboursements == []
+            finally:
+                Asset.objects.filter(pk=monnaie.pk).update(active=True)
+
+    def test_le_bouton_du_compte_rembourse(self, cawl, tenant):
+        from django_tenants.utils import tenant_context
+        from fabriques_panier import client_connecte, taches_celery_enregistrees
+        from fedow_core.services import WalletService
+
+        with tenant_context(tenant):
+            with taches_celery_enregistrees():
+                monnaie = monnaie_du_lieu()
+                personne = utilisateur_avec_portefeuille(tenant)
+                recharger_en_ligne(cawl, tenant, personne, 800)
+                personne.email_valid = True
+                personne.save(update_fields=["email_valid"])
+                client = client_connecte(personne)
+                reponse = client.get("/my_account/refund_online/", HTTP_HX_REQUEST="true")
+                assert reponse.status_code == 200
+                assert WalletService.obtenir_solde(personne.wallet, monnaie) == 0
+                assert [r["amount"] for r in cawl.remboursements] == [800]

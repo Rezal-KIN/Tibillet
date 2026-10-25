@@ -23,15 +23,15 @@ par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
   (transaction REFILL portant l'uuid du paiement). Pas de FED, pas d'appel au Fedow pour
   le crédit. Page : `/my_account/refill_wallet/` (gabarit
   `pages/classic/vues/compte/recharge_en_ligne.html`).
-- **Bloc C (remboursement en ligne du solde) : à faire.** Règle décidée (option B) :
-  remboursable en ligne = min(solde, recharges CAWL pas encore remboursées), réparti sur
-  les paiements CAWL d'origine ; le reste (rechargé sur place) se rembourse au stand en
-  espèces (`rembourser_en_especes`, existant). **Clôture (décision du 25 octobre)** : une
-  monnaie désactivée ou archivée (gala clôturé) n'est plus jamais remboursée ni créditée,
-  en ligne comme au stand, même si un nouveau gala existe : sa comptabilité est close. La
-  recharge l'applique déjà ; le remboursement devra l'appliquer (`asset.active` et
-  `not asset.archive`). En attendant, le bouton répond « pas encore
-  disponible ».
+- **Bloc C (remboursement en ligne du solde) : fait** (`PaiementCawl/remboursements.py`,
+  bouton existant `/my_account/refund_online/`). Remboursable en ligne = min(solde de la
+  monnaie du lieu, recharges CAWL pas encore remboursées), rendu sur chaque paiement CAWL
+  d'origine, du plus récent au plus ancien, chacun dans sa transaction. Le reste
+  (rechargé sur place) est annoncé « à récupérer au stand » et se rembourse en espèces
+  (`rembourser_en_especes`, existant). Comptabilité : vente VIDAGE_CARTE, règlement LE
+  positif (jetons repris) et règlement CW négatif (argent rendu, référence CAWL).
+  **Clôture** : une monnaie désactivée ou archivée n'est plus remboursée ni créditée, en
+  ligne comme au stand (garde ajoutée à `rembourser_en_especes`, en mode CAWL seulement).
 - **Bloc F : à faire.** E : à retirer de `deploy/`.
 
 Variables d'environnement d'une instance CAWL : `PAYMENT_PROVIDER=cawl`, `CAWL_TEST` (1 =

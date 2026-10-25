@@ -1856,13 +1856,12 @@ class MyAccount(viewsets.ViewSet):
 
     @action(detail=False, methods=['GET'])
     def refund_online(self, request):
-        # Instance CAWL : le remboursement en ligne du solde n'est pas encore branché.
-        # / CAWL instance: online balance refund is not wired yet.
+        # Instance CAWL : remboursement en ligne de la monnaie de l'événement, plafonné
+        # à ce qui a été rechargé par CAWL (PaiementCawl/remboursements.py).
+        # / CAWL instance: online refund of the event currency, capped at CAWL top-ups.
         from PaiementCawl.services import enabled as cawl_enabled
         if cawl_enabled():
-            messages.add_message(request, messages.WARNING,
-                                 _("Le remboursement en ligne n'est pas encore disponible."))
-            return HttpResponseClientRedirect('/my_account/')
+            return self._rembourser_par_cawl(request)
         user = request.user
         fedowAPI = FedowAPI()
         wallet = fedowAPI.wallet.cached_retrieve_by_signature(user).validated_data
@@ -2076,6 +2075,43 @@ class MyAccount(viewsets.ViewSet):
         else:
             messages.add_message(request, messages.ERROR, _("Not available. Contact an admin."))
             return HttpResponseClientRedirect('/my_account/')
+
+    def _rembourser_par_cawl(self, request):
+        """
+        Rembourse en ligne la part rechargée par CAWL ; dit ce qui reste au stand.
+        / Refunds online the CAWL-topped-up part; tells what is left for the stand.
+        """
+        from PaiementCawl.remboursements import calculer_le_remboursable, rembourser_le_solde_en_ligne
+        from payment_providers.cawl import CawlError
+
+        def en_euros(centimes):
+            return f"{Decimal(centimes) / 100:.2f}"
+
+        if not request.user.email_valid:
+            messages.add_message(request, messages.WARNING,
+                                 _("Validez votre adresse email avant de demander un remboursement."))
+            return HttpResponseClientRedirect('/my_account/')
+        remboursable = calculer_le_remboursable(request.user)
+        if remboursable.en_ligne <= 0:
+            if remboursable.sur_place > 0:
+                messages.add_message(request, messages.INFO, _(
+                    "Votre solde a été rechargé sur place : il se rembourse au stand, en espèces."))
+            else:
+                messages.add_message(request, messages.INFO, _("Aucun montant à rembourser en ligne."))
+            return HttpResponseClientRedirect('/my_account/')
+        try:
+            rendu, reste = rembourser_le_solde_en_ligne(request.user, ip=get_client_ip(request))
+        except CawlError:
+            messages.add_message(request, messages.ERROR,
+                                 _("Le remboursement en ligne a été refusé. Contactez l'organisation."))
+            return HttpResponseClientRedirect('/my_account/')
+        cache.delete(f"wallet_user_{request.user.wallet.uuid}")
+        messages.add_message(request, messages.SUCCESS, _(
+            "%(montant)s € remboursés sur la carte bancaire qui a payé vos recharges.") % {"montant": en_euros(rendu)})
+        if reste.sur_place > 0:
+            messages.add_message(request, messages.INFO, _(
+                "%(montant)s € rechargés sur place : à récupérer au stand, en espèces.") % {"montant": en_euros(reste.sur_place)})
+        return HttpResponseClientRedirect('/my_account/')
 
     def _recharger_par_cawl(self, request):
         """
