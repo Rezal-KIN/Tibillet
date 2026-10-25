@@ -26,7 +26,11 @@ par tenant). Analyse de code uniquement : rien n'est porté ni exécuté.
 - **Bloc C (remboursement en ligne du solde) : à faire.** Règle décidée (option B) :
   remboursable en ligne = min(solde, recharges CAWL pas encore remboursées), réparti sur
   les paiements CAWL d'origine ; le reste (rechargé sur place) se rembourse au stand en
-  espèces (`rembourser_en_especes`, existant). En attendant, le bouton répond « pas encore
+  espèces (`rembourser_en_especes`, existant). **Clôture (décision du 25 octobre)** : une
+  monnaie désactivée ou archivée (gala clôturé) n'est plus jamais remboursée ni créditée,
+  en ligne comme au stand, même si un nouveau gala existe : sa comptabilité est close. La
+  recharge l'applique déjà ; le remboursement devra l'appliquer (`asset.active` et
+  `not asset.archive`). En attendant, le bouton répond « pas encore
   disponible ».
 - **Bloc F : à faire.** E : à retirer de `deploy/`.
 

@@ -147,6 +147,15 @@ def crediter_la_recharge(paiement):
         ).get(pricesold__productsold__product__methode_caisse=Product.RECHARGE_EUROS)
         asset = ligne.pricesold.productsold.product.asset
         destinataire = verrouille.user.wallet
+        # Gala clôturé (monnaie désactivée ou archivée) : sa comptabilité est close, on
+        # ne crédite plus rien. Un paiement capturé trop tard est à rembourser à la main.
+        # / Closed event (currency inactive or archived): nothing is credited anymore.
+        if asset is not None and (not asset.active or asset.archive):
+            logger.error(
+                f"Recharge CAWL {verrouille.uuid} payée après la clôture de la monnaie "
+                f"{asset.name} : NON créditée, à rembourser à la main."
+            )
+            return None
         if asset is None or destinataire is None:
             logger.error(
                 f"Recharge CAWL {verrouille.uuid} payée mais NON créditée : monnaie ou "

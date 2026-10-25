@@ -548,3 +548,25 @@ class TestRechargeEnLigneCawl:
         assert monnaie in AssetService.obtenir_assets_accessibles(tenant)
         autre_lieu = Client.objects.exclude(pk=tenant.pk).exclude(schema_name="public").first()
         assert monnaie not in AssetService.obtenir_assets_accessibles(autre_lieu)
+
+    def test_une_monnaie_cloturee_n_est_plus_creditee(self, cawl, tenant):
+        """Gala clôturé (monnaie désactivée) : un paiement capturé n'est plus crédité.
+        / Closed event (inactive currency): a captured payment is no longer credited."""
+        from django_tenants.utils import tenant_context
+        from BaseBillet.models import Paiement_stripe
+        from fedow_core.models import Asset, Transaction
+        from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+        from PaiementCawl.recharges import creer_la_recharge_en_ligne
+
+        with tenant_context(tenant):
+            monnaie = trouver_le_produit_de_recharge_de_la_borne()[0].asset
+            personne = utilisateur_avec_portefeuille(tenant)
+            creer_la_recharge_en_ligne(personne, 1000, tenant.get_primary_domain().domain)
+            paiement = Paiement_stripe.objects.get(user=personne)
+            cawl.capturer(paiement)
+            Asset.objects.filter(pk=monnaie.pk).update(active=False)
+            try:
+                paiement.update_checkout_status()
+                assert not Transaction.objects.filter(checkout_stripe=paiement.uuid).exists()
+            finally:
+                Asset.objects.filter(pk=monnaie.pk).update(active=True)
