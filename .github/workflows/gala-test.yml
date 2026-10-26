@@ -1,0 +1,90 @@
+# Déploiement et tests sur la VM gala-test (Proxmox du Rezal).
+# / Deploy and test on the gala-test VM (Rezal Proxmox).
+#
+# Tourne sur le runner auto-hébergé « gala-test » (service sur la VM, utilisateur tibillet).
+# La configuration de la VM (.env, certificat) vit hors du dépôt, dans
+# ~/gala-test-config/ : elle n'est jamais commitée.
+#
+# Sécurité : déclenché seulement par un push sur la branche ou à la main, JAMAIS par
+# une pull request : un fork ne peut pas faire exécuter de code sur la VM.
+
+name: gala-test — déploiement et tests
+
+on:
+  push:
+    branches: [tibillet-local-upstream]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Tests à lancer"
+        type: choice
+        options: [cawl, complete]
+        default: cawl
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gala-test
+  cancel-in-progress: false
+
+jobs:
+  deployer-et-tester:
+    if: github.repository == 'Rezal-KIN/Tibillet'
+    runs-on: [self-hosted, gala-test]
+    timeout-minutes: 120
+    env:
+      COMPOSE_PROJECT_NAME: tibillet
+      URL_LESPASS: https://lespass.tibillet.localhost/
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Configuration de la VM (hors dépôt)
+        run: |
+          cp ~/gala-test-config/.env .env
+          rm -rf certs && cp -r ~/gala-test-config/certs certs
+
+      - name: Construire et démarrer la pile
+        run: |
+          docker network inspect frontend >/dev/null 2>&1 || docker network create frontend
+          docker compose up -d --build --remove-orphans
+          docker compose ps --format "{{.Name}} {{.Status}}"
+
+      - name: Migrations
+        run: |
+          for essai in $(seq 1 30); do
+            docker exec lespass_postgres pg_isready -q && break
+            sleep 2
+          done
+          docker exec lespass_django poetry run python /DjangoFiles/manage.py migrate_schemas
+          docker exec lespass_django poetry run python /DjangoFiles/manage.py collectstatic --no-input -v 0
+
+      - name: Serveur Django
+        run: |
+          docker exec lespass_django pkill -f "manage.py runserver" || true
+          docker exec -d lespass_django bash -c 'cd /DjangoFiles && poetry run python manage.py runserver 0.0.0.0:8002 > /DjangoFiles/runserver.log 2>&1'
+          for essai in $(seq 1 60); do
+            [ "$(curl -sk -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
+            sleep 3
+          done
+          echo "Le serveur ne répond pas" ; docker exec lespass_django tail -40 /DjangoFiles/runserver.log ; exit 1
+
+      - name: Tests CAWL et comptabilité
+        run: |
+          bash scripts/lancer_tests.sh python -q \
+            tests/pytest/test_cawl_ventes.py \
+            tests/pytest/test_cawl_passerelle.py \
+            tests/pytest/test_garde_aucun_amount_fois_qty.py \
+            tests/pytest/test_plan_comptable_unique.py
+
+      - name: Suite complète (à la demande)
+        if: github.event_name == 'workflow_dispatch' && inputs.suite == 'complete'
+        # Les tests Stripe échouent sans clé Stripe (attendu sur une instance CAWL) :
+        # cette étape informe, elle ne bloque pas.
+        continue-on-error: true
+        run: bash scripts/lancer_tests.sh python -q -rfE tests/pytest/ booking/tests/
+
+      - name: État de la pile
+        if: always()
+        run: docker compose ps --format "{{.Name}} {{.Status}}"
