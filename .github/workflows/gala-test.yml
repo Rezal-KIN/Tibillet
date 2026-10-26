@@ -59,10 +59,15 @@ jobs:
 
       - name: Migrations
         run: |
-          for essai in $(seq 1 30); do
-            docker exec lespass_postgres pg_isready -q && break
-            sleep 2
+          # Attendre que Django tourne vraiment (un conteneur peut être en attente de
+          # redémarrage) et que PostgreSQL accepte les connexions.
+          # / Wait until Django really runs and PostgreSQL accepts connections.
+          for essai in $(seq 1 60); do
+            etat=$(docker inspect -f '{{.State.Running}} {{.State.Restarting}}' lespass_django)
+            [ "$etat" = "true false" ] && docker exec lespass_postgres pg_isready -q && break
+            sleep 3
           done
+          [ "$etat" = "true false" ] || { docker logs --tail 30 lespass_django; exit 1; }
           docker exec lespass_django poetry run python /DjangoFiles/manage.py migrate_schemas
           docker exec lespass_django poetry run python /DjangoFiles/manage.py collectstatic --no-input -v 0
 
