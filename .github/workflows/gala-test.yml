@@ -44,6 +44,12 @@ jobs:
         run: |
           cp ~/gala-test-config/.env .env
           rm -rf certs && cp -r ~/gala-test-config/certs certs
+          # Fichiers de log créés AVANT la pile : sinon nginx (root) les crée le premier
+          # et le démarrage de Django (`touch`) échoue en boucle.
+          # / Log files created BEFORE the stack, otherwise nginx (root) creates them first.
+          mkdir -p logs
+          rm -f logs/nginxAccess.log logs/nginxError.log
+          touch logs/nginxAccess.log logs/nginxError.log logs/gunicorn.logs logs/Djangologfile
 
       - name: Construire et démarrer la pile
         run: |
