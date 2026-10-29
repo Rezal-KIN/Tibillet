@@ -42,8 +42,13 @@ CAWL (test) ──► renvoie le navigateur sur https://lespass.tibillet.localho
 
 1. Arrêter le Traefik local s'il tourne (il occupe le port 443) :
    `docker stop traefik` (ou arrêter Docker Desktop).
-2. Ouvrir le tunnel, laisser le terminal ouvert :
-   `ssh -N -L 443:127.0.0.1:443 gala-test`
+2. Ouvrir le tunnel, laisser le terminal ouvert. macOS réserve le port 443 :
+   il faut `sudo` (mot de passe de session du Mac), et donc préciser la clé et la
+   configuration SSH de l'utilisateur, que `sudo` ne lit pas :
+   ```bash
+   sudo ssh -N -F ~/.ssh/config -i ~/.ssh/gala_test -o UserKnownHostsFile=~/.ssh/known_hosts \
+     -L 127.0.0.1:443:127.0.0.1:443 -L "[::1]:443:127.0.0.1:443" gala-test
+   ```
 3. Ouvrir `https://lespass.tibillet.localhost/`. Le navigateur prévient que le
    certificat n'est pas reconnu (certificat local de la VM) : accepter pour ce site.
 4. Payer avec une carte de test CAWL.
