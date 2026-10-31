@@ -21,7 +21,7 @@ from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, IntegrityError, transaction as db_transaction
 from django.db.models import Count, Q, Sum, Prefetch
-from django.http import HttpResponse, HttpRequest, Http404, HttpResponseRedirect
+from django.http import HttpResponse, HttpRequest, Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -45,7 +45,7 @@ from ApiBillet.permissions import TenantAdminPermission, CanInitiatePaymentPermi
 from ApiBillet.serializers import get_or_create_price_sold, dec_to_int
 from AuthBillet.models import TibilletUser, Wallet, HumanUser
 from AuthBillet.serializers import MeSerializer
-from AuthBillet.utils import get_or_create_user, get_client_ip
+from AuthBillet.utils import get_or_create_user, get_client_ip, sender_mail_connect
 from fedow_core.exceptions import CarteIntrouvable
 from AuthBillet.views import activate
 from BaseBillet.models import Configuration, Ticket, Product, Event, Tag, Paiement_stripe, Membership, Reservation, \
@@ -637,6 +637,22 @@ def emailconfirmation(request, token):
         raise Http404("Error on email confirmation")
 
 
+def _envoyer_le_lien_de_connexion_de_la_carte(user, qrcode_uuid):
+    """
+    Lien de connexion par mail, qui ramène sur la carte. Le QR est imprimé sur la carte :
+    il ne prouve pas l'identité de son porteur. Un mail au plus par carte et par personne
+    toutes les 5 minutes, pour que des scans répétés n'inondent pas sa boîte.
+    / Sign-in link by email, back to the card. The printed QR proves no identity.
+    At most one email per card and person every 5 minutes.
+    """
+    if cache.add(f"qr-lien-connexion:{qrcode_uuid}:{user.pk}", True, timeout=300):
+        sender_mail_connect(
+            user.email,
+            next_url=signing.dumps(f"/qr/{qrcode_uuid}/"),
+            template="emails/qr_connexion.html",
+        )
+
+
 class ScanQrCode(viewsets.ViewSet):  # /qr
     authentication_classes = [SessionAuthentication, ]
 
@@ -681,31 +697,47 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
                 logger.info("Wallet ephemere, on demande le mail")
                 template_context = get_context(request)
                 template_context['qrcode_uuid'] = qrcode_uuid
+                # Déjà connecté (retour du lien par mail) : on confirme, sans rien lier en
+                # silence. Un simple scan ne doit pas donner son portefeuille à la carte
+                # d'un autre, ni lier une pile de cartes scannées à la suite.
+                # / Already signed in: ask first, a scan alone must never link a card.
+                if request.user.is_authenticated:
+                    return render(request, "fonctionnel/qr_lier_ma_carte.html", context=template_context)
                 template_context['base_template'] = 'fonctionnel/blank_base.html'
-                # Logout au cas où on scanne les cartes à la suite.
-                logout(request)
                 return render(request, "fonctionnel/register.html", context=template_context)
 
             # Si wallet non ephemere, alors on a un user :
-            wallet = Wallet.objects.get(uuid=serialized_qrcode_card['wallet_uuid'])
+            try:
+                proprietaire: TibilletUser = Wallet.objects.get(uuid=serialized_qrcode_card['wallet_uuid']).user
+            except (Wallet.DoesNotExist, TibilletUser.DoesNotExist):
+                raise Http404("Unknown card owner")
 
-            user: TibilletUser = wallet.user
-            user.is_active = True
-            user.save()
+            template_context = get_context(request)
+            template_context['qrcode_uuid'] = qrcode_uuid
 
-            # Parti pris : On logue l'user lorsqu'il scanne sa carte.
-            login(request, user)
+            # Le QR ne connecte personne : sans session, le propriétaire reçoit un lien par mail.
+            # / The QR signs nobody in: without a session, the owner gets a link by email.
+            if not request.user.is_authenticated:
+                _envoyer_le_lien_de_connexion_de_la_carte(proprietaire, qrcode_uuid)
+                return render(request, "fonctionnel/qr_verifier_mail.html", context=template_context)
+
+            if request.user.pk != proprietaire.pk:
+                return HttpResponseForbidden(_("Cette carte est liée à un autre compte."))
 
             # Pour les tests :
             # On est sur le moteur de démonstration / test
             # Pour les tests fonctionnel, on a besoin de vérifier le token, on le génère ici.
             if settings.TEST or settings.DEBUG:
-                token = user.get_connect_token()
+                token = proprietaire.get_connect_token()
                 base_url = connection.tenant.get_primary_domain().domain
                 connexion_url = f"https://{base_url}/emailconfirmation/{token}"
                 messages.add_message(request, messages.INFO, format_html(f"<a href='{connexion_url}'>TEST MODE</a>"))
 
-            return redirect("/my_account")
+            return render(request, "fonctionnel/qr_carte_liee.html", context=template_context)
+
+    @action(detail=True, methods=['GET'], url_path='verifier-mail')
+    def verifier_mail(self, request, pk=None):
+        return render(request, "fonctionnel/qr_verifier_mail.html", context=get_context(request))
 
     # @action(detail=False, methods=['POST'])
     # def link_with_email_confirm(self, request):
@@ -713,30 +745,54 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
 
     @action(detail=False, methods=['POST'])
     def link(self, request):
-        # data=request.POST.dict() in the controler for boolean
-        # logger.info(request.POST.dict())
-        # import ipdb; ipdb.set_trace()
+        referer = request.headers.get('Referer', '/')
+
+        # Déjà connecté (retour du lien par mail) : l'identité est prouvée, on lie à ce compte.
+        # / Already signed in: identity is proven, link to this account.
+        if request.user.is_authenticated:
+            try:
+                qrcode_uuid = uuid.UUID(request.POST.get('qrcode_uuid', ''))
+            except ValueError:
+                raise Http404()
+            if not self._lier_la_carte(request, request.user, qrcode_uuid):
+                return HttpResponseClientRedirect(referer)
+            return HttpResponseClientRedirect(f"/qr/{qrcode_uuid}/")
+
         # data=request.POST.dict() in the controler for boolean
         validator = LinkQrCodeValidator(data=request.POST.dict())
         if not validator.is_valid():
             for error in validator.errors:
                 logger.error(f"{error} : {validator.errors[error][0]}")
                 messages.add_message(request, messages.ERROR, f"{error} : {validator.errors[error][0]}")
-            return HttpResponseClientRedirect(request.headers.get('Referer', '/'))
+            return HttpResponseClientRedirect(referer)
+
+        email = validator.validated_data['email'].lower()
+        qrcode_uuid = validator.validated_data['qrcode_uuid']
+
+        # Carte inconnue : aucun mail. Sinon, des uuid inventés inonderaient une boîte connue.
+        # / Unknown card: no email, or made-up uuids would flood a known mailbox.
+        if not FedowAPI().NFCcard.qr_retrieve(qrcode_uuid):
+            messages.add_message(request, messages.ERROR,
+                                 _("Cette carte n'est pas reconnue. Elle n'est peut-être pas encore activée."))
+            return HttpResponseClientRedirect(referer)
+
+        # Un email connu ne prouve rien : son propriétaire doit passer par le lien reçu par mail
+        # avant de lier la carte. Sinon, connaître une adresse suffirait à entrer dans le compte.
+        # / A known email proves nothing: its owner must follow the emailed link first.
+        compte_existant = TibilletUser.objects.filter(email__iexact=email).first()
+        if compte_existant:
+            _envoyer_le_lien_de_connexion_de_la_carte(compte_existant, qrcode_uuid)
+            return HttpResponseClientRedirect(f"/qr/{qrcode_uuid}/verifier-mail/")
 
         # Le mail est envoyé
-        email = validator.validated_data['email']
-        user: TibilletUser = get_or_create_user(email, force_mail=True)
-        if validator.validated_data.get('newsletter'):
-            send_to_ghost_email.delay(email)
+        user: TibilletUser = get_or_create_user(email, next_url=signing.dumps(f"/qr/{qrcode_uuid}/"))
 
-        # import ipdb; ipdb.set_trace()
         if not user:
             # Le mail n'est pas validé par django (example.org?)
             messages.add_message(request, messages.ERROR, f"{_('Invalid email')}")
             logger.error("email validé par validateur DRF mais pas par get_or_create_user "
                          "-> email de confirmation a renvoyé une erreur")
-            return HttpResponseClientRedirect(request.headers.get('Referer', '/'))
+            return HttpResponseClientRedirect(referer)
 
         if validator.data.get('lastname') and not user.last_name:
             user.last_name = validator.data.get('lastname')
@@ -748,6 +804,23 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
         user.email_valid = False
         user.save()
 
+        if not self._lier_la_carte(request, user, qrcode_uuid):
+            return HttpResponseClientRedirect(referer)
+
+        # Compte tout neuf : on entre tout de suite pour recharger. Son mail reste à confirmer.
+        # / Brand-new account: straight in to top up. Its email still has to be confirmed.
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        login(request, user)
+        return HttpResponseClientRedirect(f"/qr/{qrcode_uuid}/")
+
+    def _lier_la_carte(self, request, user, qrcode_uuid):
+        """
+        Lie la carte au portefeuille de la personne, chez Fedow puis en local.
+        Rend False, avec un message d'erreur, si la liaison est refusée.
+        / Links the card to the person's wallet, on Fedow then locally.
+        Returns False, with an error message, if the link is refused.
+        """
         fedowAPI = FedowAPI()
         wallet, created = fedowAPI.wallet.get_or_create_wallet(user)
         # Si l'user possède déja un wallet et une carte référencée dans Fedow,
@@ -763,10 +836,9 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
                 messages.add_message(request, messages.ERROR,
                                      _("You seem to already have a TiBillet card linked to your wallet. "
                                        "Please revoke it first in your profile area to link a new one."))
-                return HttpResponseClientRedirect(request.headers.get('Referer', '/'))
+                return False
 
         # Opération de fusion entre la carte liée au qrcode et le wallet de l'user :
-        qrcode_uuid = validator.validated_data['qrcode_uuid']
         linked_serialized_card = fedowAPI.NFCcard.linkwallet_cardqrcode(user=user, qrcode_uuid=qrcode_uuid)
         if not linked_serialized_card:
             # QR code inconnu de Fedow (carte non enregistrée / pas encore activée) ou
@@ -778,7 +850,7 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
             # below did linked_serialized_card['qrcode_uuid'] on False → TypeError 500.
             messages.add_message(request, messages.ERROR,
                                  _("Cette carte n'est pas reconnue. Elle n'est peut-être pas encore activée."))
-            return HttpResponseClientRedirect(request.headers.get('Referer', '/'))
+            return False
 
         # D'abord, on recopie l'état de Fedow : une ancienne carte détachée chez Fedow
         # sans passer par Lespass (VOID de la caisse V1) bloquerait sinon la liaison
@@ -832,8 +904,6 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
                 f"Le point de vente utilisera le proprietaire LOCAL."
             )
 
-        # On retourne sur la page GET /qr/
-        # Qui redirigera si besoin et affichera l'erreur
         logger.info(
             f"SCAN QRCODE LINK : wallet : {wallet}, user : {wallet.user}, card qrcode : {linked_serialized_card['qrcode_uuid']} ")
 
@@ -848,7 +918,7 @@ class ScanQrCode(viewsets.ViewSet):  # /qr
                 membership.last_name = user.last_name
                 membership.save()
 
-        return HttpResponseClientRedirect(request.headers.get('Referer', '/'))
+        return True
 
     def get_permissions(self):
         permission_classes = [permissions.AllowAny]

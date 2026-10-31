@@ -539,6 +539,8 @@ def test_liaison_par_qrcode_apres_un_void_v1_detache_l_ancienne_carte_et_lie_la_
     carte_b = _carte_connue_de_fedow_et_de_lespass(tenant, detail_des_cartes)
 
     navigateur = DjangoClient(HTTP_HOST=HOTE_DU_LIEU)
+    # Compte existant : il lie sa carte une fois connecte (lien recu par mail).
+    navigateur.force_login(utilisateur)
     with caplog.at_level(logging.WARNING), override_settings(DEBUG=True), \
             mock.patch("BaseBillet.views.get_or_create_user", return_value=utilisateur):
         reponse = navigateur.post("/qr/link/", {
@@ -778,6 +780,8 @@ def test_liaison_par_qrcode_d_une_carte_videe_ailleurs_passe_au_nouveau_porteur(
     nouveau_porteur = _adherent_avec_wallet_fedow(tenant, "nouveau")
 
     navigateur = DjangoClient(HTTP_HOST=HOTE_DU_LIEU)
+    # Compte existant : il lie sa carte une fois connecte (lien recu par mail).
+    navigateur.force_login(nouveau_porteur)
     with caplog.at_level(logging.WARNING), override_settings(DEBUG=True), \
             mock.patch("BaseBillet.views.get_or_create_user", return_value=nouveau_porteur):
         reponse = navigateur.post("/qr/link/", {

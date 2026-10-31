@@ -528,6 +528,8 @@ def test_liaison_par_qrcode_d_une_carte_absente_en_local_la_cree_avec_sa_proprie
     client_de_la_liaison.NFCcard.retrieve_card_by_signature.return_value = [carte_fedow.fiche]
 
     navigateur = ClientHttpDjango(HTTP_HOST=DOMAINE_DU_LIEU)
+    # Compte existant : il lie sa carte une fois connecte (lien recu par mail).
+    navigateur.force_login(proprietaire)
     with patch.object(FedowConfig, "can_fedow", return_value=True):
         with patch("BaseBillet.views.FedowAPI", return_value=client_de_la_liaison):
             with patch(

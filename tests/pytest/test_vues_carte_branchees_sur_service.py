@@ -248,6 +248,8 @@ def test_le_parcours_qr_lie_la_carte_cote_lespass(carte_vierge_et_user_sans_cart
     ]
 
     navigateur = DjangoClient(HTTP_HOST="lespass.tibillet.localhost")
+    # Compte existant : il lie sa carte une fois connecte (lien recu par mail).
+    navigateur.force_login(user)
 
     with mock.patch("BaseBillet.views.FedowAPI", return_value=api), \
             mock.patch("BaseBillet.views.get_or_create_user", return_value=user):

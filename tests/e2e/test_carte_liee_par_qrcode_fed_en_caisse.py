@@ -375,10 +375,10 @@ def _lier_la_carte_par_son_qrcode(page, uuid_du_qrcode, email):
     formulaire.locator('button[type="submit"]').click()
 
     try:
-        page.wait_for_url(lambda url: "/my_account" in url, timeout=30_000)
+        page.get_by_test_id("qr-carte-liee").wait_for(timeout=30_000)
     except PlaywrightTimeoutError:
         pytest.fail(
-            "La liaison par QR code n'a pas abouti sur /my_account. "
+            "La liaison par QR code n'a pas abouti sur la page « Carte liée ». "
             f"Page : {page.url} — {page.locator('body').inner_text()[:600]}"
         )
 

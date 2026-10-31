@@ -87,7 +87,11 @@ jobs:
             tests/pytest/test_cawl_ventes.py \
             tests/pytest/test_cawl_passerelle.py \
             tests/pytest/test_garde_aucun_amount_fois_qty.py \
-            tests/pytest/test_plan_comptable_unique.py
+            tests/pytest/test_plan_comptable_unique.py \
+            tests/pytest/test_qr_parcours_securise.py \
+            tests/pytest/test_carte_perdue_cycle_complet.py \
+            tests/pytest/test_vues_carte_branchees_sur_service.py \
+            tests/pytest/test_carte_liee_chez_fedow_fed_en_caisse.py
 
       - name: Suite complète (à la demande)
         if: github.event_name == 'workflow_dispatch' && inputs.suite == 'complete'

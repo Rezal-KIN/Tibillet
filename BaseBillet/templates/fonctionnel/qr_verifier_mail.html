@@ -1,0 +1,23 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% comment %}
+VERIFIER SES MAILS : un lien de connexion vient de partir, le QR seul ne connecte personne
+/ Check your email: a sign-in link was sent, the QR alone signs nobody in
+
+LOCALISATION : BaseBillet/templates/fonctionnel/qr_verifier_mail.html
+Vues : BaseBillet/views.py ScanQrCode.retrieve et ScanQrCode.verifier_mail
+{% endcomment %}
+
+{% block title %}{% translate 'Vérifie tes mails' %}{% endblock %}
+
+{% block main %}
+<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
+  <div class="container text-center text-white" style="max-width:440px;" data-testid="qr-verifier-mail">
+    <div class="display-2" aria-hidden="true">📧</div>
+    <h1>{% translate 'Vérifie tes mails' %}</h1>
+    <p>{% translate "Nous t'avons envoyé un lien de connexion sécurisé. Ouvre-le pour accéder à ta carte." %}</p>
+    <p class="text-white-50">{% translate 'Pense à regarder dans tes spams.' %}</p>
+  </div>
+</main>
+{% endblock %}

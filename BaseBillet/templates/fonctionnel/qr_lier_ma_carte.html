@@ -1,0 +1,30 @@
+{% extends base_template %}
+{% load i18n %}
+
+{% comment %}
+LIER CETTE CARTE : confirmation pour une personne connectee qui scanne une carte vierge
+/ Link this card: confirmation for a signed-in person scanning a blank card
+
+LOCALISATION : BaseBillet/templates/fonctionnel/qr_lier_ma_carte.html
+Vue : BaseBillet/views.py ScanQrCode.retrieve, envoie vers ScanQrCode.link
+{% endcomment %}
+
+{% block title %}{% translate 'Lier cette carte' %}{% endblock %}
+
+{% block main %}
+<main class="flex-fill d-flex align-items-center py-5" style="background:#0d1b2a;">
+  <div class="container text-center text-white" style="max-width:440px;" data-testid="qr-lier-ma-carte">
+    <div class="display-3" aria-hidden="true">💳</div>
+    <h1>{% translate 'Lier cette carte ?' %}</h1>
+    <p>{% blocktranslate with email=user.email %}Elle sera liée au compte {{ email }}.{% endblocktranslate %}</p>
+    <form hx-post="/qr/link/" hx-indicator="#tibillet-spinner">
+      {% csrf_token %}
+      <input type="hidden" name="qrcode_uuid" value="{{ qrcode_uuid }}">
+      <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" data-testid="qr-confirmer-liaison">
+        {% translate 'Lier cette carte à mon compte' %}
+      </button>
+    </form>
+    <a href="/deconnexion/" class="btn btn-outline-light w-100">{% translate "Ce n'est pas mon compte" %}</a>
+  </div>
+</main>
+{% endblock %}

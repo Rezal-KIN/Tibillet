@@ -64,7 +64,7 @@ def get_client_ip(request):
 
 
 
-def sender_mail_connect(email, subject_mail=None, next_url=None):
+def sender_mail_connect(email, subject_mail=None, next_url=None, template=None):
     # Mail de confirmation de création de compte
     try :
         base_url = connection.tenant.get_primary_domain().domain
@@ -86,7 +86,7 @@ def sender_mail_connect(email, subject_mail=None, next_url=None):
         #   Outside a transaction (public views), the callback runs immediately.
         transaction.on_commit(
             lambda: connexion_celery_mailer.delay(
-                email, f"https://{base_url}", subject_mail, next_url=next_url
+                email, f"https://{base_url}", subject_mail, template=template, next_url=next_url
             )
         )
     except Exception as e:
