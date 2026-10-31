@@ -311,6 +311,10 @@ TENANT_APPS = (
 # La bascule est explicite ; les paiements historiques gardent leur prestataire.
 # / Online payment provider of the instance; historical payments keep theirs.
 PAYMENT_PROVIDER = os.environ.get('PAYMENT_PROVIDER', 'stripe')
+
+# Charte graphique de l'instance, posée sur le skin V2 (pages/static/V2/css/theme-<nom>.css).
+# / Instance visual identity on top of the V2 skin.
+THEME_INSTANCE = os.environ.get('THEME_INSTANCE', '')
 if PAYMENT_PROVIDER not in {'stripe', 'cawl'}:
     raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')
 
@@ -471,6 +475,7 @@ TEMPLATES = [
                 # / Expose `noindex_seo: bool` to base templates.
                 'TiBillet.seo_indexing.noindex_context',
                 'BaseBillet.context_processors.panier_context',
+                'BaseBillet.context_processors.theme_instance',
                 # Expose `maptiler_key: str` a tous les gabarits qui rendent une
                 # carte (blocs, geoloc, explorer, widget d'adresse). Voir
                 # TiBillet/maptiler.py et static/cartes/tb_fond_de_carte.js.

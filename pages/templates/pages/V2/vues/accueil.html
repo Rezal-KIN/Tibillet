@@ -226,6 +226,10 @@
         </div>
     </section>
 
+    {% if config.module_monnaie_locale %}
+        {% include "pages/V2/partials/carte_cashless.html" %}
+    {% endif %}
+
     <c-V2.agenda_a_venir :events="events" title="{% translate 'Ce qui arrive' %}"/>
 
     {% comment %}

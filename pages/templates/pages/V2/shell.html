@@ -139,6 +139,7 @@
     {# is rendered with headless.html, which has no extra_meta block. #}
     <link rel="stylesheet" href="{% static 'booking/css/benevolat.css' %}">
     <link rel="stylesheet" href="{% static 'V2/css/V2.css' %}?v=1">
+    {% if theme_instance %}<link rel="stylesheet" href="{% with chemin='V2/css/theme-'|add:theme_instance|add:'.css' %}{% static chemin %}{% endwith %}">{% endif %}
     <link rel="stylesheet" href="{% static 'commun/css/swal.css' %}">
 
     {# defer : Bootstrap ne bloque plus le parsing. Ses composants (dropdown, #}

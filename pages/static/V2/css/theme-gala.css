@@ -1,0 +1,50 @@
+/*
+ * THEME GALA : la charte du gala posee sur le skin V2, sans toucher a ses gabarits.
+ * / Gala theme: the gala's identity on top of the V2 skin, its templates untouched.
+ *
+ * LOCALISATION : pages/static/V2/css/theme-gala.css
+ * Charge apres V2.css par pages/V2/shell.html si THEME_INSTANCE=gala.
+ * V2 repose sur des variables : on change les variables, presque rien d'autre.
+ * Reprend le bleu nuit et la police de BaseBillet/static/reunion/css/tibillet.css (main).
+ */
+
+@font-face {
+  font-family: "DM Serif Text";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/dm-serif-text.ttf') format('truetype');
+}
+
+:root {
+  --gala-bleu: #021244;
+  --gala-bleu-survol: #0b2a7a;
+
+  --font-display: "DM Serif Text", serif;
+
+  --color-primary: var(--gala-bleu);
+  --color-action-hover: var(--gala-bleu-survol);
+  --color-action-signal: var(--gala-bleu);
+  --color-link: var(--gala-bleu);
+  --button-primary-fond: var(--gala-bleu);
+  --button-primary-active: var(--gala-bleu-survol);
+  --grad-ruban: linear-gradient(90deg, var(--gala-bleu) 0%, var(--gala-bleu) 100%);
+}
+
+/* Fond bleu : le libelle passe en blanc, V2 l'ecrit a l'encre. / White label on blue. */
+.btn-primary,
+.btn-primary:focus-visible,
+.btn-primaire,
+.btn--primary {
+  background: var(--gala-bleu);
+  color: var(--color-text-inverse);
+  border-color: var(--gala-bleu);
+  --bs-btn-bg: var(--gala-bleu);
+  --bs-btn-border-color: var(--gala-bleu);
+  --bs-btn-color: var(--color-text-inverse);
+  --bs-btn-active-color: var(--color-text-inverse);
+}
+
+.user-bar {
+  background: var(--gala-bleu);
+}

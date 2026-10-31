@@ -7,6 +7,7 @@ Vue testée : BaseBillet/views.py ScanQrCode. Fedow est simulé, aucun mail ne p
 """
 
 import uuid
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
@@ -160,6 +161,21 @@ def test_scanner_une_carte_vierge_connecte_demande_confirmation(tenant, navigate
     assert not api.NFCcard.linkwallet_cardqrcode.called
 
 
-def test_le_panneau_cashless_s_affiche():
-    html = render_to_string("pages/classic/partials/carte_cashless.html")
+def _panneau(authentifie):
+    return render_to_string("pages/V2/partials/carte_cashless.html", {
+        "config": SimpleNamespace(module_adhesion=True, membership_menu_name=""),
+        "user": SimpleNamespace(is_authenticated=authentifie),
+    })
+
+
+def test_le_panneau_cashless_ouvre_la_connexion_sans_session():
+    html = _panneau(False)
     assert 'data-testid="carte-cashless"' in html
+    assert 'data-bs-target="#loginPanel"' in html
+    assert 'href="/memberships/"' not in html
+
+
+def test_le_panneau_cashless_mene_a_l_adhesion_une_fois_connecte():
+    html = _panneau(True)
+    assert 'href="/memberships/"' in html
+    assert "#loginPanel" not in html

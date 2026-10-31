@@ -9,11 +9,20 @@ from datetime import datetime
 import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.utils.functional import SimpleLazyObject
 
 from booking.models import Resource
 
 logger = logging.getLogger(__name__)
+
+
+def theme_instance(request):
+    """
+    Le nom de la charte graphique de l'instance, lu par pages/V2/shell.html.
+    / The instance's visual identity name, read by pages/V2/shell.html.
+    """
+    return {"theme_instance": settings.THEME_INSTANCE}
 
 
 def _valeur_a_la_demande(nom_de_la_valeur, calcul, valeur_si_le_panier_est_abime):
