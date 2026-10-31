@@ -1,0 +1,42 @@
+{% load i18n %}
+{% comment %}
+COMMENT FONCTIONNE LA CARTE CASHLESS : panneau de la page d'accueil, en 3 etapes
+/ How the cashless card works: home page panel, 3 steps
+
+LOCALISATION : pages/templates/pages/classic/partials/carte_cashless.html
+Inclus par : pages/templates/pages/classic/vues/accueil.html, si config.module_monnaie_locale.
+{% endcomment %}
+<section class="bg-body rounded-5 px-5 py-4 mt-4" aria-labelledby="cashless-how-title" data-testid="carte-cashless">
+    <h2 id="cashless-how-title" class="h4 fw-bold mb-3 text-body">
+        <i class="bi bi-credit-card me-2" aria-hidden="true"></i>{% trans 'Comment fonctionne la carte cashless ?' %}
+    </h2>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="d-flex gap-3 align-items-start">
+                <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">1</span>
+                <div>
+                    <div class="fw-semibold text-body">{% trans 'Récupère ta carte' %}</div>
+                    <div class="text-muted small">{% trans "À l'entrée de l'événement, on te remet une carte NFC avec un QR code unique." %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="d-flex gap-3 align-items-start">
+                <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">2</span>
+                <div>
+                    <div class="fw-semibold text-body">{% trans 'Recharge en ligne ou en caisse' %}</div>
+                    <div class="text-muted small">{% trans 'Scanne le QR code sur ta carte pour lier ton email et recharger en ligne, ou recharge directement à la caisse.' %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="d-flex gap-3 align-items-start">
+                <span class="badge rounded-pill bg-primary fs-6 px-3" aria-hidden="true">3</span>
+                <div>
+                    <div class="fw-semibold text-body">{% trans 'Paye par NFC aux bars' %}</div>
+                    <div class="text-muted small">{% trans 'Approche ta carte du terminal : la transaction est instantanée.' %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
