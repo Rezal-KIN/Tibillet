@@ -55,6 +55,9 @@ jobs:
         run: |
           docker network inspect frontend >/dev/null 2>&1 || docker network create frontend
           docker compose up -d --build --remove-orphans
+          # Un conteneur Django recréé change d'adresse : nginx garde l'ancienne et répond 502.
+          # / A recreated Django container changes address: nginx keeps the old one (502).
+          docker compose restart fedow_nginx lespass_nginx
           docker compose ps --format "{{.Name}} {{.Status}}"
 
       - name: Migrations
