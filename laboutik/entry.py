@@ -1,8 +1,17 @@
 """Browser entry to the register, keeping its existing permission checks."""
-from django.contrib.auth.decorators import login_required
+from urllib.parse import urlencode
+
+from django.core import signing
 from django.shortcuts import redirect
+from django.urls import reverse
 
 
-@login_required(login_url="/admin/login/")
 def ouvrir_caisse(request):
-    return redirect("laboutik-caisse-list")
+    if request.user.is_authenticated:
+        return redirect("laboutik-caisse-list")
+    # Reuse TiBillet's email login and its signed return destination.
+    destination = signing.dumps(reverse("laboutik-caisse-list"))
+    return redirect(
+        reverse("login-viewset-login-fullpage")
+        + "?" + urlencode({"next": destination})
+    )

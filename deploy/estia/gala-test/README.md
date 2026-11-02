@@ -35,7 +35,7 @@ Visiteur --HTTPS--> estia --HTTP prive--> gala-test:80 --Traefik--> nginx --> Dj
 
 La caisse integree est sur `https://cashless.gala-test.rezal.fr/laboutik/caisse/`.
 L'accueil cashless doit rediriger vers `/laboutik/ouvrir/`, qui demande une
-connexion admin si necessaire puis ouvre la caisse ; les permissions de caisse
+connexion TiBillet si necessaire puis ouvre la caisse ; les permissions de caisse
 restent en vigueur. Cette redirection nginx est une etape manuelle sur estia.
 Les autres lieux de demonstration ne sont pas publies. Un nouveau domaine devra
 etre ajoute explicitement au DNS, au proxy et au certificat : aucun joker.
