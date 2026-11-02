@@ -1,5 +1,54 @@
 # Publication de gala-test sur estia
 
+## Fonctionnement normal et mails — 03/11/2026
+
+La VM fonctionne avec `TEST=0`, `DEBUG=0`, `DEMO=0` et `CAWL_TEST=1`.
+Lespass utilise Gunicorn et Daphne, supervises dans le conteneur web ;
+le conteneur Celery existant reste le seul worker et le seul beat.
+Les nginx servent les statiques meme sans DEBUG ; Fedow partage uniquement
+son repertoire de statiques avec son nginx, sans changer son volume de base.
+
+Le SMTP normal est Brevo, port 587 STARTTLS, expediteur verifie
+`contact@galas-am-aix.rezal.fr`. `configurer-brevo.py` prepare le `.env` prive
+avec une sauvegarde et sans changer les lignes CAWL. La cle dediee reste dans
+`~/gala-test-config/brevo-local/smtp-key` (0600), montee en lecture seule via
+Compose secrets ; aucun mot de passe SMTP n'est copie dans le checkout.
+Ne pas afficher `docker compose config`, `docker inspect` ou les settings
+complets : ils peuvent contenir les autres secrets existants.
+
+`EMAIL_DELIVERY_GUARD=1` active uniquement ici le backend d'isolation SMTP.
+Un processus de test (`TEST=1`), le profil `capture`, une tache sans marqueur
+ou avec un marqueur inconnu envoient exclusivement a Mailpit, sans login ni
+TLS Brevo. Le signal Celery marque les nouvelles taches ; les descendants et
+reprises conservent la capture. Aucune adresse n'est restreinte pour les
+usages normaux. Le lanceur force TEST/DEBUG/DEMO dans le seul processus pytest.
+
+La suite complete HTTP bascule temporairement web et worker en capture ;
+un trap et une etape `always()` retablissent le mode live, meme en cas d'echec
+des tests. Apres une extinction brutale du runner, verifier le mode avant
+reouverture : `GALA_EMAIL_DELIVERY_MODE=live docker compose up -d --no-deps
+lespass_django lespass_celery`, puis `docker compose restart lespass_nginx`.
+Utiliser les deux fichiers Compose de cette pipeline.
+
+Sur Estia, `activer-websockets-estia.py` ajoute l'Upgrade uniquement a notre
+site apres verification des fichiers proteges et `nginx -T`. Il conserve une
+sauvegarde et actualise notre reference `https-caisse.conf` : le rechargement
+manuel du certificat continue donc de fonctionner avec les memes gardes.
+
+Pour revenir aux mails captures : restaurer le `.env` de la sauvegarde privee
+`brevo-prodlike-*` dans la configuration externe et le checkout, puis recreer
+uniquement les services applicatifs avec `--no-deps`. Ne jamais restaurer un
+fichier modifie entre-temps sans comparaison, ni utiliser `down -v`.
+
+L'envoi de validation est limite a un message a `kin.rezal@gmail.com`, via
+`BaseBillet.tasks.send_email_generique`. Son identifiant est enregistre avant
+publication dans `brevo-local/validation-mail.json` ; une execution incertaine
+ne doit jamais declencher une nouvelle publication automatique.
+Le succes SMTP/Celery ne remplace pas la confirmation de reception.
+
+La configuration AWS, ses identifiants et les DNS sont independants de cette
+modification. Le compte et le quota Brevo restent communs aux deux instances.
+
 **Etat au 02/11/2026 : les trois domaines publics repondent 200 en HTTPS,
 avec un certificat dedie valide jusqu'au 31/01/2027.** La VM utilise HTTP
 prive derriere estia ; les anciens domaines restent des alias en base.

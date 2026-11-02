@@ -646,6 +646,19 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
 
+# Opt-in on gala-test only: AWS keeps its existing SMTP backend and settings.
+EMAIL_DELIVERY_GUARD = os.environ.get('EMAIL_DELIVERY_GUARD') == '1'
+EMAIL_DELIVERY_MODE = os.environ.get('EMAIL_DELIVERY_MODE', 'capture')
+EMAIL_CAPTURE_HOST = os.environ.get('EMAIL_CAPTURE_HOST', 'mailpit')
+EMAIL_CAPTURE_PORT = int(os.environ.get('EMAIL_CAPTURE_PORT', '1025'))
+if EMAIL_DELIVERY_GUARD:
+    EMAIL_BACKEND = 'TiBillet.mail_delivery.EmailBackend'
+    if not TEST and EMAIL_DELIVERY_MODE == 'live':
+        password_file = os.environ.get('EMAIL_HOST_PASSWORD_FILE')
+        if password_file:
+            from pathlib import Path
+            EMAIL_HOST_PASSWORD = Path(password_file).read_text().strip()
+
 # Les variables d'environnement sont des CHAINES : « False » est une chaine non
 # vide, donc vraie pour Python. On compare la valeur a une liste explicite.
 # Sans variable : TLS non, SSL oui (port 465). Un serveur sans chiffrement

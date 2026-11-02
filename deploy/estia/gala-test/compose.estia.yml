@@ -1,5 +1,5 @@
-# CANDIDAT NON ACTIVE. Base verifiee : tibillet-local-upstream, 63ed1ab.
-# Charger explicitement APRES docker-compose.yml ; jamais en production.
+# VM gala-test uniquement. Charger explicitement APRES docker-compose.yml.
+# Les secrets restent dans ~/gala-test-config/, jamais dans le checkout.
 services:
   traefik:
     # Compose remplace command, il ne concatene pas cette liste.
@@ -17,21 +17,38 @@ services:
       - 192.168.1.195:80:80
     configs: !reset []
   lespass_django:
+    command: [bash, deploy/estia/gala-test/start-web.sh]
+    secrets:
+      - brevo_smtp_key
+    environment:
+      EMAIL_DELIVERY_GUARD: "1"
+      EMAIL_DELIVERY_MODE: ${GALA_EMAIL_DELIVERY_MODE:-live}
+      EMAIL_HOST_PASSWORD_FILE: /run/secrets/brevo_smtp_key
     extra_hosts:
       - gala-test.rezal.fr:192.168.1.10
       - cashless.gala-test.rezal.fr:192.168.1.10
       - fedow.gala-test.rezal.fr:192.168.1.10
   lespass_celery:
+    secrets:
+      - brevo_smtp_key
+    environment:
+      EMAIL_DELIVERY_GUARD: "1"
+      EMAIL_DELIVERY_MODE: ${GALA_EMAIL_DELIVERY_MODE:-live}
+      EMAIL_HOST_PASSWORD_FILE: /run/secrets/brevo_smtp_key
     extra_hosts:
       - gala-test.rezal.fr:192.168.1.10
       - cashless.gala-test.rezal.fr:192.168.1.10
       - fedow.gala-test.rezal.fr:192.168.1.10
   fedow_django:
+    volumes:
+      - gala_fedow_static:/home/fedow/Fedow/www/static
     extra_hosts:
       - gala-test.rezal.fr:192.168.1.10
       - cashless.gala-test.rezal.fr:192.168.1.10
       - fedow.gala-test.rezal.fr:192.168.1.10
   lespass_nginx:
+    volumes:
+      - ./nginx_prod/lespass_prod.conf:/etc/nginx/conf.d/default.conf:ro
     labels:
       traefik.http.routers.lespass_nginx.tls: "false"
       traefik.http.routers.lespass_nginx.entrypoints: entrypoints-http
@@ -40,6 +57,8 @@ services:
       # RemoteAddr (pas la chaine X-Forwarded-For fournie par le visiteur).
       traefik.http.middlewares.estia-seulement.ipallowlist.sourcerange: 192.168.1.10/32
   fedow_nginx:
+    volumes:
+      - gala_fedow_static:/www/static:ro
     labels:
       traefik.http.routers.fedow_nginx.tls: "false"
       traefik.http.routers.fedow_nginx.entrypoints: entrypoints-http
@@ -48,3 +67,10 @@ services:
   mailpit:
     labels:
       traefik.enable: "false"
+
+secrets:
+  brevo_smtp_key:
+    file: /home/tibillet/gala-test-config/brevo-local/smtp-key
+
+volumes:
+  gala_fedow_static:

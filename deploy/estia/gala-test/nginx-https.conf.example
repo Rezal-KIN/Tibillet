@@ -1,5 +1,10 @@
-# CANDIDAT : remplace NOTRE fichier HTTP uniquement, apres emission du certificat.
+# Configuration du seul site gala-test sur Estia.
 # Le prefixe zz- preserve l'ordre des fichiers actuellement charges et leur defaut.
+map $http_upgrade $tibillet_connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 server {
     listen 80;
     server_name gala-test.rezal.fr cashless.gala-test.rezal.fr fedow.gala-test.rezal.fr;
@@ -31,6 +36,9 @@ server {
         client_max_body_size 12m;
         proxy_pass http://192.168.1.195:80;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $tibillet_connection_upgrade;
+        proxy_read_timeout 86400;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         # Estia est la frontiere de confiance ; ignorer les valeurs du visiteur.
@@ -62,6 +70,9 @@ server {
         client_max_body_size 12m;
         proxy_pass http://192.168.1.195:80;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $tibillet_connection_upgrade;
+        proxy_read_timeout 86400;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         # Estia est la frontiere de confiance ; ignorer les valeurs du visiteur.

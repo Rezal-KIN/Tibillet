@@ -45,6 +45,7 @@ jobs:
       - name: Configuration de la VM (hors dépôt)
         run: |
           cp ~/gala-test-config/.env .env
+          chmod 600 .env
           rm -rf certs && cp -r ~/gala-test-config/certs certs
           # Fichiers de log créés AVANT la pile : sinon nginx (root) les crée le premier
           # et le démarrage de Django (`touch`) échoue en boucle.
@@ -56,7 +57,9 @@ jobs:
       - name: Construire et démarrer la pile
         run: |
           docker network inspect frontend >/dev/null 2>&1 || docker network create frontend
-          docker compose up -d --build --remove-orphans
+          # Only the application/proxy services: retain the existing databases,
+          # caches and Mailpit even when the shared .env changes.
+          docker compose up -d --build --no-deps lespass_django lespass_celery fedow_django lespass_nginx fedow_nginx traefik
           # Un conteneur Django recréé change d'adresse : nginx garde l'ancienne et répond 502.
           # / A recreated Django container changes address: nginx keeps the old one (502).
           docker compose restart fedow_nginx lespass_nginx
@@ -92,15 +95,17 @@ jobs:
           docker exec -i -e ESTIA_DOMAIN_MODE=apply -e "ESTIA_PLACE_UUID=$place_uuid" \
             fedow_django poetry run python manage.py shell < deploy/estia/gala-test/fedow-domain.py
 
-      - name: Serveur Django
+      - name: Serveurs HTTP et WebSockets
         run: |
-          docker exec lespass_django pkill -f "manage.py runserver" || true
-          docker exec -d lespass_django bash -c 'cd /DjangoFiles && poetry run python manage.py runserver 0.0.0.0:8002 > /DjangoFiles/runserver.log 2>&1'
+          docker exec lespass_django supervisorctl -c deploy/estia/gala-test/supervisord-web.conf status
           for essai in $(seq 1 60); do
             [ "$(curl -sS --location --max-redirs 5 --connect-timeout 3 --max-time 10 --resolve "$CURL_RESOLVE" -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
             sleep 3
           done
-          echo "Le serveur ne répond pas" ; docker exec lespass_django tail -40 /DjangoFiles/runserver.log ; exit 1
+          echo "Le serveur ne répond pas" ; exit 1
+
+      - name: Isolation SMTP des tests
+        run: docker exec -e TEST=1 -e DEBUG=1 lespass_django poetry run python -m unittest deploy.tests.test_gala_mail_delivery -v
 
       - name: Tests CAWL et comptabilité
         run: |
@@ -120,7 +125,21 @@ jobs:
         # Les tests Stripe échouent sans clé Stripe (attendu sur une instance CAWL) :
         # cette étape informe, elle ne bloque pas.
         continue-on-error: true
-        run: bash scripts/lancer_tests.sh python -q -rfE tests/pytest/ booking/tests/
+        run: |
+          trap 'GALA_EMAIL_DELIVERY_MODE=live docker compose up -d --no-deps lespass_django lespass_celery && docker compose restart lespass_nginx' EXIT
+          GALA_EMAIL_DELIVERY_MODE=capture docker compose up -d --no-deps lespass_django lespass_celery
+          docker compose restart lespass_nginx
+          for essai in $(seq 1 60); do
+            [ "$(curl -sS --location --max-redirs 5 --connect-timeout 3 --max-time 10 --resolve "$CURL_RESOLVE" -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && break
+            sleep 3
+          done
+          bash scripts/lancer_tests.sh python -q -rfE tests/pytest/ booking/tests/
+
+      - name: Restaurer les mails réels après la suite complète
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.suite == 'complete'
+        run: |
+          GALA_EMAIL_DELIVERY_MODE=live docker compose up -d --no-deps lespass_django lespass_celery
+          docker compose restart lespass_nginx
 
       - name: État de la pile
         if: always()

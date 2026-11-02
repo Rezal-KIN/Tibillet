@@ -1556,12 +1556,10 @@ def connexion_celery_mailer(self, user_email,
     user = User.objects.get(email=user_email)
     connexion_url = forge_connexion_url(user, base_url)
     if next_url:
-        logger.info(f"next_url : {next_url}")
         connexion_url += f"?next={next_url}"
 
 
     logger.info(f"connexion_celery_mailer -> connection.tenant.schema_name : {connection.tenant.schema_name}")
-    logger.info(f"{connexion_url}")
 
     config = Configuration.get_solo()
     activate(config.language)
@@ -1585,8 +1583,6 @@ def connexion_celery_mailer(self, user_email,
         template = 'emails/connexion.html'
 
     logger.info(f'    title : {title}')
-    if settings.DEBUG:
-        logger.info(f"{connexion_url}")
 
     try:
         mail = CeleryMailerClass(
@@ -1683,10 +1679,12 @@ def send_email_generique(context: dict = None, email: str = None, attached_files
         )
         mail.send()
         logger.info(f"    send_email_generique : mail.sended : {mail.sended}")
+        return mail.sended is True
 
     except smtplib.SMTPRecipientsRefused as e:
         logger.error(
             f"ERROR {timezone.now()} Erreur mail SMTPRecipientsRefused pour send_email_generique : {e}")
+        return False
 
 
 @app.task

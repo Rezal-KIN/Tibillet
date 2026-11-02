@@ -62,6 +62,7 @@ cle_api=$(docker exec -e TEST=1 "$CONTENEUR" poetry run python /DjangoFiles/mana
 hote_du_serveur="${URL_DU_SERVEUR#*://}"
 hote_du_serveur="${hote_du_serveur%%/*}"
 variables_du_conteneur=(-e "API_KEY=$cle_api"
+    -e TEST=1 -e DEBUG=1 -e DEMO=1 -e EMAIL_DELIVERY_MODE=capture
     -e "API_BASE_URL=${URL_DU_SERVEUR%/}"
     -e "TEST_TENANT_HOST=$hote_du_serveur")
 

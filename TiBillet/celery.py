@@ -4,7 +4,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from django.db import connection
-from celery.signals import setup_logging, worker_process_init
+from celery.signals import setup_logging, worker_process_init, before_task_publish
 logger = logging.getLogger(__name__)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TiBillet.settings')
@@ -17,6 +17,10 @@ from tenant_schemas_celery.app import CeleryApp as TenantAwareCeleryApp
 app = TenantAwareCeleryApp()
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+from TiBillet.mail_delivery import mark_task_mail_mode
+
+before_task_publish.connect(mark_task_mail_mode)
 
 @setup_logging.connect
 def config_loggers(*args, **kwags):
