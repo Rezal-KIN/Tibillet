@@ -7,6 +7,11 @@ Lespass utilise Gunicorn et Daphne, supervises dans le conteneur web ;
 le conteneur Celery existant reste le seul worker et le seul beat.
 Les nginx servent les statiques meme sans DEBUG ; Fedow partage uniquement
 son repertoire de statiques avec son nginx, sans changer son volume de base.
+L'image native Fedow impose une cle Stripe quand DEBUG=0. Le Dockerfile local
+repart de l'image exacte deja utilisee (digest epingle) et adapte uniquement
+ses deux gardes de demarrage pour accepter `PAYMENT_PROVIDER=cawl` sans Stripe.
+Aucune fausse cle ni activation Stripe ; le code de paiement CAWL reste dans
+Lespass. Les gardes Stripe restent actifs pour un deploiement Stripe.
 
 Le SMTP normal est Brevo, port 587 STARTTLS, expediteur verifie
 `contact@galas-am-aix.rezal.fr`. `configurer-brevo.py` prepare le `.env` prive

@@ -40,6 +40,12 @@ services:
       - cashless.gala-test.rezal.fr:192.168.1.10
       - fedow.gala-test.rezal.fr:192.168.1.10
   fedow_django:
+    # Native Fedow unnecessarily requires Stripe with DEBUG=0. This local
+    # derivative permits CAWL without any Stripe key, preserving all other code.
+    image: gala-test-fedow:cawl
+    build:
+      context: ./deploy/estia/gala-test
+      dockerfile: fedow-cawl.Dockerfile
     volumes:
       - gala_fedow_static:/home/fedow/Fedow/www/static
     extra_hosts:

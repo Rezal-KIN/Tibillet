@@ -81,6 +81,15 @@ jobs:
 
       - name: Domaines publics du lieu de test
         run: |
+          # Native Fedow runs migrations/collectstatic before Gunicorn. Wait
+          # for readiness before docker exec, rather than racing its restart.
+          code_fedow=000
+          for essai in $(seq 1 60); do
+            code_fedow=$(curl -sS --connect-timeout 3 --max-time 10 --resolve fedow.gala-test.rezal.fr:443:192.168.1.10 -o /dev/null -w '%{http_code}' https://fedow.gala-test.rezal.fr/ || true)
+            [ "$code_fedow" = 200 ] && break
+            sleep 3
+          done
+          [ "$code_fedow" = 200 ] || { echo "Fedow ne repond pas ; domaines inchanges."; exit 1; }
           # Conserver le premier etat, hors du checkout nettoye par Actions.
           if [ ! -e ~/gala-test-config/domaines-avant-estia.txt ]; then
             (set -o noclobber
@@ -105,7 +114,7 @@ jobs:
           echo "Le serveur ne répond pas" ; exit 1
 
       - name: Isolation SMTP des tests
-        run: docker exec -e TEST=1 -e DEBUG=1 lespass_django poetry run python -m unittest deploy.tests.test_gala_mail_delivery -v
+        run: docker exec -e TEST=1 -e DEBUG=1 lespass_django poetry run python -m unittest deploy.tests.test_gala_mail_delivery deploy.tests.test_gala_fedow_cawl -v
 
       - name: Tests CAWL et comptabilité
         run: |
