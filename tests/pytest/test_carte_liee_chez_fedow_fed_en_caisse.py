@@ -55,6 +55,7 @@ Lancement / Run:
         tests/pytest/test_carte_liee_chez_fedow_fed_en_caisse.py -v
 """
 
+import os
 import re
 import uuid
 from contextlib import contextmanager
@@ -96,7 +97,7 @@ URL_DU_RETOUR_CARTE = "/laboutik/paiement/retour_carte/"
 URL_DE_LA_LIAISON_PAR_QRCODE = "/qr/link/"
 
 # Le domaine du lieu `lespass` de la base de dev. / The dev `lespass` venue domain.
-DOMAINE_DU_LIEU = "lespass.tibillet.localhost"
+DOMAINE_DU_LIEU = os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost")
 
 # Le prix du café, en centimes et en texte. / The coffee price.
 PRIX_DU_CAFE_EN_CENTIMES = 200

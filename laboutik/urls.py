@@ -22,6 +22,7 @@
 
 from django.urls import path
 from rest_framework import routers
+from laboutik.entry import ouvrir_caisse
 
 from laboutik.views import (
     ArticlePanelViewSet,
@@ -44,6 +45,7 @@ _stock_action = ArticlePanelViewSet.as_view({"post": "stock_action"})
 _toggle_bloquant = ArticlePanelViewSet.as_view({"post": "toggle_bloquant"})
 
 urlpatterns = [
+    path("ouvrir/", ouvrir_caisse, name="laboutik-entree"),
     path(
         "auth/bridge/",
         LaBoutikAuthBridgeView.as_view(),

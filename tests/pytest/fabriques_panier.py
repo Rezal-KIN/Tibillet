@@ -25,6 +25,7 @@ et ne seraient pas annulés par le rollback :
 membership product creation, the Stripe catalogue, and Celery tasks sent to the real worker.
 """
 
+import os
 import uuid
 from contextlib import contextmanager
 from datetime import timedelta
@@ -207,7 +208,10 @@ def client_connecte(utilisateur=None):
     """
     from django.test import Client
 
-    client = Client(HTTP_HOST="lespass.tibillet.localhost", HTTP_ACCEPT_LANGUAGE="en")
+    client = Client(
+        HTTP_HOST=os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost"),
+        HTTP_ACCEPT_LANGUAGE="en",
+    )
     if utilisateur is not None:
         client.force_login(utilisateur)
     return client

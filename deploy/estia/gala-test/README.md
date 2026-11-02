@@ -33,7 +33,10 @@ Visiteur --HTTPS--> estia --HTTP prive--> gala-test:80 --Traefik--> nginx --> Dj
 | cashless.gala-test.rezal.fr | lieu existant, schema lespass (Gala) |
 | fedow.gala-test.rezal.fr | service Fedow existant |
 
-La caisse integree reste sur `https://cashless.gala-test.rezal.fr/laboutik/`.
+La caisse integree est sur `https://cashless.gala-test.rezal.fr/laboutik/caisse/`.
+L'accueil cashless doit rediriger vers `/laboutik/ouvrir/`, qui demande une
+connexion admin si necessaire puis ouvre la caisse ; les permissions de caisse
+restent en vigueur. Cette redirection nginx est une etape manuelle sur estia.
 Les autres lieux de demonstration ne sont pas publies. Un nouveau domaine devra
 etre ajoute explicitement au DNS, au proxy et au certificat : aucun joker.
 
@@ -89,7 +92,10 @@ une coordination systematique, pas les controles avant chaque rechargement.
 - `public.env.example` : valeurs publiques a fusionner dans le `.env` existant,
   **jamais un remplacement du fichier de secrets**. Garder tous les identifiants
   CAWL de test et autres secrets ; ne pas restaurer `.env.avant-cawl`.
-- `domaines.py` : affiche les changements par defaut. Deux modes explicites
+- `fedow-domain.py` : met a jour uniquement le domaine de la place Fedow
+  identifiee par le UUID du lieu Gala ; aucun changement de cle ou de portefeuille.
+- `domaines.py` : met aussi a jour les deux champs reseau de RootConfiguration,
+  sans refaire de handshake ni modifier ses cles. Affiche les changements par defaut. Deux modes explicites
   permettent ensuite une bascule transactionnelle ou son retour arriere. Le
   script refuse les domaines deja attribues ailleurs ou un principal inattendu.
 - `nginx-http.conf.example` : premiere phase de validation ACME, reponse 503

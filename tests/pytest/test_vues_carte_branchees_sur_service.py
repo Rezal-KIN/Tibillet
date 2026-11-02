@@ -27,6 +27,7 @@ Lancement / Run:
     docker exec lespass_django poetry run pytest tests/pytest/test_vues_carte_branchees_sur_service.py -q
 """
 
+import os
 import uuid as uuid_module
 from unittest import mock
 
@@ -100,7 +101,7 @@ def test_lost_my_card_detache_la_carte_cote_lespass(carte_liee_a_un_user):
     carte = carte_liee_a_un_user["carte"]
     user = carte_liee_a_un_user["user"]
 
-    navigateur = DjangoClient(HTTP_HOST="lespass.tibillet.localhost")
+    navigateur = DjangoClient(HTTP_HOST=os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost"))
     navigateur.force_login(user)
 
     # Fedow repond « detachement fait » ; on ne teste que la part Lespass.
@@ -138,7 +139,7 @@ def test_lost_my_card_ne_detache_rien_si_fedow_refuse(carte_liee_a_un_user):
     carte = carte_liee_a_un_user["carte"]
     user = carte_liee_a_un_user["user"]
 
-    navigateur = DjangoClient(HTTP_HOST="lespass.tibillet.localhost")
+    navigateur = DjangoClient(HTTP_HOST=os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost"))
     navigateur.force_login(user)
 
     # Un refus de Fedow est une EXCEPTION : `lost_my_card_by_signature` rend True ou leve,
@@ -247,7 +248,7 @@ def test_le_parcours_qr_lie_la_carte_cote_lespass(carte_vierge_et_user_sans_cart
         api.NFCcard.linkwallet_cardqrcode.return_value,
     ]
 
-    navigateur = DjangoClient(HTTP_HOST="lespass.tibillet.localhost")
+    navigateur = DjangoClient(HTTP_HOST=os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost"))
     # Compte existant : il lie sa carte une fois connecte (lien recu par mail).
     navigateur.force_login(user)
 

@@ -190,7 +190,7 @@ def api_client(_inject_cli_env):
     / In-process Django test client — resolves 'lespass' tenant via HTTP_HOST.
     """
     from django.test import Client
-    return Client(HTTP_HOST='lespass.tibillet.localhost')
+    return Client(HTTP_HOST=os.environ.get('TEST_TENANT_HOST', 'lespass.tibillet.localhost'))
 
 
 @pytest.fixture
@@ -261,7 +261,7 @@ def admin_client(admin_user):
     """Client Django authentifie comme admin pour l'admin Django.
     / Django client authenticated as admin for Django admin site."""
     from django.test import Client as DjangoClient
-    client = DjangoClient(HTTP_HOST='lespass.tibillet.localhost')
+    client = DjangoClient(HTTP_HOST=os.environ.get('TEST_TENANT_HOST', 'lespass.tibillet.localhost'))
     client.force_login(admin_user)
     return client
 

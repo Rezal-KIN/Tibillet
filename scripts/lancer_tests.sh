@@ -39,7 +39,7 @@ shift 1
 
 CONTENEUR="lespass_django"
 URL_DU_SERVEUR="${URL_LESPASS:-https://lespass.tibillet.localhost/}"
-options_http=(--connect-timeout 3 --max-time 10)
+options_http=(--connect-timeout 3 --max-time 10 --location --max-redirs 5)
 if [ -n "${CURL_RESOLVE:-}" ]; then
     options_http+=(--resolve "$CURL_RESOLVE")
 fi
@@ -59,7 +59,11 @@ fi
 # 2. Clé API de test, passée aux tests par la variable API_KEY.
 # / Test API key, passed to the tests through API_KEY.
 cle_api=$(docker exec -e TEST=1 "$CONTENEUR" poetry run python /DjangoFiles/manage.py test_api_key 2>/dev/null | tail -1)
-variables_du_conteneur=(-e "API_KEY=$cle_api")
+hote_du_serveur="${URL_DU_SERVEUR#*://}"
+hote_du_serveur="${hote_du_serveur%%/*}"
+variables_du_conteneur=(-e "API_KEY=$cle_api"
+    -e "API_BASE_URL=${URL_DU_SERVEUR%/}"
+    -e "TEST_TENANT_HOST=$hote_du_serveur")
 
 # 3. `stripe listen` : les parcours E2E à webhook l'attendent. Il tourne sur l'hôte (byobu),
 # et le conteneur ne voit pas les processus de l'hôte : on regarde ici, et on le dit aux

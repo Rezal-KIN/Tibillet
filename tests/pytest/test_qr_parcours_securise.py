@@ -6,6 +6,7 @@ LOCALISATION : tests/pytest/test_qr_parcours_securise.py
 Vue testée : BaseBillet/views.py ScanQrCode. Fedow est simulé, aucun mail ne part.
 """
 
+import os
 import uuid
 from types import SimpleNamespace
 from unittest import mock
@@ -19,7 +20,7 @@ from django_tenants.utils import tenant_context
 
 from Customers.models import Client
 
-HOTE = "lespass.tibillet.localhost"
+HOTE = os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost")
 
 
 @pytest.fixture

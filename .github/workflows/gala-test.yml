@@ -87,13 +87,17 @@ jobs:
           fi
           docker exec -i -e ESTIA_DOMAIN_MODE=apply lespass_django poetry run python manage.py shell \
             < deploy/estia/gala-test/domaines.py
+          place_uuid=$(docker exec lespass_django poetry run python manage.py shell -c \
+            'from django.db import connection; connection.set_schema("lespass"); from fedow_connect.models import FedowConfig; print(FedowConfig.objects.get().fedow_place_uuid)' | tail -n 1)
+          docker exec -i -e ESTIA_DOMAIN_MODE=apply -e "ESTIA_PLACE_UUID=$place_uuid" \
+            fedow_django poetry run python manage.py shell < deploy/estia/gala-test/fedow-domain.py
 
       - name: Serveur Django
         run: |
           docker exec lespass_django pkill -f "manage.py runserver" || true
           docker exec -d lespass_django bash -c 'cd /DjangoFiles && poetry run python manage.py runserver 0.0.0.0:8002 > /DjangoFiles/runserver.log 2>&1'
           for essai in $(seq 1 60); do
-            [ "$(curl -sS --connect-timeout 3 --max-time 10 --resolve "$CURL_RESOLVE" -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
+            [ "$(curl -sS --location --max-redirs 5 --connect-timeout 3 --max-time 10 --resolve "$CURL_RESOLVE" -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
             sleep 3
           done
           echo "Le serveur ne répond pas" ; docker exec lespass_django tail -40 /DjangoFiles/runserver.log ; exit 1
@@ -101,6 +105,7 @@ jobs:
       - name: Tests CAWL et comptabilité
         run: |
           bash scripts/lancer_tests.sh python -q \
+            tests/pytest/test_laboutik_entree.py \
             tests/pytest/test_cawl_ventes.py \
             tests/pytest/test_cawl_passerelle.py \
             tests/pytest/test_garde_aucun_amount_fois_qty.py \

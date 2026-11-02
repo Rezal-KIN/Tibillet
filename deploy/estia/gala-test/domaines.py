@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db import transaction
 from django_tenants.utils import schema_context
 from Customers.models import Client, Domain
+from root_billet.models import RootConfiguration
 
 MODE = os.environ.get('ESTIA_DOMAIN_MODE', 'plan')
 if MODE not in ('plan', 'apply', 'rollback'):
@@ -22,6 +23,15 @@ TARGETS = (
 )
 
 with schema_context('public'), transaction.atomic():
+    roots = RootConfiguration.objects.all()
+    if MODE != 'plan':
+        roots = roots.select_for_update()
+    root = roots.get(pk=1)
+    fedow_before = (root.fedow_domain, root.fedow_ip)
+    fedow_old = ('fedow.tibillet.localhost', '172.17.0.1')
+    fedow_public = ('fedow.gala-test.rezal.fr', '192.168.1.10')
+    if fedow_before not in (fedow_old, fedow_public):
+        raise RuntimeError('Configuration reseau Fedow inattendue')
     tenants = {}
     before = {}
     for schema, old, public in TARGETS:
@@ -46,7 +56,8 @@ with schema_context('public'), transaction.atomic():
         if conflict:
             raise RuntimeError('Le domaine public appartient deja a un autre tenant : ' + public)
 
-    print(json.dumps({'mode': MODE, 'avant': before, 'cibles': TARGETS}, indent=2))
+    print(json.dumps({'mode': MODE, 'avant': before, 'cibles': TARGETS,
+                      'fedow_avant': fedow_before}, indent=2))
     if MODE == 'apply':
         if 'gala-test.rezal.fr' not in settings.ALLOWED_HOSTS:
             raise RuntimeError('Les reglages publics de la VM ne sont pas encore charges')
@@ -55,12 +66,16 @@ with schema_context('public'), transaction.atomic():
                 domain=public, defaults={'tenant': tenants[schema], 'is_primary': False})
             domain.is_primary = True
             domain.save()  # DomainMixin demote les autres domaines de CE tenant.
+        root.fedow_domain, root.fedow_ip = fedow_public
+        root.save(update_fields=['fedow_domain', 'fedow_ip'])
         print('Domaines publics principaux ; anciens noms conserves comme alias en base.')
     elif MODE == 'rollback':
         for schema, old, public in TARGETS:
             domain = Domain.objects.get(domain=old, tenant=tenants[schema])
             domain.is_primary = True
             domain.save()
+        root.fedow_domain, root.fedow_ip = fedow_old
+        root.save(update_fields=['fedow_domain', 'fedow_ip'])
         print('Anciens domaines principaux retablis ; aucune suppression.')
     else:
         print('PLAN UNIQUEMENT : aucune ecriture en base.')

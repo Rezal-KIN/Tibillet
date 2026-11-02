@@ -47,6 +47,7 @@ existe en base (pour le test « admin d'un autre lieu »).
 Lancement / Run :
     docker exec lespass_django poetry run pytest tests/pytest/test_carte_perdue_cycle_complet.py -v
 """
+import os
 import logging
 import secrets
 import uuid as uuid_module
@@ -62,7 +63,7 @@ from django_tenants.utils import tenant_context
 
 pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 
-HOTE_DU_LIEU = "lespass.tibillet.localhost"
+HOTE_DU_LIEU = os.environ.get("TEST_TENANT_HOST", "lespass.tibillet.localhost")
 REFERER_DE_L_ADMIN = f"https://{HOTE_DU_LIEU}/admin/"
 CREDIT_FEDOW_CENTIMES = 2000
 CREDIT_LOCAL_V2_CENTIMES = 1500
