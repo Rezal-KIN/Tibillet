@@ -1,0 +1,50 @@
+# CANDIDAT NON ACTIVE. Base verifiee : tibillet-local-upstream, 63ed1ab.
+# Charger explicitement APRES docker-compose.yml ; jamais en production.
+services:
+  traefik:
+    # Compose remplace command, il ne concatene pas cette liste.
+    command:
+      - --log.level=INFO
+      - --providers.docker=true
+      - --providers.docker.network=frontend
+      - --providers.docker.exposedbydefault=false
+      # Seuls nos deux nginx sont publies ; Mailpit reste intact et interne.
+      - --providers.docker.constraints=Label(`com.docker.compose.project`,`tibillet`) && (Label(`com.docker.compose.service`,`lespass_nginx`) || Label(`com.docker.compose.service`,`fedow_nginx`))
+      - --entrypoints.entrypoints-http.address=:80
+      - --entrypoints.entrypoints-http.forwardedHeaders.trustedIPs=192.168.1.10/32
+    # Compose >= 2.24.4 ; remplace les publications 80/443 du fichier de dev.
+    ports: !override
+      - 192.168.1.195:80:80
+    configs: !reset []
+  lespass_django:
+    extra_hosts:
+      - gala-test.rezal.fr:192.168.1.10
+      - cashless.gala-test.rezal.fr:192.168.1.10
+      - fedow.gala-test.rezal.fr:192.168.1.10
+  lespass_celery:
+    extra_hosts:
+      - gala-test.rezal.fr:192.168.1.10
+      - cashless.gala-test.rezal.fr:192.168.1.10
+      - fedow.gala-test.rezal.fr:192.168.1.10
+  fedow_django:
+    extra_hosts:
+      - gala-test.rezal.fr:192.168.1.10
+      - cashless.gala-test.rezal.fr:192.168.1.10
+      - fedow.gala-test.rezal.fr:192.168.1.10
+  lespass_nginx:
+    labels:
+      traefik.http.routers.lespass_nginx.tls: "false"
+      traefik.http.routers.lespass_nginx.entrypoints: entrypoints-http
+      traefik.http.routers.lespass_nginx.rule: Host(`gala-test.rezal.fr`) || Host(`cashless.gala-test.rezal.fr`)
+      traefik.http.routers.lespass_nginx.middlewares: estia-seulement
+      # RemoteAddr (pas la chaine X-Forwarded-For fournie par le visiteur).
+      traefik.http.middlewares.estia-seulement.ipallowlist.sourcerange: 192.168.1.10/32
+  fedow_nginx:
+    labels:
+      traefik.http.routers.fedow_nginx.tls: "false"
+      traefik.http.routers.fedow_nginx.entrypoints: entrypoints-http
+      traefik.http.routers.fedow_nginx.rule: Host(`fedow.gala-test.rezal.fr`)
+      traefik.http.routers.fedow_nginx.middlewares: estia-seulement
+  mailpit:
+    labels:
+      traefik.enable: "false"

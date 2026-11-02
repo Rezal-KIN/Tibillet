@@ -1,0 +1,17 @@
+# CANDIDAT : contenu de sites-available/zz-tibillet-gala-test.conf.
+# Phase HTTP-01 uniquement ; comparer les fichiers proteges et tester nginx avant activation.
+server {
+    listen 80;
+    server_name gala-test.rezal.fr cashless.gala-test.rezal.fr fedow.gala-test.rezal.fr;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/letsencrypt/tibillet-gala-test;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    # Aucune requete applicative avant la validation du certificat et de la VM.
+    location / {
+        return 503;
+    }
+}

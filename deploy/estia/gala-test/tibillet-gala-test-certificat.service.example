@@ -1,0 +1,11 @@
+[Unit]
+Description=Renouvellement du certificat dedie a gala-test (sans reload nginx)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+TimeoutStartSec=15min
+# Certbot 0.31.0 : options verifiees dans le code de cette version.
+# Confirmer le chemin du binaire avec inspect-estia.py avant installation.
+ExecStart=/usr/bin/certbot renew --cert-name tibillet-gala-test --config-dir /etc/letsencrypt-tibillet-gala-test --work-dir /var/lib/letsencrypt-tibillet-gala-test --logs-dir /var/log/letsencrypt-tibillet-gala-test --no-directory-hooks --pre-hook /bin/true --post-hook /bin/true --deploy-hook "/usr/bin/logger -t tibillet-gala-test-certificat Certificat-renouvele-verifier-config-puis-recharger-nginx"

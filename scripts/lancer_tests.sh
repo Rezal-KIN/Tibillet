@@ -38,11 +38,19 @@ fi
 shift 1
 
 CONTENEUR="lespass_django"
-URL_DU_SERVEUR="https://lespass.tibillet.localhost/"
+URL_DU_SERVEUR="${URL_LESPASS:-https://lespass.tibillet.localhost/}"
+options_http=(--connect-timeout 3 --max-time 10)
+if [ -n "${CURL_RESOLVE:-}" ]; then
+    options_http+=(--resolve "$CURL_RESOLVE")
+fi
+# Exception seulement pour le certificat local des autres environnements de dev.
+case "$URL_DU_SERVEUR" in
+    https://*.tibillet.localhost/*) options_http+=(-k) ;;
+esac
 
 # 1. Le serveur live doit répondre. Un 502 veut dire que runserver est mort dans byobu.
 # / The live server must answer. A 502 means runserver died in byobu.
-code_http=$(curl -sk -o /dev/null -w "%{http_code}" "$URL_DU_SERVEUR" || true)
+code_http=$(curl -sS "${options_http[@]}" -o /dev/null -w "%{http_code}" "$URL_DU_SERVEUR" || true)
 if [ "$code_http" != "200" ]; then
     echo "Le serveur live ne répond pas (HTTP $code_http) : relancer runserver dans byobu." >&2
     exit 1

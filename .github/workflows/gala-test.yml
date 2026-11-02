@@ -35,7 +35,9 @@ jobs:
     timeout-minutes: 120
     env:
       COMPOSE_PROJECT_NAME: tibillet
-      URL_LESPASS: https://lespass.tibillet.localhost/
+      URL_LESPASS: https://cashless.gala-test.rezal.fr/
+      CURL_RESOLVE: cashless.gala-test.rezal.fr:443:192.168.1.10
+      COMPOSE_FILE: docker-compose.yml:deploy/estia/gala-test/compose.estia.yml
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
@@ -74,12 +76,24 @@ jobs:
           docker exec lespass_django poetry run python /DjangoFiles/manage.py migrate_schemas
           docker exec lespass_django poetry run python /DjangoFiles/manage.py collectstatic --no-input -v 0
 
+      - name: Domaines publics du lieu de test
+        run: |
+          # Conserver le premier etat, hors du checkout nettoye par Actions.
+          if [ ! -e ~/gala-test-config/domaines-avant-estia.txt ]; then
+            (set -o noclobber
+             docker exec -i lespass_django poetry run python manage.py shell \
+               < deploy/estia/gala-test/domaines.py \
+               > ~/gala-test-config/domaines-avant-estia.txt)
+          fi
+          docker exec -i -e ESTIA_DOMAIN_MODE=apply lespass_django poetry run python manage.py shell \
+            < deploy/estia/gala-test/domaines.py
+
       - name: Serveur Django
         run: |
           docker exec lespass_django pkill -f "manage.py runserver" || true
           docker exec -d lespass_django bash -c 'cd /DjangoFiles && poetry run python manage.py runserver 0.0.0.0:8002 > /DjangoFiles/runserver.log 2>&1'
           for essai in $(seq 1 60); do
-            [ "$(curl -sk -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
+            [ "$(curl -sS --connect-timeout 3 --max-time 10 --resolve "$CURL_RESOLVE" -o /dev/null -w '%{http_code}' "$URL_LESPASS")" = 200 ] && exit 0
             sleep 3
           done
           echo "Le serveur ne répond pas" ; docker exec lespass_django tail -40 /DjangoFiles/runserver.log ; exit 1
