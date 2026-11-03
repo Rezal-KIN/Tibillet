@@ -1,0 +1,301 @@
+# Nouvelle architecture — TiBillet V2, Gala et Kfet
+
+**Document de référence vivant — ouvert le 3 novembre 2026.**
+
+Ce document rassemble les analyses réalisées dans le workspace Sydney, les contraintes exprimées et les questions restant à trancher. Il sera mis à jour dans ce même fichier au fil des échanges. Les propositions ne sont pas des fonctionnalités déjà livrées ni des autorisations de mise en production.
+
+## 1. Statuts et règles de travail
+
+- **Vérifié** : comportement lu dans la version du code étudiée ou observé sur la VM ; la preuve est précisée.
+- **Confirmé par l'utilisateur** : contrainte ou règle explicitement exprimée.
+- **Piste à étudier** : proposition discutée, sans décision d'implémentation ni déploiement.
+- **À vérifier** : question non encore résolue ou parcours non validé de bout en bout.
+
+**Règle confirmée :** toute modification de code, de script ou de configuration publique passe par le dépôt, un commit identifiable, les validations et la construction avant activation. Aucun patch de code manuel dans les conteneurs. Les secrets restent hors Git ; les modèles et noms de variables sont versionnés. L'étude actuelle ne déclenche pas de migration, de changement DNS ou de paiement.
+
+L'utilisateur souhaite construire l'instance actuelle avec CAWL en test. Avant la production, il prévoit une copie de test isolée, puis les identifiants CAWL réels sur l'instance de production. Cette séparation reste à préparer ; elle n'a pas été effectuée.
+
+## 2. Résumé des contraintes et pistes
+
+| Sujet | Conclusion / état |
+|---|---|
+| Cartes imprimées | Adresse confirmée : `https://galas-am-aix.rezal.fr/qr/<identifiant>` |
+| Réutilisation des cartes | Confirmée : les mêmes cartes doivent resservir entre éditions |
+| Identités physiques | Conserver UUID QR, numéro imprimé et UID NFC ; ne pas régénérer ces associations |
+| Kfet / Gala | Deux installations ou VM sont envisagées pour l'indépendance ; choix précis encore à arrêter |
+| Éditions du gala | Un lieu par édition, avec un événement, est une piste de cloisonnement ; ce n'est pas encore mis en place |
+| Domaines | Wildcard `*.galas-am-aix.rezal.fr` envisagé pour éviter une intervention Estia à chaque lieu |
+| Adresse racine | Personnalisation en portail du collectif envisagée ; pas une vitrine générique souhaitée par l'utilisateur |
+| Gestion interlieux | Rechercher et réutiliser les outils natifs avant de créer une nouvelle interface |
+| Authentification | Étudier un accès central sur le domaine racine avec l'identité TiBillet existante |
+| Production existante | Préserver le fonctionnement AWS et les adresses imprimées jusqu'à une bascule préparée |
+
+## 3. Ce qui existe actuellement
+
+Constats réalisés le 3 novembre 2026 sur la version VM `122d9d374f50b51141c4dc45fde77ffaac3f7ea1`. Treize fichiers structurants ont été comparés par SHA256 entre le dépôt étudié et la VM : identiques. Les inventaires de lieux ont été faits en lecture seule. Ces constats datés doivent être revérifiés avant une opération future.
+
+| Adresse | Rôle actuel |
+|---|---|
+| `gala-test.rezal.fr` | Tenant technique `public`, accueil général TiBillet et assistant de création |
+| `cashless.gala-test.rezal.fr` | Lieu nommé Lespass, schéma `lespass`, moteur V2 ; administration et caisse du même lieu |
+| `fedow.gala-test.rezal.fr` | Service Fedow distant, pas un lieu métier supplémentaire |
+| `galas-am-aix.rezal.fr` | Domaine imprimé des cartes ; DNS observé vers l'ancienne infrastructure AWS, distincte de la VM actuelle |
+
+Le mot `cashless` n'impose pas un logiciel séparé : cette adresse dessert un lieu qui porte aussi sa billetterie, ses pages et son administration. La racine générique vient de l'association du domaine au tenant public ; ce n'est pas une obligation métier pour le collectif.
+
+La base contient plusieurs lieux de démonstration et des emplacements en attente, mais pas deux organisations déjà distinctes nommées Kfet et Gala. Au relevé : Lespass contient 185 événements, 29 produits de caisse, trois stocks et sept points de vente. Ces objets ne sont pas autant d'installations. Le compte de l'utilisateur a reçu les droits admin du lieu Lespass ; il n'est pas superutilisateur global.
+
+Le runtime est en `TEST=0`, `DEBUG=0`, `DEMO=0`, avec `CAWL_TEST=1`. Les vrais mails passent par Brevo ; un unique mail applicatif de validation a été reçu. Les tests capturent leurs mails dans Mailpit. Gunicorn, Daphne et le worker Celery existant sont utilisés, sans doublon de worker. Les WebSockets via Estia puis le domaine public ont été vérifiés avec un handshake 101 valide. Le contenu et le certificat de `hello.rezal.fr` sont restés identiques dans les contrôles avant/après.
+
+Ces vérifications ne prouvent pas encore un parcours matériel caisse/NFC complet ni un paiement CAWL de test avec retour et webhook de bout en bout.
+
+## 4. Vocabulaire : machine, installation, lieu, événement, point de vente
+
+| Niveau | Sens | Exemple |
+|---|---|---|
+| Serveur / VM | Machine qui héberge les services | VM Gala ou VM Kfet |
+| Installation / instance | Déploiement de TiBillet, sa configuration et ses services | Une pile avec sa base, ses workers et ses réglages CAWL |
+| Lieu / tenant | Unité de gestion ; pas nécessairement un bâtiment | Kfet, Gala ou une édition de festival |
+| Événement | Programmation appartenant à un lieu | Gala 2026, soirée de Noël |
+| Point de vente | Comptoir ou usage de caisse dans le lieu | Bar, Restaurant, Cashless, Billetterie |
+| Terminal | Appareil associé au lieu | Téléphone ou tablette de caisse |
+
+Une installation peut héberger plusieurs lieux ; chaque lieu peut contenir plusieurs événements et points de vente ; plusieurs terminaux peuvent utiliser un même point de vente.
+
+Exemple discuté, **pas encore déployé** :
+
+```text
+Installation Gala
+  Lieu Gala 2026 -> événement Gala 2026 -> plusieurs points de vente
+  Lieu Gala 2027 -> événement Gala 2027 -> plusieurs points de vente
+Installation Kfet
+  Lieu Kfet -> plusieurs soirées / événements -> plusieurs points de vente
+```
+
+Deux installations ne nécessitent pas obligatoirement deux VM. Deux VM renforcent l'indépendance d'exploitation, mais un proxy ou d'autres services peuvent encore être communs.
+
+## 5. Séparation réelle entre lieux
+
+TiBillet utilise Django et `django-tenants` avec PostgreSQL. Un nom de domaine est associé à un `Customers.Client` par `Customers.Domain`. Le middleware sélectionne le schéma du lieu. Plusieurs schémas existent dans une base commune ; ce ne sont pas des serveurs indépendants.
+
+**Données propres au lieu :** configuration de l'organisation, événements, réservations, billets, catalogue et tarifs, points de vente, terminaux, cartes primaires, inventaire, ventes, règlements, plan comptable, clôtures et réglages de modules. Les pages existent également dans chaque schéma.
+
+**Données et services partagés dans l'installation :** registre des lieux/domaines, identités des utilisateurs, registre des cartes, portefeuilles, tables du moteur monétaire V2, application, workers, infrastructure, SMTP et réglages globaux du prestataire de paiement.
+
+Les données monétaires partagées portent des références de lieu et de monnaie et sont filtrées par les services. Leur isolation ne repose pas sur un schéma différent par solde. Cette étude n'est pas un audit exhaustif des permissions ou une certification de sécurité/comptabilité.
+
+Sources : [Customers](../../Customers/models.py), [réglages Django](../../TiBillet/settings.py), [services monétaires](../../fedow_core/services.py). Mécanisme : https://django-tenants.readthedocs.io/en/latest/ .
+
+## 6. Plusieurs événements ou points de vente ne remplacent pas deux lieux
+
+**Plusieurs événements :** oui, avec dates, jauges, réservations, billets et produits de billetterie distincts. Un lieu peut conserver plusieurs éditions. Un seul événement dans un lieu ne supprime aucune fonction de billetterie.
+
+Mais créer un événement ne crée pas une nouvelle organisation, un nouveau catalogue indépendant, une monnaie cashless, une équipe admin ni une clôture distincte. Une vente ordinaire au bar n'est pas automatiquement rattachée à l'événement de billetterie du même jour : `Vente` porte notamment son point de vente, pas une relation universelle à `Event`.
+
+**Plusieurs points de vente :** ils ont leurs sélections d'articles, moyens de paiement, droits opérateurs et ventilations de vente. Mais un même produit vendu au Bar et au Restaurant puise dans son stock commun. Le stock est un enregistrement par produit. Les clôtures couvrent le lieu entier, avec ventilation par point de vente.
+
+Deux points de vente Kfet/Gala conviennent à une gestion commune. Deux lieux sont plus adaptés si l'on veut séparer administrateurs, catalogues, stocks, ventes et clôtures. Le besoin de deux installations est une question supplémentaire de configuration et d'exploitation.
+
+Sources : [Event / LigneArticle](../../BaseBillet/models.py), [Vente](../../BaseBillet/models_vente.py), [points de vente et clôtures](../../laboutik/models.py), [stocks](../../inventaire/models.py), [clôtures comptables](../../comptabilite/models.py).
+
+## 7. Navigation, administration et modules
+
+L'administration commune regroupe les outils, tandis que l'interface de caisse sert aux opérations d'encaissement. Le bouton « Ouvrir la caisse » mène donc à la caisse et à l'identification du personnel par carte primaire ; il ne sert pas à modifier les articles.
+
+Accès actuels du lieu Lespass :
+
+- Gestion : `https://cashless.gala-test.rezal.fr/admin/`.
+- Configuration caisse : `/admin/module/caisse/?onglet=configurer`.
+- Articles : `/admin/BaseBillet/posproduct/`.
+- Points de vente : `/admin/laboutik/pointdevente/`.
+- Exploitation : `/laboutik/ouvrir/` puis `/laboutik/caisse/`.
+- Compte personnel et accès aux lieux administrés : `/my_account/`, rubrique « Mes responsabilités ».
+
+L'entrée du menu latéral « Caisse & Restaurant » est censée ouvrir le module de gestion. Le raccourci « Ouvrir la caisse » ouvre l'exploitation. Le signalement utilisateur d'un clic menant au NFC n'a pas établi quelle entrée était utilisée ; aucun correctif de navigation n'a été fait sur cette seule hypothèse.
+
+| Ensemble de modules | Fonctions |
+|---|---|
+| Espace en ligne / Lespass | Site, agenda, billetterie, adhésions, réservations |
+| LaBoutik | Produits, tarifs, points de vente, caisse, inventaire |
+| Réseau / monnaies | Cartes, portefeuilles, monnaies et fédérations |
+| Contributions | Financement participatif, budgets et bénévolat |
+| Matériel | Terminaux, imprimantes, bornes et tireuses |
+| Gestion transversale | Ventes, règlements, rapports et clôtures |
+
+Présence dans les menus et activation d'un module ne prouvent pas tous ses parcours. Exemple : le type de caisse Advanced est indiqué comme réservé/non codé dans le modèle. Les bornes ont notamment des parcours Stripe Terminal : leur compatibilité CAWL complète n'a pas été validée. La newsletter prévoit Ghost et est désactivée sur le lieu actuel ; elle est distincte des mails transactionnels Brevo.
+
+Sources : [navigation](../../Administration/admin/dashboard.py), [administration](../../Administration/admin/site.py), [modèles](../../BaseBillet/models.py).
+
+## 8. Création native d'un lieu dans l'interface
+
+Le bouton « Créer son espace » ouvre `/onboard/`. Le formulaire d'identité a été vérifié en HTTP 200 sur `https://gala-test.rezal.fr/onboard/`. Le parcours comporte identité/email, vérification si nécessaire, nom et adresse web du lieu, adresse géographique, présentation/logo, puis création asynchrone. Le compte créateur reçoit les droits d'administration du lieu.
+
+**Point de fonctionnement vérifié dans le code :** valider « Continuer » à l'étape Présentation et logo déclenche déjà la création. L'étape de brouillons d'événements existe dans le code mais est sautée dans le flux courant ; les événements peuvent être créés ensuite.
+
+La VM propose le suffixe `gala-test.rezal.fr` et avait vingt emplacements en attente au contrôle. Cela ne prouve pas que chacun est entièrement migré : le créateur vérifie ce point avant d'en sélectionner un.
+
+L'assistant crée le lieu et son association Domain ; il n'ajoute pas à lui seul DNS public, certificat wildcard ou règles Estia/Traefik. Le routage actuel accepte seulement les adresses déjà configurées. Un nouveau lieu n'est pas automatiquement autorisé à utiliser CAWL.
+
+Ne pas confondre ce parcours avec « Créer un nouveau lieu » dans l'assistant d'un événement : ce dernier peut désigner une adresse physique d'événement, pas une nouvelle organisation/tenant.
+
+Sources : [routes](../../onboard/urls.py), [vues](../../onboard/views.py), [création du tenant](../../BaseBillet/validators.py), [tâches](../../onboard/tasks.py).
+
+## 9. Portail du collectif et pages interlieux natives
+
+L'utilisateur ne souhaite pas une vitrine publicitaire TiBillet comme entrée de ses services. Personnaliser `gala-test.rezal.fr`, puis le domaine de production, est une piste explicitement discutée, pas une modification déjà livrée.
+
+**Il existe déjà une page réseau publique native : `/federation/`.** La vue `FederationViewset` présente une carte et une liste du lieu courant et de ses lieux fédérés. Le titre peut être personnalisé (`federation_menu_name`), ainsi qu'un texte d'introduction, le tri et les filtres.
+
+Les lieux affichés proviennent des liens explicites `FederatedPlace`, éventuellement des lieux entrants et d'abonnements par tags. Pour un portail limité au collectif, il faudra étudier la sélection explicite des lieux et les options d'élargissement, plutôt que supposer que tous les lieux actifs sont souhaités. Les mécanismes de fédération permettent aussi de faire remonter des événements dans un agenda commun.
+
+Le `/explorer/` du tenant public présente le réseau général ; ce n'est pas automatiquement une sélection privée du collectif. `/my_account/` propose déjà « Mes responsabilités », avec les lieux administrés et leurs liens vers les back-offices. Ces accès ne constituent pas une gestion complète de toutes les organisations sur une seule page.
+
+**Trois fonctions à distinguer pour le futur portail :** présentation publique du collectif, accès personnels/administratifs après connexion, et entrée permanente des cartes. Les réunir sur un même domaine ne doit pas fusionner les données, droits ou soldes des lieux.
+
+La personnalisation de la racine et son articulation avec les pages réseau existantes restent à concevoir. Réutiliser l'existant avant d'ajouter une nouvelle interface est la règle retenue.
+
+Sources : [FederationViewset](../../BaseBillet/views.py), [FederatedPlace / FederationConfiguration](../../BaseBillet/models.py), [page réseau V2](../../pages/templates/pages/V2/vues/reseau.html), [Mon compte](../../pages/templates/pages/V2/vues/compte/index.html), [routes publiques](../../TiBillet/urls_public.py).
+
+## 10. Authentification et permissions interlieux
+
+**Question en cours d'approfondissement :** utiliser le login TiBillet sur le domaine racine et donner accès à une interface de gestion des lieux du collectif, en réutilisant les fonctions existantes.
+
+Éléments déjà vérifiés :
+
+- L'identité `TibilletUser` est partagée dans une installation.
+- `client_admin` définit les lieux que la personne administre ; `is_staff` seul n'autorise pas tous les lieux.
+- `TenantAdminPermissionWithRequest` vérifie notamment l'administration du lieu courant, le compte actif et son type humain ; un superutilisateur a une portée globale.
+- `RootPermissionWithRequest` exige une authentification et le statut superutilisateur.
+- Des droits distincts existent pour initier un paiement, créer des événements ou gérer des contributions.
+- Les comptes de terminaux et leurs clés API sont distincts des administrateurs humains.
+- Le compte personnel liste les lieux autorisés dans « Mes responsabilités ».
+- La section « Root Configuration » de l'administration prévoit un accès à la liste des lieux pour les superutilisateurs ; le modèle Client possède notamment une action de passage vers leur administration. Sa portée exacte et son adéquation au rôle de responsable du collectif restent à analyser.
+- Le domaine public n'expose actuellement pas un `/admin/` racine actif : sa route est commentée dans `urls_public.py`.
+- Les cookies de session sont actuellement limités à l'hôte. Identité commune ne signifie donc pas connexion automatiquement conservée entre tous les sous-domaines.
+- La liste native des lieux n'est pas un CRUD complet : création/suppression refusées dans cette page ; les champs du lieu sont en lecture seule et les superutilisateurs peuvent éditer les domaines via un inline.
+- Il existe une action native de passage à l'administration d'un lieu pour superutilisateur. Elle ne constitue pas une délégation de ce pouvoir à tous les admins du collectif.
+- Un SSO transitoire existe pour le parcours d'onboarding tenant vers racine : jeton signé, portée dédiée et durée courte. Son existence ne prouve pas un SSO général de portail vers tous les lieux. Il faut étudier le mécanisme dans son contexte avant de le réutiliser.
+
+**Lecture pour le futur portail :** le login doit réutiliser les comptes TiBillet ; les fonctionnalités affichées doivent découler des droits natifs sur les lieux. Une personne administratrice de plusieurs lieux peut déjà être représentée par plusieurs associations `client_admin`. Cela ne nécessite pas automatiquement un superutilisateur global. Une interface de gestion interlieux limitée au collectif reste une piste à définir, pas une page complète déjà présente sur la racine actuelle.
+
+À vérifier avant de proposer une interface : couverture exacte des rôles, gestion interlieux existante, mécanismes de passage de session entre domaines, accès au login depuis la racine, révocation et absence d'accès aux lieux non autorisés. Ne pas créer un second système d'identités ni accorder un superutilisateur global simplement pour contourner une navigation manquante.
+
+Sources : [utilisateurs](../../AuthBillet/models.py), [permissions](../../ApiBillet/permissions.py), [site admin](../../Administration/admin/site.py), [liste des lieux](../../Administration/admin_tenant.py), [vues du compte](../../BaseBillet/views.py), [cookies](../../TiBillet/settings.py).
+
+## 11. Téléphones, Discovery et personnel de caisse
+
+Le Discovery V2 est intégré à TiBillet. L'administrateur déclare un terminal dans son lieu ; un PIN à six chiffres est généré. L'application appelle `/api/discovery/claim/` sur le serveur Discovery configuré. Le PIN désigne le lieu ; le téléphone reçoit son adresse et une clé API de terminal. Le PIN est à usage unique et sa durée de vie actuelle est d'une heure.
+
+Le client Android V2 présent dans le dépôt permet de changer le serveur Discovery et utilise ensuite `/laboutik/auth/bridge/` pour ouvrir la caisse. La version réellement installée sur les téléphones n'a pas été inspectée : cette lecture de code ne prouve pas sa compatibilité.
+
+Dans la configuration publique actuelle, le point d'entrée Discovery est exposé sur le domaine racine. L'appairage ne nécessite pas un service Discovery distinct pour chaque édition. Il faut toutefois des droits/appairages propres aux lieux ; la réutilisation d'un téléphone entre éditions, les profils enregistrés et la révocation sont à valider en réel.
+
+Le terminal représente l'appareil ; la carte primaire identifie le personnel et ses points de vente autorisés. Le PIN d'appairage et le scan NFC d'un opérateur sont donc deux mécanismes différents.
+
+Sources : [modèle Discovery](../../discovery/models.py), [claim](../../discovery/views.py), [services](../../discovery/services.py), [terminal](../../laboutik/models.py), [client Android V2](../../laboutik_client_android_v2/mobile-app/www/assets/js/modules/utils.js). Le README Discovery contient des descriptions anciennes ; le code actuel fait référence pour la création préalable du Terminal et les PIN expirables.
+
+## 12. Cartes imprimées et réutilisation entre éditions
+
+**Contraintes confirmées :** URL `https://galas-am-aix.rezal.fr/qr/<identifiant>` et cartes réutilisables. L'adresse imprimée doit rester pérenne, indépendamment des adresses de gestion des éditions.
+
+Le parcours natif `/qr/<uuid>/` :
+
+1. Valide l'UUID et retrouve la carte auprès du Fedow distant.
+2. Lit le domaine du lieu d'origine de la carte.
+3. Peut rediriger vers le domaine principal de ce lieu.
+4. Propose la liaison à un compte ou la connexion du propriétaire.
+5. Après identification, propose la recharge native du lieu si elle est activée.
+
+Le QR imprimé ne prouve pas l'identité du porteur. Sans session, le scan d'une carte liée peut envoyer un mail au propriétaire. Aucun scan HTTP de carte réelle n'a été lancé pendant l'étude afin de ne pas déclencher un envoi non demandé.
+
+**Une simple redirection vers la dernière édition n'est pas une solution déjà validée :** le routage natif vers l'origine peut la contredire ou produire une boucle. Le futur aiguillage doit préserver UUID, numéro imprimé et UID NFC, sans modifier silencieusement l'origine des cartes à chaque édition.
+
+Piste adaptée : entrée QR permanente -> reconnaissance/authentification -> proposition du gala ouvert ou choix d'édition -> recharge native du lieu choisi. Les anciens soldes et remboursements gardent un accès explicite. Aucun code de cet aiguillage n'est encore livré.
+
+La même carte peut porter des soldes de monnaies différents. Un `Token` correspond au couple portefeuille/monnaie. Créer un événement ne crée pas une monnaie et ne remet pas un ancien solde à zéro. Le parcours CAWL actuel sélectionne un produit de recharge TLF actif du lieu, pas une monnaie déterminée par un événement de billetterie.
+
+Un changement de gala actif ne doit pas envoyer un paiement ou son webhook vers la mauvaise édition. Le lieu, la commande, le compte marchand et la monnaie à créditer doivent rester ceux du paiement initial, y compris pour les retours tardifs et remboursements.
+
+Sources : [ScanQrCode](../../BaseBillet/views.py), [client Fedow](../../fedow_connect/fedow_api.py), [page carte liée](../../BaseBillet/templates/fonctionnel/qr_carte_liee.html), [modèles monétaires](../../fedow_core/models.py), [recharge CAWL](../../PaiementCawl/recharges.py), [sélection du produit](../../kiosk/credit.py), [tests QR](../../tests/pytest/test_qr_parcours_securise.py).
+
+## 13. Stock physique, origines et migration
+
+Le catalogue versionné décrit trois lots : 3 510 + 1 755 + 1 755 = **7 020 cartes**. Les documents d'exploitation décrivent des imports historiques sur AWS ; ce n'est pas une preuve d'import sur la nouvelle VM.
+
+Relevé de la VM au 3 novembre : **158 cartes Fedow**, toutes de génération 1, origine renvoyant `cashless.gala-test.rezal.fr`. Le miroir Lespass ne contient que quatre cartes. Aucun Domain `galas-am-aix.rezal.fr` n'est enregistré dans Lespass de cette VM. Le stock complet du catalogue n'y est donc pas présent ; les fichiers privés des lots n'ont pas été comparés individuellement pendant cette étude.
+
+Un importeur de déploiement existe : il pilote la commande native Fedow `import_cards`, conserve les associations identiques, ajoute les absentes et refuse les conflits. Son branchement au déploiement VM reste à préparer/vérifier. Il ne faut ni réinventer les identités ni publier les fichiers privés de cartes dans Git.
+
+Importer le stock physique sur une base neuve ne transfère pas automatiquement les comptes, portefeuilles, soldes et transactions de l'ancien système. La reprise éventuelle de ces données sera un chantier distinct avec sauvegarde et contrôles, sans effacement implicite.
+
+Sources : [catalogue](../card-stock.json), [procédure historique](operations/card-stock-import.md), [enveloppe native](../tools/runtime/import_card_stock_fedow.py), [tests d'import](../tests/test_card_stock.py).
+
+## 14. Domaines, wildcard, certificat et Estia
+
+**Piste discutée :** `*.galas-am-aix.rezal.fr` pour les lieux d'édition, avec conservation de `galas-am-aix.rezal.fr` pour le portail, Discovery et l'entrée QR selon le routage à définir. Les noms des lieux doivent rester sur un seul niveau, par exemple `gala-2027.galas-am-aix.rezal.fr`. La caisse intégrée reste sous `/laboutik/` ; inutile d'imposer `cashless.gala-2027...`.
+
+Préparer une seule fois :
+
+1. DNS wildcard vers l'entrée publique retenue, et enregistrement de la racine conservé explicitement.
+2. Certificat couvrant la racine ET `*.galas-am-aix.rezal.fr`.
+3. Routage Estia pour ce périmètre uniquement, en préservant le Host et les WebSockets.
+4. Routage Traefik/nginx dans la VM, avec les exceptions des services fixes comme Fedow.
+5. Paramètres d'hôtes/suffixes de TiBillet ; chaque lieu créé par l'interface conserve sa propre association Domain.
+
+Objectif : une fois ces éléments validés, ne plus intervenir sur Estia pour chaque création de lieu. Le wildcard ne crée pas un lieu, ne donne pas de droits et n'autorise pas CAWL. Les noms inconnus ne doivent pas devenir des organisations accessibles par défaut.
+
+Un certificat wildcard ne couvre qu'un niveau : il ne couvre ni la racine seule ni `cashless.gala-2027.galas-am-aix.rezal.fr`. Avec Let's Encrypt, les wildcard nécessitent DNS-01, à automatiser pour le renouvellement ; la validation HTTP actuelle ne suffit pas. L'accès au DNS et sa possibilité d'automatisation restent à étudier. Ne pas toucher aux autres certificats/services d'Estia pour cette préparation.
+
+Au contrôle DNS : `galas-am-aix.rezal.fr` résout vers 51.44.90.200, et `gala-test.rezal.fr` vers 86.220.191.228. Un sous-domaine aléatoire sous le domaine de production n'a pas résolu. Ce constat ne remplace pas l'inventaire de la zone autoritaire et ne prouve pas l'état de tous les enregistrements. Aucune bascule DNS n'a été réalisée.
+
+Sources : [configuration Estia](../estia/gala-test/nginx-https.conf.example), [routage VM](../estia/gala-test/compose.estia.yml), [association des domaines](../estia/gala-test/domaines.py). Références : https://letsencrypt.org/docs/challenge-types/#dns-01-challenge et https://www.rfc-editor.org/rfc/rfc9525.html#section-6.3 .
+
+## 15. CAWL, monnaies et séparation test/production
+
+Le connecteur de ce fork choisit le prestataire en ligne au niveau de l'installation (`PAYMENT_PROVIDER`). CAWL lit un seul jeu de paramètres marchands ; `CAWL_TEST` est global. `CAWL_TENANT_SCHEMAS` autorise explicitement les lieux qui peuvent encaisser. Sur la VM étudiée, la liste contient seulement `lespass` et CAWL est en test.
+
+Deux lieux peuvent donc séparer leur gestion TiBillet tout en utilisant le même compte marchand. Cela ne crée pas deux comptes CAWL ni une ventilation bancaire automatique. Deux comptes marchands différents ou un lieu en test et l'autre en réel ne sont pas un simple choix par lieu dans cette implémentation.
+
+La monnaie locale V2 vit dans `fedow_core` de Lespass. Le Fedow distant reste utilisé, notamment pour l'identité/origine des cartes et des fonctions du réseau : ne pas le supprimer en supposant que toute sa fonction a disparu. Les soldes par monnaie peuvent être distincts et certaines monnaies peuvent être partagées explicitement via fédération. Partager une carte, un agenda et une monnaie sont trois décisions différentes.
+
+Les vrais mails de connexion/confirmation et les paiements CAWL de test peuvent coexister. Les tests automatisés doivent continuer à capturer leurs mails. La copie future de test doit être isolée et configurée avant démarrage de ses workers/services ; ce document ne prescrit pas une simple duplication de VM avec toutes les connexions de production actives.
+
+Sources : [CAWL / lieux autorisés](../../PaiementCawl/services.py), [configuration du SDK](../../payment_providers/cawl.py), [services monétaires](../../fedow_core/services.py), [isolation SMTP](../../TiBillet/mail_delivery.py), [runtime actuel](../estia/gala-test/README.md).
+
+## 16. Comparaison des architectures discutées
+
+| Choix | Séparation obtenue | Ce qui reste commun |
+|---|---|---|
+| Un lieu, plusieurs événements | Programmation, billets, réservations et jauges | Organisation, catalogue, stocks par produit, monnaies configurées et clôtures |
+| Un lieu, plusieurs points de vente | Écrans/articles proposés, droits opérateurs et ventilation | Gestion du lieu, stocks des produits communs et clôtures |
+| Plusieurs lieux, une installation | Réglages, catalogues, stocks, admins, ventes/clôtures et monnaies configurées | Application, infrastructure, identités/cartes et paramètres CAWL globaux |
+| Plusieurs installations | Bases, paramètres marchands et déploiements configurés séparément | Éventuellement machine/proxy et services externes volontairement partagés |
+
+L'idée de deux installations Gala/Kfet et d'un lieu par édition du gala reste une option cohérente à évaluer. La contrainte des cartes réutilisables ajoute impérativement la question de l'entrée QR stable et de l'accès aux anciennes éditions. Aucun choix ne doit être présenté comme déjà déployé.
+
+## 17. Questions ouvertes et prochaines analyses
+
+Priorités :
+
+1. **Gestion interlieux / permissions :** identifier précisément les interfaces natives, le rôle de responsable du collectif et le passage de session entre domaines ; réutiliser le login TiBillet.
+2. **Portail public du collectif :** sélectionner les lieux/événements à présenter et étudier l'adaptation de la racine avec les mécanismes réseau natifs.
+3. **Cartes réutilisables :** définir gala ouvert, choix d'édition, anciens soldes/remboursements, absence ou pluralité d'éditions ouvertes.
+4. **Domaines :** étudier zone DNS, wildcard, DNS-01, renouvellement et routage Estia/VM, sans basculer le domaine imprimé pendant le développement.
+5. **Stock et migration :** vérifier les lots privés et préparer l'import VM ; décider séparément de la reprise des anciennes données.
+6. **Validation réelle :** téléphone V2 appairé, carte physique, deux lieux/éditions de test, recharge CAWL test, retour et webhook dans le bon contexte.
+7. **Production :** préparer la copie de test isolée puis une bascule contrôlée ; préserver AWS tant que la nouvelle chaîne n'est pas validée.
+
+## 18. Historique et maintenance du document
+
+| Date | Analyse / évolution |
+|---|---|
+| 03/11/2026 | Analyse de la séparation installation/lieu/événement/point de vente et inventaire VM |
+| 03/11/2026 | Étude de la création native de lieux et du routage des nouveaux domaines |
+| 03/11/2026 | Contrainte confirmée : cartes imprimées sur galas-am-aix.rezal.fr, réutilisables entre éditions |
+| 03/11/2026 | Lecture du parcours QR natif et constat du stock incomplet sur la VM |
+| 03/11/2026 | Étude wildcard Estia/DNS/TLS et appairage Discovery V2 |
+| 03/11/2026 | Ajout des pistes portail collectif, pages interlieux et permissions ; approfondissement en cours |
+
+**Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
+
+Les anciens documents décrivent des architectures AWS/V1 et des décisions historiques : [architecture des galas](ARCHITECTURE-GALAS.md), [compatibilité CAWL/V2](COMPATIBILITE-CAWL-VERSION-INTEGREE.md), [ancien gala actif](operations/active-gala-and-shared-integrations.md). Ils restent utiles pour la reprise, mais ne doivent pas être lus comme le déploiement V2 actuel ou comme des décisions déjà reconfirmées pour la nouvelle cible.
