@@ -23,12 +23,18 @@ L'utilisateur souhaite construire l'instance actuelle avec CAWL en test. Avant l
 | Réutilisation des cartes | Confirmée : les mêmes cartes doivent resservir entre éditions |
 | Identités physiques | Conserver UUID QR, numéro imprimé et UID NFC ; ne pas régénérer ces associations |
 | Kfet / Gala | Deux installations ou VM sont envisagées pour l'indépendance ; choix précis encore à arrêter |
-| Éditions du gala | Un lieu par édition, avec un événement, est une piste de cloisonnement ; ce n'est pas encore mis en place |
+| Éditions du gala | Décision confirmée : une installation commune et un lieu natif par édition, avec ses points de vente et sa billetterie ; pas encore mis en place |
+| Alternative étudiée | Une refonte pour isoler les points de vente par événement a été comparée ; l'utilisateur a retenu la réutilisation des lieux |
 | Domaines | Wildcard `*.galas-am-aix.rezal.fr` envisagé pour éviter une intervention Estia à chaque lieu |
-| Adresse racine | Personnalisation en portail du collectif envisagée ; pas une vitrine générique souhaitée par l'utilisateur |
-| Gestion interlieux | Rechercher et réutiliser les outils natifs avant de créer une nouvelle interface |
-| Authentification | Étudier un accès central sur le domaine racine avec l'identité TiBillet existante |
+| Adresse racine | Portail cashless commun demandé ; pas une reprise du contenu du site de communication ni une vitrine générique |
+| Gestion interlieux | Compte central avec cartes, monnaies et demandes ; administration des éditions, rôles et lots, en réutilisant les services natifs |
+| Gala live | Un seul accès utilisateur vers le gala explicitement désigné live ; les anciens soldes et demandes restent consultables |
+| Remboursements | Demandes possibles pendant les sept jours suivant la clôture métier du gala ; reliquats concernés ensuite « non réclamés », avec historique conservé |
+| Cartes primaires | Gestion globale demandée, avec un réglage par carte autorisant ou refusant chaque lieu ; accès aux points de vente explicites |
+| Authentification | Identité TiBillet commune et permissions natives ; rôles interlieux et passage entre domaines à développer |
 | Production existante | Préserver le fonctionnement AWS et les adresses imprimées jusqu'à une bascule préparée |
+
+La conception détaillée retenue pour poursuivre l'étude est dans [Portail interlieux des Galas](PORTAIL-INTERLIEUX-GALAS.md) : parcours, cycle de vie, permissions, remboursement à J+7, lots, cartes primaires et ordre de réalisation. Les besoins sont confirmés ; les mécanismes supplémentaires proposés ne sont pas encore livrés.
 
 ## 3. Ce qui existe actuellement
 
@@ -62,7 +68,7 @@ Ces vérifications ne prouvent pas encore un parcours matériel caisse/NFC compl
 
 Une installation peut héberger plusieurs lieux ; chaque lieu peut contenir plusieurs événements et points de vente ; plusieurs terminaux peuvent utiliser un même point de vente.
 
-Exemple discuté, **pas encore déployé** :
+Décision confirmée pour les éditions Gala, **pas encore déployée** ; la séparation Kfet reste une proposition :
 
 ```text
 Installation Gala
@@ -97,6 +103,25 @@ Mais créer un événement ne crée pas une nouvelle organisation, un nouveau ca
 Deux points de vente Kfet/Gala conviennent à une gestion commune. Deux lieux sont plus adaptés si l'on veut séparer administrateurs, catalogues, stocks, ventes et clôtures. Le besoin de deux installations est une question supplémentaire de configuration et d'exploitation.
 
 Sources : [Event / LigneArticle](../../BaseBillet/models.py), [Vente](../../BaseBillet/models_vente.py), [points de vente et clôtures](../../laboutik/models.py), [stocks](../../inventaire/models.py), [clôtures comptables](../../comptabilite/models.py).
+
+### 6.1. Proposition : donner aux événements la séparation des lieux
+
+**Question de l'utilisateur, 03/11/2026 :** modifier TiBillet pour que les événements soient cloisonnés au même niveau que les lieux, dans une installation commune. C'est une piste d'architecture, pas une demande de migration immédiate.
+
+Une seule installation peut déjà héberger tous les lieux. Le choix supplémentaire concerne l'unité de séparation des opérations et la navigation : une adresse commune ne suffit pas à choisir l'édition concernée par une recharge ou un remboursement.
+
+**Constats du code actuel :** `Event` porte la programmation et la billetterie ; `Vente` référence son point de vente mais ne possède pas de relation universelle à un événement ; `Stock` est unique par produit ; les clôtures couvrent le lieu ; les monnaies V2 portent un `tenant_origin` et leurs transactions un `tenant` ; les permissions administratives sont notamment définies par lieu. Filtrer une liste par événement ne procurerait donc pas le cloisonnement d'un lieu.
+
+Deux approches sont à comparer :
+
+- **Conserver les unités existantes et unifier l'entrée.** Présenter un tenant comme un espace de gestion (Gala 2026, Gala 2027, Kfet), tout en conservant ses événements de billetterie. Un portail commun peut donner accès aux espaces autorisés et masquer la complexité des domaines. Le routage des sessions, des cartes et des opérations reste à concevoir ; cette interface n'existe pas encore dans les ajouts de la page d'accueil.
+- **Ajouter un véritable périmètre d'exploitation sous un lieu.** Un lieu Gala pourrait contenir plusieurs éditions séparées. Il faudrait définir ce qui appartient à ce périmètre : ventes et règlements, produits et stocks, terminaux et droits, monnaies et remboursements, rapports et clôtures, tâches asynchrones, retours prestataires et WebSockets. Les événements natifs de billetterie pourraient lui être rattachés. Cela implique une évolution du modèle, des migrations et une vérification des autorisations, pas seulement un nouveau champ de filtrage.
+
+La seconde approche doit aussi couvrir les activités permanentes (Kfet), les événements simultanés et les données historiques. Le choix d'un périmètre doit rester explicite et être validé côté serveur ; la dernière édition consultée ou la seule date du jour ne suffit pas pour attribuer une opération financière.
+
+**Décision ultérieure de l'utilisateur :** conserver les lieux natifs, un par édition, dans une installation commune, et construire une entrée interlieux. La refonte par événement n'est donc pas l'option retenue. Décider séparément si les crédits restent propres à chaque édition ou sont utilisables entre éditions : une identité et une carte communes ne tranchent pas cette règle. Voir la [conception du portail](PORTAIL-INTERLIEUX-GALAS.md).
+
+Sources complémentaires : [monnaies et transactions](../../fedow_core/models.py), [permissions](../../ApiBillet/permissions.py), [routage des domaines](../../Customers/models.py).
 
 ## 7. Navigation, administration et modules
 
@@ -142,7 +167,7 @@ Sources : [routes](../../onboard/urls.py), [vues](../../onboard/views.py), [cré
 
 ## 9. Portail du collectif et pages interlieux natives
 
-L'utilisateur ne souhaite pas une vitrine publicitaire TiBillet comme entrée de ses services. Personnaliser `gala-test.rezal.fr`, puis le domaine de production, est une piste explicitement discutée, pas une modification déjà livrée.
+L'utilisateur ne souhaite pas une vitrine publicitaire TiBillet comme entrée de ses services, ni remplacer le site de communication des Galas. Il demande une entrée cashless commune, avec compte personnel interlieux et administration autorisée. L'adaptation de l'accueil est en préparation locale ; le véritable compte interlieux demandé reste à développer.
 
 **Il existe déjà une page réseau publique native : `/federation/`.** La vue `FederationViewset` présente une carte et une liste du lieu courant et de ses lieux fédérés. Le titre peut être personnalisé (`federation_menu_name`), ainsi qu'un texte d'introduction, le tri et les filtres.
 
@@ -152,13 +177,13 @@ Le `/explorer/` du tenant public présente le réseau général ; ce n'est pas a
 
 **Trois fonctions à distinguer pour le futur portail :** présentation publique du collectif, accès personnels/administratifs après connexion, et entrée permanente des cartes. Les réunir sur un même domaine ne doit pas fusionner les données, droits ou soldes des lieux.
 
-La personnalisation de la racine et son articulation avec les pages réseau existantes restent à concevoir. Réutiliser l'existant avant d'ajouter une nouvelle interface est la règle retenue.
+La composition exacte de la racine et son articulation avec les pages réseau existantes restent à réaliser selon la [conception détaillée du portail](PORTAIL-INTERLIEUX-GALAS.md). L'accès à Explorer reste secondaire. Réutiliser l'existant avant d'ajouter une nouvelle interface est la règle retenue.
 
 Sources : [FederationViewset](../../BaseBillet/views.py), [FederatedPlace / FederationConfiguration](../../BaseBillet/models.py), [page réseau V2](../../pages/templates/pages/V2/vues/reseau.html), [Mon compte](../../pages/templates/pages/V2/vues/compte/index.html), [routes publiques](../../TiBillet/urls_public.py).
 
 ## 10. Authentification et permissions interlieux
 
-**Question en cours d'approfondissement :** utiliser le login TiBillet sur le domaine racine et donner accès à une interface de gestion des lieux du collectif, en réutilisant les fonctions existantes.
+**Besoin désormais confirmé :** utiliser le login TiBillet sur le domaine racine et donner accès à une interface de gestion des lieux du collectif, en réutilisant les fonctions existantes et leurs permissions. La conception des nouveaux droits interlieux reste à implémenter.
 
 Éléments déjà vérifiés :
 
@@ -271,17 +296,17 @@ Sources : [CAWL / lieux autorisés](../../PaiementCawl/services.py), [configurat
 | Plusieurs lieux, une installation | Réglages, catalogues, stocks, admins, ventes/clôtures et monnaies configurées | Application, infrastructure, identités/cartes et paramètres CAWL globaux |
 | Plusieurs installations | Bases, paramètres marchands et déploiements configurés séparément | Éventuellement machine/proxy et services externes volontairement partagés |
 
-L'idée de deux installations Gala/Kfet et d'un lieu par édition du gala reste une option cohérente à évaluer. La contrainte des cartes réutilisables ajoute impérativement la question de l'entrée QR stable et de l'accès aux anciennes éditions. Aucun choix ne doit être présenté comme déjà déployé.
+L'utilisateur a retenu une installation commune aux éditions Gala et un lieu par édition. Le choix d'une installation Kfet indépendante reste à arrêter séparément. La contrainte des cartes réutilisables impose l'entrée QR stable et l'accès aux anciennes monnaies/remboursements, même lorsqu'un nouveau gala est live. Cette décision n'est pas encore déployée.
 
 ## 17. Questions ouvertes et prochaines analyses
 
 Priorités :
 
-1. **Gestion interlieux / permissions :** identifier précisément les interfaces natives, le rôle de responsable du collectif et le passage de session entre domaines ; réutiliser le login TiBillet.
-2. **Portail public du collectif :** sélectionner les lieux/événements à présenter et étudier l'adaptation de la racine avec les mécanismes réseau natifs.
-3. **Cartes réutilisables :** définir gala ouvert, choix d'édition, anciens soldes/remboursements, absence ou pluralité d'éditions ouvertes.
+1. **Socle du portail / permissions :** registre des éditions, sélection explicite du seul gala live, droits collectifs et passage de session ; réutiliser le login TiBillet.
+2. **Compte personnel central :** cartes associées, soldes par monnaie sans double comptage, anciennes éditions et accès au gala live.
+3. **Cycle de vie et remboursements :** distinguer clôture métier et clôtures de caisse ; fenêtre de sept jours confirmée, demandes conservées après échéance, non-réclamés traçables. Adapter les routes natives qui bloquent actuellement dès la désactivation de la monnaie.
 4. **Domaines :** étudier zone DNS, wildcard, DNS-01, renouvellement et routage Estia/VM, sans basculer le domaine imprimé pendant le développement.
-5. **Stock et migration :** vérifier les lots privés et préparer l'import VM ; décider séparément de la reprise des anciennes données.
+5. **Cartes et rôles :** inventaire des lots réellement chargés, autorisations par carte primaire et par lieu, droits admins cohérents entre lieux ; préparation de l'import et reprise des données à décider séparément.
 6. **Validation réelle :** téléphone V2 appairé, carte physique, deux lieux/éditions de test, recharge CAWL test, retour et webhook dans le bon contexte.
 7. **Production :** préparer la copie de test isolée puis une bascule contrôlée ; préserver AWS tant que la nouvelle chaîne n'est pas validée.
 
@@ -295,6 +320,10 @@ Priorités :
 | 03/11/2026 | Lecture du parcours QR natif et constat du stock incomplet sur la VM |
 | 03/11/2026 | Étude wildcard Estia/DNS/TLS et appairage Discovery V2 |
 | 03/11/2026 | Ajout des pistes portail collectif, pages interlieux et permissions ; approfondissement en cours |
+| 03/11/2026 | Comparaison d'un cloisonnement par événement avec la réutilisation des tenants derrière une entrée commune ; aucune refonte activée |
+| 03/11/2026 | Choix confirmé : une installation commune aux éditions Gala, un lieu par édition, portail personnel et administration interlieux |
+| 03/11/2026 | Délai confirmé : demandes pendant les sept jours suivant la clôture du gala ; étude des incompatibilités actuelles CAWL, des non-réclamés et des droits multi-lieux |
+| 03/11/2026 | Demande explicite d'un réglage global par carte primaire pour autoriser ou refuser les lieux ; conception détaillée ajoutée dans PORTAIL-INTERLIEUX-GALAS.md |
 
 **Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
 

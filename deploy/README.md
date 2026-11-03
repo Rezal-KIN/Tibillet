@@ -2,6 +2,8 @@
 
 L’étude en cours pour la V2 Gala/Kfet est centralisée dans [Nouvelle architecture](docs/NOUVELLE-ARCHITECTURE.md). Elle distingue les constats actuels, les contraintes confirmées et les propositions ; les descriptions historiques ci-dessous ne décrivent pas toutes la nouvelle VM.
 
+La [conception du portail interlieux des Galas](docs/PORTAIL-INTERLIEUX-GALAS.md) détaille le choix d'un lieu par édition, le compte central, les remboursements pendant sept jours après clôture, les droits administratifs et les cartes primaires autorisées par lieu. Ces fonctionnalités supplémentaires restent à réaliser.
+
 Configuration de déploiement de la stack TiBillet pour l'association **Guinche 508-225** (`galas-am-aix.rezal.fr`).
 
 Ce repo contient les fichiers de configuration, patches et personnalisations appliqués par-dessus les images Docker officielles TiBillet. Il ne contient **aucun secret** — les fichiers `.env` sont exclus du dépôt.
