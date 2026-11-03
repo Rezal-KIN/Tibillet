@@ -11,9 +11,9 @@ Document d'ensemble : [Nouvelle architecture](NOUVELLE-ARCHITECTURE.md).
 - Une installation TiBillet commune aux éditions du gala, avec **un lieu natif par édition**. Chaque lieu conserve ses points de vente, catalogue, stocks, ventes et clôtures. Il peut contenir un ou plusieurs événements de billetterie.
 - Le domaine principal devient une entrée de services cashless, pas une reprise du site de communication des Galas. L'ancien site sert uniquement de référence visuelle. La billetterie pourra être proposée ultérieurement.
 - Les cartes physiques sont réutilisables. Leur adresse imprimée reste `https://galas-am-aix.rezal.fr/qr/<identifiant>` ; préserver UUID QR, numéro et UID NFC.
-- Un espace personnel central présente les cartes associées au compte, les monnaies et soldes des différentes éditions, les demandes de remboursement et un accès au seul gala actuellement live.
+- Un espace personnel central présente les cartes associées au compte, les monnaies et soldes des différentes éditions, l'accès au remboursement natif de chaque lieu et un accès au seul gala actuellement live.
 - Un espace d'administration interlieux permet de créer les lieux avec le parcours natif, les désactiver, gérer les administrateurs, consulter les lots de cartes et attribuer des cartes primaires réutilisables. L'utilisateur a précisé que chaque carte doit avoir un réglage global autorisant ou refusant explicitement les lieux.
-- Les remboursements peuvent être demandés **pendant les sept jours suivant la clôture du gala**, puis les montants restants concernés sont indiqués « non réclamés ». Cette interprétation a été explicitement confirmée.
+- **Décision simplifiée qui remplace la première conception :** garder le mécanisme interne de remboursement TiBillet. Afficher que les participants disposent de sept jours après la date du gala pour demander leur remboursement ; les organisateurs attendent ce délai puis désactivent eux-mêmes la monnaie. Aucun dossier de demande, file d'attente, validation administrative supplémentaire ni coupure automatique à développer.
 - La production AWS et les adresses imprimées ne basculent pas pendant la conception. CAWL reste en mode test dans l'instance en construction.
 
 Ce choix concerne les éditions Gala. Le regroupement ou non de la Kfet dans cette installation reste à décider séparément ; il ne découle pas de l'accord sur les éditions.
@@ -24,13 +24,12 @@ Ce choix concerne les éditions Gala. Le regroupement ou non de la Kfet dans cet
 Domaine commun → connexion TiBillet → Mon espace
   ├── Ma carte / mes cartes associées
   ├── Mes monnaies et soldes, classés par édition
-  ├── Mes demandes de remboursement et leur suivi
+  ├── Remboursement natif dans le lieu concerné + message sur les sept jours
   └── Accéder au gala en cours (un seul, s'il existe)
 
 Compte autorisé → Administration du collectif
-  ├── Éditions : créer, préparer, sélectionner comme live, clôturer
+  ├── Éditions : créer, préparer, sélectionner comme live, désactiver manuellement
   ├── Administrateurs et périmètres de droits
-  ├── Demandes de remboursement à traiter
   ├── Lots de cartes : catalogue, import et rapprochement
   └── Cartes primaires et accès accordés par lieu
 ```
@@ -51,7 +50,7 @@ Le bouton utilisateur mène à l'espace natif du gala live. Pour une personne au
 | Attribution d'un admin de lieu | Action `SpecialAdminAction.toggle_user_right`, `set_staff` | Le parcours central, la délégation globale et la cohérence multi-lieux demandent une adaptation |
 | Cartes et générations | `QrcodeCashless.Detail` et `CarteCashless` ; catalogue distant | La présence d'un catalogue ne prouve pas que toutes ses cartes sont chargées et utilisables |
 | Carte primaire | `laboutik.CartePrimaire`, autorisations par point de vente | Enregistrement par schéma ; formulaire limité aux cartes d'origine du lieu, avec déclaration au Fedow distant |
-| Remboursement CAWL | `PaiementCawl.remboursements`, suivi `CawlRefund`, écritures de vente/règlement | Monnaie sélectionnée via le produit actif ; désactiver/archiver la monnaie bloque actuellement les remboursements |
+| Remboursement CAWL | `PaiementCawl.remboursements`, suivi `CawlRefund`, écritures de vente/règlement | Comportement à conserver : la monnaie doit rester active jusqu'à la coupure manuelle par les organisateurs |
 | Clôtures de caisse | `comptabilite.ClotureCaisse` | Rapports périodiques du lieu, pas le cycle de vie métier de l'édition |
 
 La nouvelle interface doit composer ces services, sans dupliquer les identités, les soldes ni le moteur d'encaissement.
@@ -60,60 +59,39 @@ La nouvelle interface doit composer ces services, sans dupliquer les identités,
 
 Le portefeuille appartient à la personne ; sa carte sert à l'identifier. L'espace présente donc les soldes du portefeuille du compte connecté et les cartes qui y sont réellement associées. Une carte anonyme non associée ne doit pas être rattachée sur la seule connaissance de son numéro.
 
-Pour chaque monnaie : nom, édition émettrice, montant, unité, état, montant encore réclamable et date limite. Séparer les crédits en euros, cadeaux et points. Ne pas présenter un total mélangeant ces unités, ni additionner deux fois une monnaie acceptée dans plusieurs lieux. Pour une monnaie partagée, afficher une seule position et ses lieux d'acceptation.
+Pour chaque monnaie : nom, édition émettrice, montant, unité, état et accès au remboursement lorsqu'il est permis nativement. Le message des sept jours et sa date de référence sont informatifs. Séparer les crédits en euros, cadeaux et points. Ne pas présenter un total mélangeant ces unités, ni additionner deux fois une monnaie acceptée dans plusieurs lieux. Pour une monnaie partagée, afficher une seule position et ses lieux d'acceptation.
 
-Les anciennes monnaies doivent rester visibles dans l'historique, même lorsque leur usage ou leur remboursement est fermé. Un montant « non réclamé » n'est plus présenté comme disponible. Les données historiques ne sont pas effacées pour produire ce résultat.
+Les anciennes monnaies doivent rester visibles dans l'historique, même lorsque leur usage ou leur remboursement est fermé. Après désactivation manuelle, leur solde n'est plus présenté comme disponible. Ne pas créer un traitement automatique des « non réclamés », ni effacer les données historiques.
 
 Dans la VM V2, les soldes locaux viennent de `fedow_core`. La migration d'anciennes données AWS et leur rapprochement avec le Fedow distant restent un chantier distinct ; les afficher côte à côte ne prouve pas qu'ils sont indépendants ni additionnables.
 
-La conception proposée conserve une monnaie propre à chaque édition pour rendre son délai et ses montants non réclamés explicites. Un partage de crédit entre éditions reste une décision supplémentaire : s'il est autorisé, il faut définir à quelle édition s'applique l'expiration. Réutiliser une carte ne transfère pas automatiquement ses anciens crédits.
+La conception proposée conserve une monnaie propre à chaque édition et ses réglages natifs. Un partage de crédit entre éditions reste une décision supplémentaire. Réutiliser une carte ne transfère pas automatiquement ses anciens crédits.
 
-## 5. Cycle de vie d'une édition et choix du gala live
+## 5. Gala live et désactivation manuelle
 
-Proposition d'états :
+La configuration commune désigne explicitement **zéro ou un** lieu live. Aucun choix par `first()`, par événement le plus récent ou par cache ancien. Un lieu de démonstration ou en préparation ne devient pas live implicitement. Si aucun gala n'est live, le compte reste accessible et le bouton indique l'absence de gala en cours.
 
-| État | Utilisation et visibilité |
-|---|---|
-| Préparation | Back-office accessible aux personnes autorisées ; pas d'encaissement public |
-| Live | Édition désignée par le bouton public ; caisse et recharge selon les modules autorisés |
-| Clôturée — remboursements ouverts | Fin des nouvelles ventes/recharges de cette édition ; soldes et demandes restent accessibles pendant sept jours |
-| Terminée — non réclamé | Plus de nouvelle demande ; conservation des soldes historiques, dossiers et écritures |
+Le choix du gala affiché et l'activation de sa monnaie sont deux réglages distincts. Une ancienne édition peut rester accessible pour le remboursement natif même lorsqu'une autre édition est désignée live, tant que les organisateurs n'ont pas désactivé sa monnaie.
 
-La clôture du gala est une action métier datée, distincte d'une clôture journalière de caisse. Le serveur fixe `closed_at` et calcule `refund_deadline_at`. Proposition précise : sept jours de 24 heures, instants stockés en UTC, date et heure limites affichées dans le fuseau du gala. La demande est recevable avant l'instant limite, pas à partir de cet instant. Cette convention horaire reste à valider.
+Les organisateurs attendent sept jours après la date du gala, puis utilisent le réglage natif pour désactiver la monnaie. Conserver cette action manuelle. Aucun calcul d'échéance bloquant, timer de fermeture, champ `refund_deadline_at` ou nouveau cycle de demandes n'est requis.
 
-La configuration commune désigne explicitement **zéro ou un** lieu live. Aucun choix par `first()`, par événement le plus récent ou par cache ancien. Une bascule met à jour ce choix de façon cohérente avec les états ; un lieu de démonstration, en préparation ou clôturé ne devient pas live implicitement. Si aucun gala n'est live, le compte et les remboursements restent accessibles, et le bouton indique l'absence de gala en cours.
+**Désactiver ne signifie pas supprimer.** Conserver les lieux, soldes et écritures historiques. Les clôtures journalières de caisse restent les rapports natifs ; elles ne déclenchent pas une fermeture automatique des remboursements. Ne pas utiliser les commandes de suppression des lieux inactifs pour cette fonctionnalité.
 
-Il peut y avoir simultanément un gala live et des remboursements ouverts pour l'édition précédente. Les demandes de cette dernière restent attachées à cette dernière, même après la bascule.
+## 6. Remboursement natif et message d'information
 
-**Désactiver ne signifie pas supprimer.** Après ouverture, la sortie normale est la clôture métier, puis la fin du délai. Une suspension d'urgence constitue un état opérationnel distinct : elle arrête les nouvelles opérations concernées, sans antidater la clôture ni faire disparaître l'historique. Ne pas utiliser les commandes natives de suppression des lieux inactifs pour cette fonctionnalité.
+**La simplification demandée remplace la conception initiale de demandes en attente.** Le participant utilise directement le remboursement natif du lieu concerné. Le portail fournit l'accès au bon lieu depuis la ligne de monnaie, y compris pour une ancienne édition ; il ne crée aucun dossier à faire approuver et ne réserve aucun montant dans une nouvelle file.
 
-## 6. Remboursements et non-réclamés
+Message prévu dans l'espace personnel et près de l'accès au remboursement :
 
-### Règle temporelle
+> Vous disposez de 7 jours après la date du gala pour demander le remboursement de votre solde.
 
-Les demandes utilisateur sont ouvertes entre la clôture du gala et son échéance à J+7. Le montant restant et la date limite sont affichés dans le compte, dans le formulaire de demande et dans l'information fournie lors de la recharge. Le texte est une règle du service à publier, pas une affirmation nouvelle sur sa qualification juridique ou comptable.
+Afficher la date du gala concerné pour éviter l'ambiguïté entre éditions. Cette information ne bloque pas automatiquement l'action à J+7 : la coupure est effectuée par les organisateurs. Ne pas ouvrir artificiellement une nouvelle fenêtre de remboursement à partir d'une clôture de caisse.
 
-Une demande recevable enregistrée à J+6 reste à traiter après J+7. Un retard de l'administrateur ou du prestataire ne transforme pas cette demande en non-réclamé. Séparer les montants disponibles, réservés à une demande, remboursés et non réclamés. Une demande ne réserve jamais plus que le montant éligible restant, même avec plusieurs onglets ou plusieurs essais.
+Conserver les règles d'éligibilité existantes. Le code CAWL actuel limite le remboursement en ligne au minimum entre le solde de la monnaie et les recharges CAWL de cette personne encore remboursables, vers les paiements d'origine. Le portail ne transforme pas les autres crédits en recharges CAWL remboursables et n'ajoute pas de traitement administratif alternatif.
 
-Après l'échéance, seules les nouvelles demandes sont bloquées. Le reliquat sans demande recevable reçoit le statut « non réclamé », avec date, montant et référence d'édition. L'extinction du disponible doit être justifiée par une écriture traçable ; la qualification comptable et l'écriture exacte restent à définir. Ne pas supprimer les transactions ni maquiller ce montant en remboursement réalisé ou en consommation.
+Conserver également les contrôles, écritures et états prestataire déjà fournis par TiBillet. La nouvelle interface n'ajoute ni statut métier « demande en attente », ni approbation, ni service financier parallèle. Désactiver/archiver la monnaie bloque déjà son remboursement dans ce fork : ce comportement est maintenant celui que l'utilisateur souhaite conserver, avec la coupure manuelle après le délai annoncé.
 
-L'échéance est contrôlée côté serveur à chaque opération ; elle ne dépend pas seulement du passage d'un timer ou de la visibilité d'un bouton. Les reprises de traitements et la régularisation des paiements déjà engagés restent possibles dans le bon contexte.
-
-### Éligibilité selon l'origine des fonds
-
-Le code CAWL actuel limite le remboursement en ligne au minimum entre le solde de la monnaie et les recharges CAWL de cette personne encore remboursables. Il rend l'argent sur les paiements d'origine. Les crédits issus d'espèces, d'un terminal bancaire externe, de cadeaux ou d'autres monnaies ne deviennent pas remboursables par CAWL du seul fait d'une interface centrale.
-
-Pour couvrir la demande utilisateur, le portail doit pouvoir enregistrer une demande nécessitant un traitement administratif lorsque l'automatisation n'est pas possible. Le moyen de règlement de ce reliquat et la règle pour les crédits offerts restent à décider. Une demande, son acceptation et le versement effectif sont des états distincts ; afficher aussi les refus, les erreurs et les paiements en attente.
-
-**Adaptation indispensable :** le remboursement doit recevoir explicitement l'édition et la monnaie concernées, et utiliser son échéance. Il ne doit plus dépendre de la monnaie de recharge actuellement active. Bloquer l'utilisation pour payer doit être distinct de l'autorisation de remboursement pendant la fenêtre.
-
-La logique doit être appliquée aux routes existantes de remboursement et au vidage en caisse, aux actions administratives concernées et aux tâches ; modifier seulement la nouvelle page laisserait des contournements ou des refus incohérents.
-
-### Suivi du prestataire
-
-Réutiliser les appels CAWL et les écritures natives, en complétant la persistance des demandes, la réservation du montant, l'idempotence et le rapprochement. Le succès HTTP d'un appel ne prouve pas un versement final : CAWL distingue notamment `REFUND_REQUESTED`, `REFUNDED` et `REJECTED`. Une opération incertaine doit être rapprochée avant un nouvel envoi.
-
-Documentation officielle : [états CAWL](https://docs.ecommerce.cawl-solutions.fr/en/integration/api-developer-guide/statuses), [requêtes idempotentes](https://docs.ecommerce.cawl-solutions.fr/en/integration/api-developer-guide/idempotent-requests).
+Le passage à « non réclamé » ne donne lieu à aucun nouveau traitement comptable automatique dans ce périmètre. L'ancienne proposition de réservations, d'expiration automatique et de traitement des demandes après échéance est abandonnée.
 
 ## 7. Authentification, droits et nouveaux administrateurs
 
@@ -123,7 +101,7 @@ Proposition de rôles :
 
 | Rôle | Périmètre |
 |---|---|
-| Participant | Ses propres cartes, soldes et demandes ; accès public au gala live |
+| Participant | Ses propres cartes et soldes, accès au remboursement natif ; accès public au gala live |
 | Administrateur d'une édition | Droits natifs `client_admin` sur les lieux autorisés ; pas de création de lieux ou d'admins globaux implicite |
 | Gestionnaire du collectif | Permissions explicites sur les éditions du collectif, sa configuration, les lots, les cartes opérateurs et la délégation des droits |
 | Superutilisateur technique | Pouvoir global existant, distinct du rôle courant des organisateurs |
@@ -178,14 +156,14 @@ La carte primaire autorise un opérateur dans un lieu déjà choisi par le termi
 
 Ordre proposé pour une réalisation dans le dépôt, avec commits, tests et builds :
 
-1. Définir le registre des éditions du collectif, le gala live, les états, échéances et permissions complémentaires. Reprendre l'adaptation d'accueil en cours : sa redirection vers un lieu fixe ne doit pas devenir la logique du compte central.
+1. Définir le registre des éditions du collectif, le gala live et les permissions complémentaires. Reprendre l'adaptation d'accueil en cours : sa redirection vers un lieu fixe ne doit pas devenir la logique du compte central.
 2. Livrer le compte central en lecture seule : authentification, cartes, monnaies locales, historique et états ; accès au seul gala live. Vérifier deux lieux et un même compte sans exposition des données d'autrui ni double comptage.
 3. Ajouter la gestion des lieux et des administrateurs : onboarding natif, préparation, désactivation sans suppression, cohérence des droits et passage de session.
 4. Ajouter l'inventaire des lots et les autorisations de cartes primaires communes ; tester une carte physique sur deux lieux avec un point de vente autorisé et un refus attendu.
-5. Implémenter le cycle de remboursement : explicitement par édition/monnaie, demandes horodatées, réservations, traitement CAWL test ou manuel, échéances et non-réclamés traçables.
+5. Relier chaque monnaie à l'accès au remboursement natif de son lieu, afficher le message des sept jours et exposer aux personnes autorisées la désactivation manuelle native. Conserver le moteur de remboursement existant.
 6. Valider la chaîne avec deux éditions distinctes, puis préparer séparément la reprise des cartes/données de production et la bascule DNS/CAWL.
 
-Vérifications structurantes : zéro ou un gala live ; ancien solde visible avec nouveau gala live ; monnaie inactive mais remboursable pendant la fenêtre ; demande à l'instant limite refusée ; demande recevable conservée après la limite ; absence de double remboursement après double clic, reprise ou réponse CAWL incertaine ; retrait des droits d'un seul lieu sans casser les autres ; fermeture par toutes les routes concernées ; historique et cartes inchangés après désactivation.
+Vérifications structurantes : zéro ou un gala live ; ancien solde visible avec nouveau gala live ; accès au remboursement du bon lieu sans nouvelle demande en attente ; message et date du bon gala ; absence de coupure automatique à J+7 ; remboursement permis nativement avant désactivation puis bloqué après désactivation manuelle ; retrait des droits d'un seul lieu sans casser les autres ; historique et cartes inchangés après désactivation.
 
 Ce document ne remplace pas la preuve réelle d'un parcours NFC ou d'un remboursement CAWL test avec rapprochement. Aucun paiement, remboursement ou message de validation n'est nécessaire pour la présente étude.
 
@@ -193,12 +171,10 @@ Ce document ne remplace pas la preuve réelle d'un parcours NFC ou d'un rembours
 
 - À quoi mène exactement le bouton participant du gala live : compte natif/recharge ou autre entrée publique ? L'accès administration reste conditionné aux droits.
 - Le crédit d'une édition reste-t-il strictement propre à cette édition ? Proposition de cette étude : oui, sans transfert automatique.
-- Le délai de sept jours est confirmé ; valider la convention précise des sept fois 24 heures et l'affichage du fuseau.
-- Moyen de traitement des demandes pour des recharges non CAWL et règle des crédits offerts ; qui traite ces demandes ?
-- Texte public, traitement comptable exact des non-réclamés, et gestion d'une demande recevable mais refusée techniquement après l'échéance.
+- Identifier la date de référence de l'édition à afficher avec le message des sept jours ; cette donnée est informative et ne programme aucune coupure.
 - Administrateurs du collectif autorisés à déléguer ce rôle, politique des droits sur les futurs lieux, et périmètre Kfet éventuel.
 
-Ces points n'empêchent pas la conception du socle et la lecture seule, mais ne doivent pas être tranchés silencieusement lors du développement financier ou de la délégation de droits.
+Ces points n'empêchent pas la conception du socle et la lecture seule. La conservation du mécanisme de remboursement interne, sans nouveau workflow d'attente, est déjà décidée.
 
 ## 12. Sources de code consultées
 

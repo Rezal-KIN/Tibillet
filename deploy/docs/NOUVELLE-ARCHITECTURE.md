@@ -27,14 +27,14 @@ L'utilisateur souhaite construire l'instance actuelle avec CAWL en test. Avant l
 | Alternative étudiée | Une refonte pour isoler les points de vente par événement a été comparée ; l'utilisateur a retenu la réutilisation des lieux |
 | Domaines | Wildcard `*.galas-am-aix.rezal.fr` envisagé pour éviter une intervention Estia à chaque lieu |
 | Adresse racine | Portail cashless commun demandé ; pas une reprise du contenu du site de communication ni une vitrine générique |
-| Gestion interlieux | Compte central avec cartes, monnaies et demandes ; administration des éditions, rôles et lots, en réutilisant les services natifs |
-| Gala live | Un seul accès utilisateur vers le gala explicitement désigné live ; les anciens soldes et demandes restent consultables |
-| Remboursements | Demandes possibles pendant les sept jours suivant la clôture métier du gala ; reliquats concernés ensuite « non réclamés », avec historique conservé |
+| Gestion interlieux | Compte central avec cartes, monnaies et accès au remboursement natif ; administration des éditions, rôles et lots |
+| Gala live | Un seul accès utilisateur vers le gala explicitement désigné live ; les anciens soldes et accès au remboursement restent consultables |
+| Remboursements | Mécanisme TiBillet conservé ; message annonçant sept jours après la date du gala, puis coupure manuelle par les organisateurs. Aucune demande en attente ni coupure automatique à ajouter |
 | Cartes primaires | Gestion globale demandée, avec un réglage par carte autorisant ou refusant chaque lieu ; accès aux points de vente explicites |
 | Authentification | Identité TiBillet commune et permissions natives ; rôles interlieux et passage entre domaines à développer |
 | Production existante | Préserver le fonctionnement AWS et les adresses imprimées jusqu'à une bascule préparée |
 
-La conception détaillée retenue pour poursuivre l'étude est dans [Portail interlieux des Galas](PORTAIL-INTERLIEUX-GALAS.md) : parcours, cycle de vie, permissions, remboursement à J+7, lots, cartes primaires et ordre de réalisation. Les besoins sont confirmés ; les mécanismes supplémentaires proposés ne sont pas encore livrés.
+La conception détaillée retenue pour poursuivre l'étude est dans [Portail interlieux des Galas](PORTAIL-INTERLIEUX-GALAS.md) : parcours, activation manuelle, permissions, accès au remboursement natif avec message des sept jours, lots, cartes primaires et ordre de réalisation. Les besoins sont confirmés ; les mécanismes supplémentaires proposés ne sont pas encore livrés.
 
 ## 3. Ce qui existe actuellement
 
@@ -304,7 +304,7 @@ Priorités :
 
 1. **Socle du portail / permissions :** registre des éditions, sélection explicite du seul gala live, droits collectifs et passage de session ; réutiliser le login TiBillet.
 2. **Compte personnel central :** cartes associées, soldes par monnaie sans double comptage, anciennes éditions et accès au gala live.
-3. **Cycle de vie et remboursements :** distinguer clôture métier et clôtures de caisse ; fenêtre de sept jours confirmée, demandes conservées après échéance, non-réclamés traçables. Adapter les routes natives qui bloquent actuellement dès la désactivation de la monnaie.
+3. **Remboursements simplifiés :** conserver les routes et règles natives ; afficher sept jours après la date du gala. Les organisateurs laissent la monnaie active puis la désactivent eux-mêmes. Aucun dossier en attente, échéance bloquante ou nouveau traitement des non-réclamés à développer.
 4. **Domaines :** étudier zone DNS, wildcard, DNS-01, renouvellement et routage Estia/VM, sans basculer le domaine imprimé pendant le développement.
 5. **Cartes et rôles :** inventaire des lots réellement chargés, autorisations par carte primaire et par lieu, droits admins cohérents entre lieux ; préparation de l'import et reprise des données à décider séparément.
 6. **Validation réelle :** téléphone V2 appairé, carte physique, deux lieux/éditions de test, recharge CAWL test, retour et webhook dans le bon contexte.
@@ -324,6 +324,7 @@ Priorités :
 | 03/11/2026 | Choix confirmé : une installation commune aux éditions Gala, un lieu par édition, portail personnel et administration interlieux |
 | 03/11/2026 | Délai confirmé : demandes pendant les sept jours suivant la clôture du gala ; étude des incompatibilités actuelles CAWL, des non-réclamés et des droits multi-lieux |
 | 03/11/2026 | Demande explicite d'un réglage global par carte primaire pour autoriser ou refuser les lieux ; conception détaillée ajoutée dans PORTAIL-INTERLIEUX-GALAS.md |
+| 03/11/2026 | Simplification demandée : remboursement interne conservé, message des sept jours après la date du gala et coupure manuelle ; l'ancienne proposition de demandes en attente et d'expiration automatique est abandonnée |
 
 **Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
 
