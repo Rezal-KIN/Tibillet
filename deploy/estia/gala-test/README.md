@@ -1,5 +1,22 @@
 # Publication de gala-test sur estia
 
+## Regle de travail — code versionne avant construction
+
+Toute modification applicative ou de deploiement est faite dans ce depot,
+revue et commitee avant construction puis activation. Les validations,
+constructions et deploiements doivent etre relies au commit utilise.
+Aucun correctif manuel de code dans un conteneur, aucune modification du
+checkout serveur en dehors du flux de deploiement. Les scripts d'administration
+et les configurations publiques sont egalement versionnes avant execution.
+Les secrets restent hors Git ; leurs noms de variables et les modeles de
+configuration sont versionnes, sans publier leurs valeurs.
+
+L'instance actuelle reste l'environnement de construction et de validation,
+avec CAWL en test. Avant la mise en production, preparer une copie de test
+isolee et configurer les identifiants CAWL reels sur l'instance destinee a la
+production. Cette bascule est une operation future, pas une instruction de
+modifier les identifiants ou de cloner les donnees maintenant.
+
 ## Fonctionnement normal et mails — 03/11/2026
 
 La VM fonctionne avec `TEST=0`, `DEBUG=0`, `DEMO=0` et `CAWL_TEST=1`.
@@ -39,6 +56,16 @@ Sur Estia, `activer-websockets-estia.py` ajoute l'Upgrade uniquement a notre
 site apres verification des fichiers proteges et `nginx -T`. Il conserve une
 sauvegarde et actualise notre reference `https-caisse.conf` : le rechargement
 manuel du certificat continue donc de fonctionner avec les memes gardes.
+Commencer par `sudo python3 ~/activer-websockets-estia.py --verifier` :
+aucune configuration modifiee, aucun reload. Ce mode affiche l'etat nginx,
+les codes HTTP/HTTPS des noms explicites des configurations protegees et les
+empreintes du contenu/certificat hello. Les sondes restent locales a Estia,
+sans suivre les redirections ; une erreur preexistante doit etre examinee.
+L'activation sans option refait ces controles, puis compare les reponses apres
+reload, attend de nouveaux workers et valide le handshake WebSocket 101.
+Une anomalie apres reload laisse notre ajout en place pour diagnostic, avec
+une alerte ; aucun second reload ni retour arriere global automatique.
+Ces controles ne remplacent pas les parcours fonctionnels de chaque service.
 
 Pour revenir aux mails captures : restaurer le `.env` de la sauvegarde privee
 `brevo-prodlike-*` dans la configuration externe et le checkout, puis recreer
