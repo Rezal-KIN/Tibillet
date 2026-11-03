@@ -6,6 +6,11 @@ Les constats de code portent sur le worktree `tibillet-local-upstream`, base `7f
 
 Document d'ensemble : [Nouvelle architecture](NOUVELLE-ARCHITECTURE.md).
 
+**Implémentation, 4 novembre 2026 :** le code du portail est ajouté dans `seo/portal/`, avec la migration additive `seo.0007`, les écrans `seo/templates/seo/cashless/` et le drapeau explicite `GALA_CASHLESS_PORTAL`. Les comptes et monnaies restent natifs. Le groupe Django « Gestionnaires des Galas » reçoit la permission `seo.manage_collective` ; la commande `initialiser_portail_galas` rattache un lieu et un administrateur déjà existants, sans créer de compte ni accorder le statut superutilisateur.
+
+L'inventaire distingue les miroirs locaux et les nombres agrégés obtenus auprès de Fedow. La dérivée Fedow épinglée ajoute uniquement, pour cette fonction, une route GET protégée par la permission native du lieu ; elle ne renvoie aucun identifiant de carte. Les nouveaux domaines et leur accès CAWL restent à préparer avant l'utilisation d'une nouvelle édition. Les tests matériels NFC et le parcours bancaire réel restent des validations distinctes des tests automatisés.
+
+
 ## 1. Décisions confirmées et périmètre
 
 - Une installation TiBillet commune aux éditions du gala, avec **un lieu natif par édition**. Chaque lieu conserve ses points de vente, catalogue, stocks, ventes et clôtures. Il peut contenir un ou plusieurs événements de billetterie.

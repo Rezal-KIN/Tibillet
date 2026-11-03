@@ -167,7 +167,7 @@ Sources : [routes](../../onboard/urls.py), [vues](../../onboard/views.py), [cré
 
 ## 9. Portail du collectif et pages interlieux natives
 
-L'utilisateur ne souhaite pas une vitrine publicitaire TiBillet comme entrée de ses services, ni remplacer le site de communication des Galas. Il demande une entrée cashless commune, avec compte personnel interlieux et administration autorisée. L'adaptation de l'accueil est en préparation locale ; le véritable compte interlieux demandé reste à développer.
+L'utilisateur ne souhaite pas une vitrine publicitaire TiBillet comme entrée de ses services, ni remplacer le site de communication des Galas. Il demande une entrée cashless commune, avec compte personnel interlieux et administration autorisée. L’accueil et le compte interlieux sont désormais implémentés dans `seo/portal/` ; leur activation et leur validation réelle sont à vérifier séparément du code.
 
 **Il existe déjà une page réseau publique native : `/federation/`.** La vue `FederationViewset` présente une carte et une liste du lieu courant et de ses lieux fédérés. Le titre peut être personnalisé (`federation_menu_name`), ainsi qu'un texte d'introduction, le tri et les filtres.
 

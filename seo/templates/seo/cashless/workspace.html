@@ -1,0 +1,12 @@
+{% extends 'seo/base.html' %}{% load i18n %}
+{% block content %}
+<div class="portal-workspace">
+  <nav class="workspace-nav" aria-label="{% translate 'Mon espace' %}">
+    <a href="/espace/">{% translate 'Mon compte' %}</a>
+    {% if manager %}<a href="/collectif/administration/">{% translate 'Éditions' %}</a><a href="/collectif/administrateurs/">{% translate 'Administrateurs' %}</a><a href="/collectif/lots/">{% translate 'Lots de cartes' %}</a><a href="/collectif/cartes-primaires/">{% translate 'Cartes primaires' %}</a>{% endif %}
+    <form method="post" action="/collectif/deconnexion/">{% csrf_token %}<button class="portal-text-link" type="submit">{% translate 'Me déconnecter' %}</button></form>
+  </nav>
+  {% for message in messages %}<p class="workspace-message" role="status">{{ message }}</p>{% endfor %}
+  {% block workspace %}{% endblock %}
+</div>
+{% endblock %}

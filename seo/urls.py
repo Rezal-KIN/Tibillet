@@ -11,16 +11,19 @@ Version V1 allegee : pas de /adhesions/. La navigation pointe vers
 """
 
 from django.templatetags.static import static
-from django.urls import path
+from django.urls import include, path
 from django.views.generic import RedirectView
 
 from seo import views, views_legal
+from seo.cashless_portal import portal_space
 from seo.views_common import humans_txt, robots_txt
 
 app_name = "seo"
 
 urlpatterns = [
     path("", views.landing, name="landing"),
+    path("collectif/", include("seo.portal.urls")),
+    path("espace/", portal_space, name="cashless-space"),
     # Hub des fonctionnalites (page liste). Avant la route <slug> pour la lisibilite.
     # / Features hub (list page). Before the <slug> route for readability.
     path("features/", views.features_hub, name="features_hub"),

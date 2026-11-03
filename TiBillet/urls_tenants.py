@@ -4,6 +4,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include, re_path
 
 from Administration.admin_tenant import staff_admin_site
+from seo.cashless_portal import portal_space
 # on modifie la creation du token pour rajouter access_token dans la réponse pour Postman
 from ApiBillet.views import Webhook_stripe
 from BaseBillet.sitemap import EventSitemap, StaticViewSitemap
@@ -11,6 +12,8 @@ from pages.sitemap import PageSitemap
 from booking.sitemap import PlanningSitemap, RessourceSitemap
 
 urlpatterns = [
+    path("espace/", portal_space, name="cashless-space"),
+    path("collectif/", include("seo.portal.urls")),
     # path('jet/', include('jet.urls', 'jet')),  # Django JET URLS
     # re_path(r'^jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django JET dashboard URLS
     path('admin/', staff_admin_site.urls, name="staff_admin_site"),

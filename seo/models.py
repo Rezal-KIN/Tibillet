@@ -93,3 +93,10 @@ class SEOCache(models.Model):
     def __str__(self):
         tenant_name = self.tenant.name if self.tenant else "global"
         return f"{self.cache_type} — {tenant_name}"
+
+# Modèles du portail : application partagée, aucune table financière parallèle.
+# / Portal models: shared app, no duplicate financial tables.
+from seo.portal.models import (  # noqa: F401,E402
+    CollectiveConfiguration, GalaEdition, PrimaryCard, PrimaryCardAccess,
+    PortalTransfer, CollectiveAudit,
+)

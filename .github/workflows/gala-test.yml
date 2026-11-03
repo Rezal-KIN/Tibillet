@@ -116,6 +116,9 @@ jobs:
       - name: Isolation SMTP des tests
         run: docker exec -e TEST=1 -e DEBUG=1 lespass_django poetry run python -m unittest deploy.tests.test_gala_mail_delivery deploy.tests.test_gala_fedow_cawl -v
 
+      - name: Portail cashless et accès au compte
+        run: docker exec -e TEST=1 -e DEBUG=1 -e EMAIL_DELIVERY_MODE=capture lespass_django poetry run python manage.py test seo.portal.tests deploy.tests.test_cashless_portal --verbosity 1 --noinput
+
       - name: Tests CAWL et comptabilité
         run: |
           bash scripts/lancer_tests.sh python -q \

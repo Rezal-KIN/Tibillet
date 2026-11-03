@@ -1,0 +1,50 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block page_title %}{{ page_title|default:"Galas Arts et Métiers — Espace cashless" }}{% endblock %}</title>
+  <meta name="description" content="{% block page_description %}{{ page_description|default:'Votre carte, votre solde et vos paiements : votre espace cashless des Galas Arts et Métiers d’Aix.' }}{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}{% if noindex_seo %}noindex, nofollow{% else %}index, follow{% endif %}{% endblock %}">
+  <link rel="canonical" href="{{ canonical_url|default:request.build_absolute_uri }}">
+  <meta property="og:title" content="{{ page_title|default:'Galas Arts et Métiers — Espace cashless' }}">
+  <meta property="og:description" content="{{ page_description|default:'Votre carte et vos paiements, au même endroit.' }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Galas Arts et Métiers Aix">
+  <meta property="og:url" content="{{ canonical_url|default:request.build_absolute_uri }}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'seo/cashless-mark.svg' %}">
+  <link rel="stylesheet" href="{% static 'commun/css/bootstrap.min.5.3.3.css' %}">
+  <link rel="stylesheet" href="{% static 'commun/css/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'commun/css/vars.css' %}">
+  <link rel="stylesheet" href="{% static 'commun/css/marque.css' %}">
+  <link rel="stylesheet" href="{% static 'commun/css/tibillet.css' %}">
+  <link rel="stylesheet" href="{% static 'seo/seo.css' %}">
+  <link rel="stylesheet" href="{% static 'seo/cashless-portal.css' %}">
+  {% block extra_head %}{% endblock %}
+  <script defer src="{% static 'commun/js/bootstrap.bundle.min.5.3.3.js' %}"></script>
+</head>
+<body class="cashless-portal">
+<a class="portal-skip" href="#contenu">{% translate "Aller au contenu" %}</a>
+<header class="portal-header">
+  <a class="portal-brand" href="/" aria-label="Galas Arts et Métiers Aix, accueil">
+    <span class="portal-brand-symbol" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M8 10h28L22 36 8 10Zm7 0 14 13M29 10 15 23"/></svg></span>
+    <span><strong>Les Galas<span class="brand-period">.</span></strong><small>ARTS ET MÉTIERS · AIX</small></span>
+  </a>
+  <nav class="portal-nav" aria-label="{% translate 'Navigation principale' %}">
+    <a href="/explorer/">{% translate "Explorer les lieux" %}</a>
+    <a href="/#aide">{% translate "Aide" %}</a>
+    <a class="portal-button portal-button-small" href="/espace/">{% translate "Mon espace" %} <span aria-hidden="true">↗</span></a>
+  </nav>
+</header>
+{% block main_wrapper %}<main id="contenu" class="portal-inner-page"><div class="container-lg">{% block content %}{% endblock %}</div></main>{% endblock %}
+<footer class="portal-footer">
+  <div class="portal-footer-top"><a class="portal-footer-brand" href="/">Les Galas<span>.</span></a><p>{% translate "Votre espace cashless, simplement." %}</p>{% if manager %}<a href="/collectif/administration/">{% translate "Administration" %} <span aria-hidden="true">↗</span></a>{% endif %}</div>
+  <div class="portal-footer-bottom"><span>Aix-en-Provence · Arts et Métiers</span><nav aria-label="{% translate 'Informations légales' %}" data-testid="footer-legal"><a href="/mentions-legales/" data-testid="footer-legal-mentions">{% translate "Mentions légales" %}</a><a href="/confidentialite/" data-testid="footer-legal-confidentialite">{% translate "Confidentialité" %}</a><a href="/cgu/" data-testid="footer-legal-cgu">{% translate "Conditions d’utilisation" %}</a></nav></div>
+  <details class="portal-credits"><summary>{% translate "À propos du service" %}</summary><p>{% translate "Propulsé par TiBillet, logiciel libre." %} {% translate "Opération soutenue par l’État dans le cadre du dispositif « Solutions de billetteries innovantes » de France 2030, opéré par la Caisse des Dépôts." %}</p></details>
+</footer>
+{% block body_extras %}{% endblock %}
+{% block extra_js %}{% endblock %}
+</body>
+</html>

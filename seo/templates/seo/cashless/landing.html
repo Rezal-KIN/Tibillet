@@ -1,0 +1,43 @@
+{% extends "seo/base.html" %}
+{% load i18n %}
+{% block main_wrapper %}
+<main id="contenu">
+  <section class="portal-hero" aria-labelledby="portal-title">
+    <div class="portal-hero-copy">
+      <p class="portal-eyebrow"><span aria-hidden="true"></span> {% translate "L’ESPACE CASHLESS DES GALAS" %}</p>
+      <h1 id="portal-title">{% translate "Votre carte." %}<br><span>{% translate "Tout simplement." %}</span></h1>
+      <p class="portal-intro">{% translate "Rechargez votre carte, consultez votre solde et retrouvez vos paiements. Tout commence ici." %}</p>
+      <div class="portal-hero-actions"><a class="portal-button" href="/espace/" data-testid="cashless-account">{% translate "Accéder à mon espace" %} <span aria-hidden="true">↗</span></a><a class="portal-text-link" href="#ma-carte">{% translate "J’ai une carte, comment ça marche ?" %} <span aria-hidden="true">↓</span></a></div>
+      <p class="portal-reassurance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 9V6a5 5 0 0 1 10 0v3M4 9h12v9H4z"/></svg>{% translate "Connexion par e-mail · Paiement en ligne sécurisé" %}</p>
+    </div>
+    <div class="portal-card-scene" aria-hidden="true">
+      <span class="portal-orbit portal-orbit-one"></span><span class="portal-orbit portal-orbit-two"></span>
+      <div class="portal-card-shadow"></div>
+      <div class="portal-art-card">
+        <div class="art-card-top"><span class="art-card-brand">Les Galas<span>.</span></span><svg class="art-card-nfc" viewBox="0 0 40 42"><path d="M10 15a14 14 0 0 1 0 12m8-18a24 24 0 0 1 0 24m8-30a35 35 0 0 1 0 36"/></svg></div>
+        <div class="art-card-lines"><span></span><span></span><span></span></div>
+        <div class="art-card-bottom"><span>ARTS ET MÉTIERS<br>AIX-EN-PROVENCE</span><span class="art-card-label">CASHLESS</span></div>
+      </div>
+      <span class="portal-card-caption"><span class="caption-dot"></span> {% translate "Une carte. Votre espace." %}</span>
+      <span class="portal-scene-cross">✳</span>
+    </div>
+  </section>
+  <section class="portal-services" aria-label="{% translate 'Votre espace cashless' %}">
+    <article class="portal-service"><span class="portal-service-number">01 /</span><div><h2>{% translate "Recharger" %}</h2><p>{% translate "Retrouvez la recharge en ligne depuis votre compte." %}</p><a href="/espace/">{% translate "Accéder à mon compte" %} <span aria-hidden="true">↗</span></a></div></article>
+    <article class="portal-service"><span class="portal-service-number">02 /</span><div><h2>{% translate "Consulter mon solde" %}</h2><p>{% translate "Gardez un œil sur les monnaies disponibles sur votre carte." %}</p><a href="/espace/?section=solde">{% translate "Voir mon solde" %} <span aria-hidden="true">↗</span></a></div></article>
+    <article class="portal-service"><span class="portal-service-number">03 /</span><div><h2>{% translate "Retrouver mes opérations" %}</h2><p>{% translate "Consultez votre historique et les options de remboursement." %}</p><a href="/espace/#historique">{% translate "Ouvrir mon historique" %} <span aria-hidden="true">↗</span></a></div></article>
+  </section>
+  <section class="portal-card-guide" id="ma-carte" aria-labelledby="card-guide-title">
+    <div class="portal-guide-visual" aria-hidden="true"><div class="guide-card"><span>Les Galas.</span><div class="guide-qr"><i></i><i></i><i></i><b>↗</b></div></div><span class="guide-note">QR → {% translate "votre espace" %}</span></div>
+    <div class="portal-guide-copy"><p class="portal-eyebrow">{% translate "VOUS AVEZ DÉJÀ VOTRE CARTE ?" %}</p><h2 id="card-guide-title">{% translate "Un scan, et vous y êtes." %}</h2><p>{% translate "Scannez le QR code imprimé sur votre carte avec l’appareil photo de votre téléphone. Suivez ensuite les indications pour l’associer à votre compte ou retrouver votre espace." %}</p><p class="portal-guide-muted">{% translate "Le QR code reste sur la carte. L’accès à votre compte se confirme avec votre adresse e-mail." %}</p><a class="portal-text-link" href="/espace/">{% translate "J’ai déjà un compte" %} <span aria-hidden="true">↗</span></a></div>
+  </section>
+  <section class="portal-help" id="aide" aria-labelledby="portal-help-title">
+    <div><p class="portal-eyebrow">{% translate "BESOIN D’UN REPÈRE ?" %}</p><h2 id="portal-help-title">{% translate "On vous explique." %}</h2><a class="portal-text-link" href="/explorer/">{% translate "Explorer les lieux du réseau" %} <span aria-hidden="true">↗</span></a></div>
+    <div class="portal-faq">
+      <details><summary>{% translate "Comment recharger ma carte ?" %}<span aria-hidden="true">+</span></summary><p>{% translate "Accédez à votre espace et connectez-vous avec votre adresse e-mail. La recharge, lorsqu’elle est ouverte pour votre lieu, se trouve dans votre compte." %}</p></details>
+      <details><summary>{% translate "Je n’ai pas encore associé ma carte." %}<span aria-hidden="true">+</span></summary><p>{% translate "Scannez le QR code qui figure sur votre carte, puis suivez le parcours de liaison. Utilisez une adresse e-mail à laquelle vous avez accès pour confirmer votre connexion." %}</p></details>
+      <details><summary>{% translate "Puis-je utiliser mon solde dans tous les lieux ?" %}<span aria-hidden="true">+</span></summary><p>{% translate "Cela dépend de la monnaie et des lieux qui l’acceptent. Consultez les soldes de votre compte et vérifiez le lieu concerné avant de recharger." %}</p></details>
+    </div>
+  </section>
+</main>
+{% endblock %}

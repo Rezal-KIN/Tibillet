@@ -47,6 +47,10 @@ modules (R11).
             </div>
             <div class="offcanvas-body">
                 <div class="compte__remboursement">
+                    {% if cashless_portal_enabled %}
+                        <p class="callout__text">{% translate "Vous disposez de 7 jours après la date du gala pour demander le remboursement de votre solde." %}</p>
+                        {% if cashless_gala_date %}<p>{% translate "Date du gala :" %} {{ cashless_gala_date|date:"d/m/Y" }}</p>{% endif %}
+                    {% else %}
                     <div class="callout" role="note">
                         <div class="callout__text">
                             <p><strong>{% translate "Don't panic! You've got time left…" %}</strong></p>
@@ -60,6 +64,7 @@ modules (R11).
                         </div>
                     </div>
 
+                    {% endif %}
                     <div class="callout" role="note">
                         <p class="callout__text">{% translate "You can only obtain online refunds for amounts topped up online or via card payment terminal named ‘TiBillet’. For amounts topped up in cash, please contact the collective or return to their next event!" %}</p>
                     </div>

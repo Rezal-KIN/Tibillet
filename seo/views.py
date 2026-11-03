@@ -15,6 +15,8 @@ d'initiatives crowds. On agrege uniquement lieux + evenements.
 initiatives. We aggregate only venues + events.
 """
 
+from django.conf import settings
+
 import json
 import logging
 import random
@@ -133,6 +135,10 @@ def landing(request):
 
     URL: GET /
     """
+    if getattr(settings, "GALA_CASHLESS_PORTAL", False):
+        from seo.cashless_portal import portal_home
+        return portal_home(request)
+
     # Lire les agregats depuis le cache / Read aggregates from cache
     lieux_data = get_seo_cache(SEOCache.AGGREGATE_LIEUX) or {}
     events_data = get_seo_cache(SEOCache.AGGREGATE_EVENTS) or {}

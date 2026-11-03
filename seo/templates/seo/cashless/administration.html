@@ -1,0 +1,8 @@
+{% extends 'seo/cashless/workspace.html' %}{% load i18n %}
+{% block workspace %}<p class="portal-eyebrow">{% translate 'ADMINISTRATION DU COLLECTIF' %}</p><h1>{% translate 'Les éditions du gala.' %}</h1>
+<p>{% translate 'Chaque édition garde ses articles, ses points de vente et ses stocks.' %}</p>
+<a class="portal-button" href="/onboard/">{% translate 'Créer un lieu avec TiBillet' %} ↗</a>
+<div class="workspace-grid">{% for edition in editions %}<article class="workspace-card"><p class="portal-eyebrow">{% if config.live_venue_id == edition.venue_id %}{% translate 'GALA EN COURS' %}{% elif edition.enabled %}{% translate 'ACTIVÉ' %}{% else %}{% translate 'DÉSACTIVÉ' %}{% endif %}</p><h2>{{ edition.venue.name }}</h2><p>{{ edition.gala_date|date:'d/m/Y'|default:'—' }}</p><a class="portal-text-link" href="/collectif/editions/{{ edition.pk }}/">{% translate 'Gérer cette édition' %} →</a></article>{% endfor %}</div>
+<details class="workspace-card"><summary>{% translate 'Rattacher un lieu existant' %}</summary><form method="post" action="/collectif/editions/ajouter/">{% csrf_token %}<label>{% translate 'Lieu' %}<select name="venue" required>{% for venue in candidates %}<option value="{{ venue.pk }}">{{ venue.name }}</option>{% endfor %}</select></label><button class="portal-button" type="submit">{% translate 'Rattacher' %}</button></form></details>
+<p class="workspace-muted">{% translate 'Un nouveau domaine doit être configuré dans DNS et le proxy avant utilisation. La création du lieu ne provisionne pas son certificat ni ses autorisations CAWL.' %}</p>
+{% endblock %}

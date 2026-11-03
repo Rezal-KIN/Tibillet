@@ -1,0 +1,19 @@
+{% extends 'seo/cashless/workspace.html' %}{% load i18n %}
+{% block workspace %}
+<p class="portal-eyebrow">{% translate 'MON ESPACE CASHLESS' %}</p>
+<h1>{% translate 'Votre carte, vos galas.' %}</h1>
+<p class="workspace-muted">{{ request.user.email }}</p>
+{% if config.live_venue %}<section class="workspace-live"><div><span class="portal-eyebrow">{% translate 'LE GALA EN COURS' %}</span><h2>{{ config.live_venue.name }}</h2></div><a class="portal-button" href="/collectif/lieux/{{ config.live_venue.gala_edition.pk }}/">{% translate 'Accéder au gala' %} ↗</a></section>{% else %}<p class="workspace-notice">{% translate 'Aucun gala en cours. Vos soldes restent consultables ici.' %}</p>{% endif %}
+{% if cards_unavailable %}<p class="workspace-notice">{% translate "Fedow est temporairement indisponible : seules les cartes du registre local sont affichées." %}</p>{% endif %}
+<section aria-labelledby="cards-title"><h2 id="cards-title">{% translate 'Mes cartes TiBillet' %}</h2><div class="workspace-grid">
+{% for card in cards %}<article class="workspace-card"><span class="portal-eyebrow">{% translate 'CARTE ASSOCIÉE' %}</span><h3>{{ card.number }}</h3>{% if card.detail %}<p>{% translate 'Génération' %} {{ card.detail.generation }}</p>{% endif %}</article>{% empty %}<p class="workspace-muted">{% translate 'Aucune carte associée dans le registre local. Scannez le QR de votre carte pour suivre le parcours de liaison TiBillet.' %}</p>{% endfor %}
+</div></section>
+<section aria-labelledby="balances-title"><h2 id="balances-title">{% translate 'Mes monnaies' %}</h2><p class="workspace-notice">{{ refund_notice }}</p>
+<div class="workspace-grid">{% for row in balances %}<article class="workspace-card" data-testid="collective-balance"><p class="portal-eyebrow">{{ row.asset.tenant_origin.name|default:'TiBillet' }}</p><h3>{{ row.asset.name }}</h3><p class="workspace-amount">{{ row.amount|floatformat:2 }} <span>{{ row.unit }}</span></p>{% if row.gift %}<p>{% translate 'Crédit cadeau' %}</p>{% endif %}
+{% if row.edition.gala_date %}<p>{% translate 'Date du gala :' %} {{ row.edition.gala_date|date:'d/m/Y' }}</p>{% endif %}
+{% if row.available %}<p class="workspace-status">{% translate 'Monnaie active' %}</p>{% if row.edition %}<a class="portal-text-link" href="/collectif/lieux/{{ row.edition.pk }}/?section=refund">{% if row.gift %}{% translate 'Consulter dans le lieu' %}{% else %}{% translate 'Gérer mon solde / remboursement' %}{% endif %} ↗</a>{% endif %}{% else %}<p class="workspace-muted">{% translate 'Monnaie désactivée : solde historique indisponible.' %}</p>{% endif %}
+</article>{% empty %}<p class="workspace-muted">{% translate 'Aucun solde enregistré dans le portefeuille local de ce compte.' %}</p>{% endfor %}</div></section>
+<section id="historique"><h2>{% translate 'Mes dernières opérations' %}</h2><div class="workspace-table"><table><thead><tr><th>{% translate 'Date' %}</th><th>{% translate 'Lieu' %}</th><th>{% translate 'Monnaie' %}</th><th>{% translate 'Opération' %}</th><th>{% translate 'Montant' %}</th></tr></thead><tbody>{% for operation in operations %}<tr><td>{{ operation.datetime|date:'d/m/Y H:i' }}</td><td>{{ operation.tenant.name }}</td><td>{{ operation.asset.name }}</td><td>{{ operation.get_action_display }}</td><td>{% if operation.debit %}−{% else %}+{% endif %}{{ operation.display_amount|floatformat:2 }} {{ operation.asset.currency_code }}</td></tr>{% empty %}<tr><td colspan="5">{% translate 'Aucune opération locale à afficher.' %}</td></tr>{% endfor %}</tbody></table></div>
+{% if operations.has_previous %}<a href="?page={{ operations.previous_page_number }}#historique">← {% translate 'Précédent' %}</a>{% endif %} {% if operations.has_next %}<a href="?page={{ operations.next_page_number }}#historique">{% translate 'Suivant' %} →</a>{% endif %}
+</section>
+{% endblock %}

@@ -315,6 +315,10 @@ PAYMENT_PROVIDER = os.environ.get('PAYMENT_PROVIDER', 'stripe')
 # Charte graphique de l'instance, posée sur le skin V2 (pages/static/V2/css/theme-<nom>.css).
 # / Instance visual identity on top of the V2 skin.
 THEME_INSTANCE = os.environ.get('THEME_INSTANCE', '')
+
+# Root UI only; account, identity and payment services remain TiBillet's.
+GALA_CASHLESS_PORTAL = os.environ.get('GALA_CASHLESS_PORTAL', '0') == '1'
+
 if PAYMENT_PROVIDER not in {'stripe', 'cawl'}:
     raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')
 
@@ -406,6 +410,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'seo.portal.middleware.CollectiveAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
@@ -467,6 +472,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'seo.context_processors.root_portal',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 # Expose `noindex_seo: bool` aux bases templates pour

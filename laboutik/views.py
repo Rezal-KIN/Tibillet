@@ -1198,11 +1198,18 @@ def _charger_carte_primaire(tag_id):
     except CarteCashless.DoesNotExist:
         return None, _("Carte inconnue")
 
+    from seo.portal.services import card_allowed
+    if not card_allowed(carte_cashless, connection.tenant):
+        return None, _("Cette carte primaire n'est pas autorisée dans ce lieu.")
+
     try:
         carte_primaire_obj = CartePrimaire.objects.get(carte=carte_cashless)
     except CartePrimaire.DoesNotExist:
         return None, _("Carte non primaire")
 
+    from seo.portal.services import native_primary_matches_access
+    if not native_primary_matches_access(carte_primaire_obj, connection.tenant):
+        return None, _("Les droits de cette carte doivent être synchronisés depuis le collectif.")
     return carte_primaire_obj, None
 
 

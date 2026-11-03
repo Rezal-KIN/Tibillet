@@ -938,12 +938,12 @@ class SpecialAdminAction(viewsets.ViewSet):
 
         if request.GET.get('action') == 'client_admin':
             if user.client_admin.filter(pk=tenant.pk).exists():
-                user.client_admin.remove(tenant)
-                user.is_staff = False
-                user.save(update_fields=['is_staff'])
+                from seo.portal.services import set_venue_admin
+                set_venue_admin(user, tenant, False)
                 messages.info(request, _("Admin right removed"))
             else:
-                user.client_admin.add(tenant)
+                from seo.portal.services import set_venue_admin
+                set_venue_admin(user, tenant, True)
                 messages.success(request, _("Admin right granted: with great power comes great responsibility."))
 
         elif request.GET.get('action') == 'initiate_payment':
@@ -983,7 +983,8 @@ class TiBilletLogin(viewsets.ViewSet):
     def login_fullpage(self, request):
         template_context = get_context(request)
         next_url = request.GET.get('next', None)
-        logger.info(f"login_fullpage next_url : {next_url}")
+        # Le retour signé peut contenir un ticket de session ; ne pas le journaliser.
+        # / Signed return paths may contain session tickets: never log them.
         if request.method == 'GET':  # Render email form or confirmation page
             # Optional next parameter sended in the email confirm button
             if next_url:

@@ -21,6 +21,7 @@ services:
     secrets:
       - brevo_smtp_key
     environment:
+      GALA_CASHLESS_PORTAL: "1"
       EMAIL_DELIVERY_GUARD: "1"
       EMAIL_DELIVERY_MODE: ${GALA_EMAIL_DELIVERY_MODE:-live}
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/brevo_smtp_key
@@ -32,6 +33,7 @@ services:
     secrets:
       - brevo_smtp_key
     environment:
+      GALA_CASHLESS_PORTAL: "1"
       EMAIL_DELIVERY_GUARD: "1"
       EMAIL_DELIVERY_MODE: ${GALA_EMAIL_DELIVERY_MODE:-live}
       EMAIL_HOST_PASSWORD_FILE: /run/secrets/brevo_smtp_key

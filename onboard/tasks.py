@@ -408,6 +408,10 @@ def create_tenant_from_draft(self, wc_uuid):
     # (cf. BaseBillet/validators.py).
     try:
         new_tenant = wc.create_tenant()
+        from django.conf import settings
+        if getattr(settings, 'GALA_CASHLESS_PORTAL', False):
+            from seo.portal.models import GalaEdition
+            GalaEdition.objects.get_or_create(venue=new_tenant)
     except Exception as exc:
         # On capture le message, puis on LIBERE LE CLAIM : sans ca, le TTL
         # de 5 min le laisserait pose, et le bouton « Reessayer » de

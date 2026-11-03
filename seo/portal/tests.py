@@ -1,0 +1,282 @@
+"""Isolation, droits et passage de session ; aucun envoi ni remboursement réel.
+/ Isolation, permissions and session handoff; no real emails or refunds.
+"""
+from datetime import timedelta
+from urllib.parse import urlsplit, parse_qs
+from django.core import signing
+from unittest.mock import patch
+from uuid import uuid4
+
+from django.contrib.auth.models import AnonymousUser, Group, Permission
+from django.contrib.messages.middleware import MessageMiddleware
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.exceptions import ValidationError
+from django.db import connection
+from django.test import RequestFactory, override_settings
+from django.utils import timezone
+from django_tenants.test.cases import TenantTestCase
+from django_tenants.utils import tenant_context, schema_context
+from rest_framework.test import force_authenticate
+
+from AuthBillet.models import TibilletUser, Wallet
+from Customers.models import Client, Domain
+from QrcodeCashless.models import CarteCashless
+from fedow_core.models import Asset, Token
+from laboutik.models import CartePrimaire, PointDeVente
+from seo.portal.models import (CollectiveConfiguration, GalaEdition, PrimaryCard,
+                               PrimaryCardAccess, PortalTransfer)
+from seo.portal.services import (balances_for, card_allowed, inventory_rows, is_manager, native_primary_matches_access, save_card_access,
+                                set_edition_enabled, set_live, set_venue_admin)
+from seo.portal.views import CollectiveViewSet
+
+
+class CollectiveTests(TenantTestCase):
+    @classmethod
+    def setup_tenant(cls, tenant):
+        tenant.name = 'Gala 2026 isolated'
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with schema_context('public'):
+            cls.other = Client(schema_name='collective_other', name='Gala 2027 isolated')
+            cls.other.save(verbosity=0)
+            Domain.objects.create(tenant=cls.other, domain='other.test', is_primary=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        connection.set_schema_to_public()
+        # Le runner supprime la base de test entière ; le collecteur Django ne
+        # sait pas supprimer un tenant depuis public (tables métier absentes).
+        # / The runner drops the isolated test database, including both schemas.
+        cls.remove_allowed_test_domain()
+
+    def setUp(self):
+        self.enterContext(override_settings(GALA_CASHLESS_PORTAL=True, SOLO_CACHE=None,
+                                           ALLOWED_HOSTS=['portal.test', 'other.test', self.domain.domain]))
+        self.enterContext(patch('celery.app.task.Task.apply_async'))
+        connection.set_tenant(self.tenant)
+        self.root = Client(schema_name='public', name='Collective isolated')
+        self.root.auto_create_schema = False
+        with schema_context('public'):
+            self.root.save()
+            Domain.objects.create(tenant=self.root, domain='portal.test', is_primary=True)
+        self.edition = GalaEdition.objects.create(venue=self.tenant, gala_date=timezone.now().date())
+        self.second = GalaEdition.objects.create(venue=self.other)
+        self.config = CollectiveConfiguration.objects.create(login_venue=self.tenant, live_venue=self.tenant)
+        self.user = TibilletUser.objects.create(username=uuid4().hex, email=uuid4().hex+'@example.test',
+                                               is_active=True, email_valid=True)
+        self.wallet = Wallet.objects.create(name='isolated user')
+        self.user.wallet = self.wallet
+        self.user.save(update_fields=['wallet'])
+        self.owner = Wallet.objects.create(name='isolated venue')
+        self.asset = Asset.objects.create(name='Gala 2026', category='TLF', currency_code='EUR',
+                                         wallet_origin=self.owner, tenant_origin=self.tenant, active=True)
+        Token.objects.create(wallet=self.wallet, asset=self.asset, value=1250)
+        self.manager = TibilletUser.objects.create(username=uuid4().hex, email=uuid4().hex+'@example.test',
+                                                  is_active=True, email_valid=True)
+        permission = Permission.objects.get(content_type__app_label='seo', codename='manage_collective')
+        self.manager.user_permissions.add(permission)
+        self.card = CarteCashless.objects.create(tag_id=uuid4().hex[:8].upper(), number=uuid4().hex[:8].upper(), user=self.user)
+        self.primary = PrimaryCard.objects.create(card=self.card)
+        self.point = PointDeVente.objects.create(name='Bar isolated')
+
+    def request(self, path, method='get', data=None, user=None, tenant=None):
+        request = getattr(RequestFactory(), method)(path, data=data or {}, HTTP_HOST='portal.test', secure=True)
+        request.tenant = tenant or self.root
+        request.user = user or AnonymousUser()
+        SessionMiddleware(lambda r: None).process_request(request)
+        request.session.save()
+        MessageMiddleware(lambda r: None).process_request(request)
+        if user:
+            force_authenticate(request, user=user)
+        return request
+
+    def view(self, action, request, **kwargs):
+        return CollectiveViewSet.as_view({request.method.lower(): action})(request, **kwargs)
+
+    def test_native_login_roundtrip_keeps_the_original_root_browser(self):
+        root_request = self.request('/collectif/connexion/')
+        response = self.view('begin_login', root_request)
+        target = urlsplit(response.url)
+        self.assertEqual(target.hostname, self.domain.domain)
+        callback_path = signing.loads(parse_qs(target.query)['retour'][0])
+        ticket_id = root_request.session['collective_login_challenge']
+        from seo.cashless_portal import portal_space
+        tenant_request = self.request(target.path+'?'+target.query, user=self.user, tenant=self.tenant)
+        self.assertEqual(portal_space(tenant_request).url, callback_path)
+        returned = self.view('login_return', tenant_request, ticket_id=ticket_id)
+        self.assertEqual(urlsplit(returned.url).hostname, 'portal.test')
+        receive = self.request('/collectif/session/')
+        receive.session = root_request.session
+        self.assertEqual(self.view('receive', receive, ticket_id=ticket_id).url, '/espace/')
+
+    def test_inventory_queries_only_registered_venue_and_handles_fedow_failure(self):
+        from django.core.cache import cache
+        for edition in (self.edition, self.second):
+            cache.delete(f'collective-card-inventory:{edition.venue_id}')
+        with patch('fedow_connect.models.FedowConfig.get_solo') as config, patch('requests.get') as read:
+            config.return_value.can_fedow.return_value = True
+            config.return_value.fedow_domain.return_value = 'fedow.test'
+            config.return_value.get_fedow_place_admin_apikey.return_value = 'isolated-key'
+            read.return_value.json.return_value = [{'generation': 1, 'count': 42, 'linked_count': 3}]
+            rows = inventory_rows()
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(all(row['remote_count'] == 42 for row in rows))
+            self.assertEqual(read.call_count, 2)
+        for edition in (self.edition, self.second):
+            cache.delete(f'collective-card-inventory:{edition.venue_id}')
+        with patch('fedow_connect.models.FedowConfig.get_solo') as config:
+            config.return_value.can_fedow.return_value = False
+            self.assertTrue(all(row['remote_count'] is None for row in inventory_rows()))
+
+    def test_participant_cannot_manage_collective(self):
+        response = self.view('administration', self.request('/collectif/administration/', user=self.user))
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(is_manager(self.user))
+        self.assertTrue(is_manager(self.manager))
+
+    def test_account_uses_only_own_wallet_and_includes_refund_notice(self):
+        other_wallet = Wallet.objects.create(name='private other user')
+        Token.objects.create(wallet=other_wallet, asset=self.asset, value=987654)
+        rows = balances_for(self.user)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(str(rows[0]['amount']), '12.5')
+        response = self.view('space', self.request('/espace/', user=self.user))
+        self.assertContains(response, '7 jours après la date du gala')
+        self.assertContains(response, '12,50')
+        self.assertNotContains(response, '9876')
+        self.assertContains(response, 'Gala 2026 isolated')
+
+    def test_shared_asset_is_not_counted_twice_and_gift_remains_separate(self):
+        self.asset.federated_with.add(self.other)
+        gift = Asset.objects.create(name='Cadeau', category='TNF', currency_code='EUR', wallet_origin=self.owner,
+                                    tenant_origin=self.other, active=True)
+        Token.objects.create(wallet=self.wallet, asset=gift, value=200)
+        rows = balances_for(self.user)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(sum(row['gift'] for row in rows), 1)
+
+    def test_disable_is_manual_and_keeps_tokens_and_history(self):
+        set_edition_enabled(self.edition, False, self.manager)
+        self.asset.refresh_from_db()
+        self.config.refresh_from_db()
+        self.assertFalse(self.asset.active)
+        self.assertIsNone(self.config.live_venue_id)
+        self.assertEqual(Token.objects.get(wallet=self.wallet, asset=self.asset).value, 1250)
+        self.assertEqual(len(balances_for(self.user)), 1)
+        set_edition_enabled(self.edition, True, self.manager)
+        self.asset.refresh_from_db()
+        self.assertTrue(self.asset.active)
+
+    def test_live_selection_never_selects_disabled_edition(self):
+        self.second.enabled = False
+        self.second.save()
+        with self.assertRaises(ValidationError):
+            set_live(self.second, self.manager)
+        set_live(None, self.manager)
+        self.config.refresh_from_db()
+        self.assertIsNone(self.config.live_venue_id)
+
+    def test_removing_one_venue_admin_keeps_other_venue_rights(self):
+        set_venue_admin(self.user, self.tenant, True)
+        set_venue_admin(self.user, self.other, True)
+        set_venue_admin(self.user, self.tenant, False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_staff)
+        self.assertTrue(self.user.is_tenant_admin(self.other))
+        self.assertFalse(self.user.is_tenant_admin(self.tenant))
+
+    def test_native_card_access_is_default_deny_for_new_edition(self):
+        self.assertFalse(card_allowed(self.card, self.other))
+        PrimaryCardAccess.objects.create(primary=self.primary, edition=self.edition, enabled=True)
+        self.assertTrue(card_allowed(self.card, self.tenant))
+        self.assertFalse(card_allowed(self.card, self.other))
+        with patch('laboutik.carte_primaire_ancien_fedow.retirer_la_carte_primaire_de_l_ancien_fedow'), \
+             patch('fedow_connect.models.FedowConfig.get_solo') as fedow:
+            fedow.return_value.can_fedow.return_value = True
+            save_card_access(self.primary, self.edition, False, [], False, self.manager)
+        self.assertFalse(card_allowed(self.card, self.tenant))
+
+    def test_card_grant_reuses_native_pos_and_rejects_other_venue_points(self):
+        with patch('laboutik.carte_primaire_ancien_fedow.declarer_la_carte_primaire_a_l_ancien_fedow'), \
+             patch('fedow_connect.models.FedowConfig.get_solo') as fedow:
+            fedow.return_value.can_fedow.return_value = True
+            self.assertTrue(save_card_access(self.primary, self.edition, True, [str(self.point.pk)], False, self.manager))
+        native = CartePrimaire.objects.get(carte=self.card)
+        self.assertEqual(list(native.points_de_vente.all()), [self.point])
+        self.assertTrue(native_primary_matches_access(native, self.tenant))
+        native.edit_mode = True
+        native.save(update_fields=['edit_mode'])
+        self.assertFalse(native_primary_matches_access(native, self.tenant))
+        with self.assertRaises(ValidationError):
+            save_card_access(self.primary, self.second, True, [str(self.point.pk)], False, self.manager)
+
+    def test_failed_fedow_grant_never_authorizes_card(self):
+        with patch('fedow_connect.models.FedowConfig.get_solo') as fedow:
+            fedow.return_value.can_fedow.return_value = False
+            self.assertFalse(save_card_access(self.primary, self.edition, True, [str(self.point.pk)], False, self.manager))
+        self.assertFalse(card_allowed(self.card, self.tenant))
+        self.assertFalse(CartePrimaire.objects.filter(carte=self.card).exists())
+
+    def test_session_ticket_is_bound_to_domain_and_consumed_once(self):
+        ticket = PortalTransfer.objects.create(user=self.user, domain='other.test', destination='account',
+                                               expires_at=timezone.now()+timedelta(seconds=60))
+        wrong = self.view('receive', self.request('/collectif/session/', tenant=self.other), ticket_id=ticket.pk)
+        self.assertEqual(wrong.status_code, 404)
+        request = self.request('/collectif/session/', tenant=self.other)
+        request.META['HTTP_HOST'] = 'other.test'
+        response = self.view('receive', request, ticket_id=ticket.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/my_account/')
+        replay = self.view('receive', request, ticket_id=ticket.pk)
+        self.assertEqual(replay.status_code, 404)
+
+    def test_login_return_requires_initial_browser(self):
+        ticket = PortalTransfer.objects.create(user=self.user, domain='portal.test', destination='root',
+                                               expires_at=timezone.now()+timedelta(seconds=60))
+        request = self.request('/collectif/session/')
+        denied = self.view('receive', request, ticket_id=ticket.pk)
+        self.assertEqual(denied.status_code, 403)
+        request.session['collective_login_challenge'] = str(ticket.pk)
+        response = self.view('receive', request, ticket_id=ticket.pk)
+        self.assertEqual(response.url, '/espace/')
+
+    def test_expired_ticket_and_admin_escalation_are_refused(self):
+        for destination, expires in [('admin', timezone.now()+timedelta(seconds=30)),
+                                     ('account', timezone.now()-timedelta(seconds=1))]:
+            ticket = PortalTransfer.objects.create(user=self.user, domain='other.test', destination=destination, expires_at=expires)
+            request = self.request('/collectif/session/', tenant=self.other)
+            request.META['HTTP_HOST'] = 'other.test'
+            self.assertEqual(self.view('receive', request, ticket_id=ticket.pk).status_code, 403)
+
+    def test_get_cannot_change_edition_and_post_requires_confirmation(self):
+        request = self.request('/collectif/editions/', user=self.manager)
+        self.assertEqual(self.view('edition', request, edition_id=self.edition.pk).status_code, 200)
+        self.edition.refresh_from_db()
+        self.assertTrue(self.edition.enabled)
+        request = self.request('/collectif/editions/', method='post', data={'command':'disable'}, user=self.manager)
+        self.assertEqual(self.view('edition', request, edition_id=self.edition.pk).status_code, 400)
+
+    def test_real_http_rejects_csrf_and_checks_permissions(self):
+        from django.test import Client as HttpClient
+        client = HttpClient(enforce_csrf_checks=True)
+        client.force_login(self.manager)
+        response = client.post('/collectif/editions/'+str(self.edition.pk)+'/',
+                               {'command': 'disable', 'confirm': '1'}, HTTP_HOST='portal.test', secure=True)
+        self.assertEqual(response.status_code, 403)
+        self.edition.refresh_from_db()
+        self.assertTrue(self.edition.enabled)
+        response = client.get('/espace/', HTTP_HOST='portal.test', secure=True)
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_templates_render_and_malformed_role_is_rejected(self):
+        for action in ['administration', 'administrators', 'inventory', 'primary_cards']:
+            response = self.view(action, self.request('/collectif/', user=self.manager))
+            self.assertEqual(response.status_code, 200, action)
+        response = self.view('primary_card', self.request('/collectif/', user=self.manager), primary_id=self.primary.pk)
+        self.assertEqual(response.status_code, 200)
+        response = self.view('administrators', self.request('/collectif/', method='post', user=self.manager,
+            data={'email': self.user.email, 'scope': str(self.edition.pk), 'allowed': 'invalid'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(self.user.client_admin.exists())
