@@ -1,0 +1,6 @@
+{% extends "seo/base.html" %}{% load i18n %}
+{% block content %}
+<h1>{% translate "Reprenons votre connexion." %}</h1>
+<p>{% translate "Ce lien a expiré, a déjà été utilisé ou ne correspond pas à ce navigateur. Reprenez la connexion depuis votre espace, puis ouvrez le lien reçu par mail dans le même navigateur." %}</p>
+<a class="portal-button" href="{{ login_url }}">{% translate "Reprendre la connexion" %}</a>
+{% endblock %}

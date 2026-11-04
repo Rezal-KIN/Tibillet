@@ -101,7 +101,7 @@ class CollectiveTests(TenantTestCase):
         target = urlsplit(response.url)
         self.assertEqual(target.hostname, self.domain.domain)
         callback_path = signing.loads(parse_qs(target.query)['retour'][0])
-        ticket_id = root_request.session['collective_login_challenge']
+        ticket_id = root_request.session['collective_login_challenges'][-1]
         from seo.cashless_portal import portal_space
         tenant_request = self.request(target.path+'?'+target.query, user=self.user, tenant=self.tenant)
         self.assertEqual(portal_space(tenant_request).url, callback_path)
@@ -238,6 +238,8 @@ class CollectiveTests(TenantTestCase):
         request = self.request('/collectif/session/')
         denied = self.view('receive', request, ticket_id=ticket.pk)
         self.assertEqual(denied.status_code, 403)
+        self.assertContains(denied, 'Reprendre la connexion', status_code=403)
+        self.assertNotContains(denied, str(ticket.pk), status_code=403)
         request.session['collective_login_challenge'] = str(ticket.pk)
         response = self.view('receive', request, ticket_id=ticket.pk)
         self.assertEqual(response.url, '/espace/')
@@ -269,6 +271,41 @@ class CollectiveTests(TenantTestCase):
         self.assertTrue(self.edition.enabled)
         response = client.get('/espace/', HTTP_HOST='portal.test', secure=True)
         self.assertEqual(response.status_code, 200)
+
+    def test_two_login_tabs_keep_the_first_browser_challenge(self):
+        from django.test import Client as HttpClient
+        browser = HttpClient()
+        callbacks = []
+        for _ in range(2):
+            response = browser.get('/collectif/connexion/', HTTP_HOST='portal.test', secure=True)
+            callbacks.append(signing.loads(parse_qs(urlsplit(response.url).query)['retour'][0]))
+        # Deux onglets, deux retours valides dans le même navigateur.
+        # / Both tabs must remain valid in the initiating browser.
+        venue_browser = HttpClient()
+        venue_browser.force_login(self.user)
+        for callback in callbacks:
+            response = venue_browser.get(callback, HTTP_HOST=self.domain.domain, secure=True)
+            self.assertEqual(response.status_code, 302)
+            response = browser.get(urlsplit(response.url).path, HTTP_HOST='portal.test', secure=True)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, '/espace/')
+
+    def test_portal_form_policy_allows_csrf_protected_logout(self):
+        from django.test import Client as HttpClient
+        browser = HttpClient(enforce_csrf_checks=True)
+        browser.force_login(self.user)
+        response = browser.get('/espace/', HTTP_HOST='portal.test', secure=True)
+        # no-referrer transforme l'Origin des formulaires en null dans Chromium.
+        # / no-referrer makes native form submissions send Origin: null.
+        self.assertEqual(response['Referrer-Policy'], 'same-origin')
+        token = browser.cookies['csrftoken'].value
+        denied = browser.post('/collectif/deconnexion/', {'csrfmiddlewaretoken': token},
+                              HTTP_HOST='portal.test', HTTP_ORIGIN='null', secure=True)
+        self.assertEqual(denied.status_code, 403)
+        response = browser.post('/collectif/deconnexion/', {'csrfmiddlewaretoken': token},
+                                HTTP_HOST='portal.test', HTTP_ORIGIN='https://portal.test', secure=True)
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn('_auth_user_id', browser.session)
 
     def test_admin_templates_render_and_malformed_role_is_rejected(self):
         for action in ['administration', 'administrators', 'inventory', 'primary_cards']:

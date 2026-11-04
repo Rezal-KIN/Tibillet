@@ -86,12 +86,26 @@ class CollectiveViewSet(viewsets.ViewSet):
     def handle_exception(self, exc):
         if isinstance(exc, ValidationError):
             return HttpResponseBadRequest('; '.join(exc.messages))
+        if (getattr(settings, 'GALA_CASHLESS_PORTAL', False)
+                and self.action in ('login_return', 'receive')
+                and isinstance(exc, (PermissionDenied, Http404))):
+            # Un ancien lien n'est pas une erreur d'API pour le participant.
+            # / Give the participant a safe restart instead of an API error.
+            response = page(self.request, 'connection_failed',
+                            login_url='https://' + root_domain() + '/collectif/connexion/',
+                            canonical_url='https://' + root_domain() + '/espace/')
+            response.status_code = 404 if isinstance(exc, Http404) else 403
+            return response
         return super().handle_exception(exc)
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         response['Cache-Control'] = 'no-store, private'
-        response['Referrer-Policy'] = 'no-referrer'
+        # Les URL de transfert restent secrètes. Les pages contenant des
+        # formulaires doivent conserver leur origine pour le contrôle CSRF.
+        # / Hide transfer URLs; preserve form origins for CSRF validation.
+        response['Referrer-Policy'] = ('no-referrer' if self.action in ('login_return', 'receive')
+                                       else 'same-origin')
         response['X-Robots-Tag'] = 'noindex, nofollow'
         return response
 
@@ -131,7 +145,13 @@ class CollectiveViewSet(viewsets.ViewSet):
         # / The callback must find THIS browser; the ticket alone cannot sign in.
         ticket = PortalTransfer.objects.create(domain=request.get_host(), destination='root',
                          expires_at=timezone.now() + timedelta(minutes=30))
-        request.session['collective_login_challenge'] = str(ticket.pk)
+        challenges = list(request.session.get('collective_login_challenges', []))
+        legacy = request.session.pop('collective_login_challenge', None)
+        if legacy:
+            challenges.append(legacy)
+        # Une seconde tentative ne doit pas invalider le premier onglet.
+        # / A second attempt must not invalidate the first tab.
+        request.session['collective_login_challenges'] = challenges[-9:] + [str(ticket.pk)]
         path = '/collectif/retour/' + str(ticket.pk) + '/'
         return redirect('https://' + domain.domain + '/espace/?' + urlencode({'retour': signing.dumps(path)}))
 
@@ -158,9 +178,15 @@ class CollectiveViewSet(viewsets.ViewSet):
             if ticket.expires_at <= timezone.now() or ticket.user is None or not active_user_record(ticket.user):
                 raise PermissionDenied(_('Connexion expirée. Recommencez depuis votre espace.'))
             if ticket.destination == 'root':
-                if request.tenant.schema_name != 'public' or request.session.get('collective_login_challenge') != str(ticket.pk):
+                challenges = list(request.session.get('collective_login_challenges', []))
+                legacy = request.session.get('collective_login_challenge')
+                if request.tenant.schema_name != 'public' or (str(ticket.pk) not in challenges and legacy != str(ticket.pk)):
                     raise PermissionDenied()
-                request.session.pop('collective_login_challenge')
+                if str(ticket.pk) in challenges:
+                    challenges.remove(str(ticket.pk))
+                request.session['collective_login_challenges'] = challenges
+                if legacy == str(ticket.pk):
+                    request.session.pop('collective_login_challenge')
                 destination = '/espace/'
             else:
                 edition = get_object_or_404(GalaEdition, venue=request.tenant)

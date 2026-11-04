@@ -121,6 +121,8 @@ Chaque mutation vérifie la permission et le périmètre côté serveur, puis jo
 
 Les sessions restent limitées à l'hôte. Le passage portail → lieu doit réutiliser ou adapter un échange signé de courte durée, à usage unique et limité au destinataire, avec vérification des droits à l'arrivée. Le mécanisme SSO d'onboarding est une base à étudier, pas une preuve de SSO général déjà livré. Ne pas élargir globalement le cookie à tous les sous-domaines pour contourner ce travail.
 
+**Correction du parcours livré (4 novembre 2026) :** le retour vers le portail reste lié au navigateur qui a commencé la connexion. Jusqu'à dix tentatives peuvent coexister dans sa session pour qu'un second onglet n'invalide pas le premier. Les anciens liens à tentative unique restent compatibles jusqu'à expiration. Un lien expiré, déjà consommé ou ouvert dans un autre navigateur affiche une page proposant de reprendre la connexion ; il ne contourne jamais la vérification de session. Les URL de transfert conservent `Referrer-Policy: no-referrer`. Les pages avec formulaires utilisent `same-origin` : `no-referrer` provoquait `Origin: null` sur les formulaires Chromium et leur rejet CSRF. Les contrôles CSRF restent actifs, y compris le refus d'une origine `null`.
+
 ## 8. Création et préparation d'une édition
 
 Réutiliser les formulaires et services de `/onboard/`, avec une entrée administrative qui rattache le nouveau lieu au collectif et le laisse en préparation. La création depuis ce parcours doit vérifier les droits ; masquer seulement le lien public ne protège pas la route.
