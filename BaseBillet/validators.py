@@ -1381,6 +1381,8 @@ class TenantCreateValidator:
         if waiting_config.tenant:
             raise Exception("Tenant already exists. ")
 
+        from django.conf import settings
+
         with schema_context('public'):
             # Double check for unique name to avoid IntegrityError if name was taken since validation
             if Client.objects.filter(name=name).exists():
@@ -1396,6 +1398,10 @@ class TenantCreateValidator:
             emplacements_vides = Client.objects.filter(
                 categorie=Client.WAITING_CONFIG,
             ).order_by('created_on', 'pk')
+            if settings.GALA_CASHLESS_PORTAL:
+                # La caisse Gala utilise le moteur V2, sans convertir un lieu legacy.
+                # / Gala POS requires V2; never convert a legacy venue implicitly.
+                emplacements_vides = emplacements_vides.filter(moteur_monnaie=Client.MOTEUR_V2)
             if not emplacements_vides.exists():
                 raise Exception("No waiting tenant. ")
 
@@ -1497,6 +1503,11 @@ class TenantCreateValidator:
                 logger.info("Stripe non ok")
                 pass
 
+            if settings.GALA_CASHLESS_PORTAL:
+                # Le garde contre la recréation est déjà passé : uniquement ce nouveau lieu.
+                # / The existing-venue guard ran above: initialize this new venue only.
+                for field, value in settings.GALA_NEW_VENUE_MODULES.items():
+                    setattr(config, field, value)
             config.save()
 
             # Liaison / création du lieu coté Fedow :

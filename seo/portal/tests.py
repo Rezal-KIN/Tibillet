@@ -5,6 +5,7 @@ from datetime import timedelta
 from urllib.parse import urlsplit, parse_qs
 from django.core import signing
 from unittest.mock import patch
+from types import SimpleNamespace
 from uuid import uuid4
 
 from django.contrib.auth.models import AnonymousUser, Group, Permission
@@ -317,3 +318,91 @@ class CollectiveTests(TenantTestCase):
             data={'email': self.user.email, 'scope': str(self.edition.pk), 'allowed': 'invalid'}))
         self.assertEqual(response.status_code, 400)
         self.assertFalse(self.user.client_admin.exists())
+
+    def prepare_native_creation(self):
+        # Seul un emplacement de la base de test est consommé.
+        # / Consume only a slot from the isolated test database.
+        with schema_context('public'):
+            self.other.refresh_from_db()
+            self.other.categorie = Client.WAITING_CONFIG
+            self.other.save()
+        return SimpleNamespace(tenant=None, organisation='Edition '+uuid4().hex,
+                               email=self.user.email, slug='edition-'+uuid4().hex,
+                               dns_choice='test', site_web='', short_description='',
+                               save=lambda: None)
+
+    def create_native_venue(self, draft):
+        from BaseBillet.validators import TenantCreateValidator
+        with patch('BaseBillet.validators.schema_est_entierement_migre', return_value=True), \
+             patch('BaseBillet.validators.get_or_create_user', return_value=self.user), \
+             patch('BaseBillet.validators.RootConfiguration.get_solo', side_effect=Exception('Stripe absent du test')), \
+             patch('fedow_connect.fedow_api.FedowAPI'), \
+             patch('fedow_connect.models.FedowConfig.get_solo') as fedow:
+            fedow.return_value.can_fedow.return_value = True
+            return TenantCreateValidator.create_tenant(draft)
+
+    def test_native_creation_applies_gala_settings_once_and_preserves_existing_venue(self):
+        from django.conf import settings
+        from BaseBillet.models import Configuration
+        from BaseBillet.validators import TenantCreateValidator
+        draft = self.prepare_native_creation()
+        with tenant_context(self.tenant):
+            existing = Configuration.get_solo()
+            before = {f.name:getattr(existing, f.name) for f in existing._meta.fields if f.name.startswith('module_')}
+        with tenant_context(self.other):
+            prepared = Configuration.get_solo()
+            prepared.module_pages = True
+            prepared.module_booking = True
+            prepared.module_caisse = False
+            prepared.save()
+
+        venue = self.create_native_venue(draft)
+        self.assertEqual(venue.pk, self.other.pk)
+        with tenant_context(venue):
+            config = Configuration.get_solo()
+            self.assertEqual(set(settings.GALA_NEW_VENUE_MODULES), set(before))
+            for field, value in settings.GALA_NEW_VENUE_MODULES.items():
+                self.assertEqual(getattr(config, field), value, field)
+            self.assertTrue(config.module_federation)
+            self.assertTrue(config.module_monnaie_locale)
+            self.assertTrue(config.module_caisse)
+            self.assertFalse(config.module_pages)
+            point = PointDeVente.objects.create(name='Bar de la nouvelle edition')
+            self.assertTrue(point.service_direct)
+            self.assertFalse(point.accepte_commandes)
+            config.module_booking = True
+            config.save()
+        with self.assertRaisesRegex(Exception, 'Tenant already exists'):
+            TenantCreateValidator.create_tenant(draft)
+        with tenant_context(venue):
+            self.assertTrue(Configuration.get_solo().module_booking)
+        with tenant_context(self.tenant):
+            current = Configuration.get_solo()
+            self.assertEqual({name:getattr(current, name) for name in before}, before)
+
+    @override_settings(GALA_CASHLESS_PORTAL=False)
+    def test_native_creation_outside_gala_preserves_native_configuration(self):
+        from BaseBillet.models import Configuration
+        draft = self.prepare_native_creation()
+        with tenant_context(self.other):
+            config = Configuration.get_solo()
+            config.module_pages = True
+            config.module_caisse = False
+            config.save()
+        venue = self.create_native_venue(draft)
+        with tenant_context(venue):
+            config = Configuration.get_solo()
+            self.assertTrue(config.module_pages)
+            self.assertFalse(config.module_caisse)
+
+    def test_native_gala_creation_does_not_consume_legacy_slot(self):
+        draft = self.prepare_native_creation()
+        with schema_context('public'):
+            self.other.moteur_monnaie = Client.MOTEUR_LEGACY
+            self.other.save()
+        with self.assertRaisesRegex(Exception, 'No waiting tenant'):
+            self.create_native_venue(draft)
+        with schema_context('public'):
+            self.other.refresh_from_db()
+        self.assertEqual(self.other.categorie, Client.WAITING_CONFIG)
+        self.assertIsNone(draft.tenant)

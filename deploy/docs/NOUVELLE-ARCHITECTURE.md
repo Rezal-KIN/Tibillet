@@ -28,6 +28,7 @@ L'utilisateur souhaite construire l'instance actuelle avec CAWL en test. Avant l
 | Domaines | Wildcard `*.galas-am-aix.rezal.fr` envisagé pour éviter une intervention Estia à chaque lieu |
 | Adresse racine | Portail cashless commun demandé ; pas une reprise du contenu du site de communication ni une vitrine générique |
 | Gestion interlieux | Compte central avec cartes, monnaies et accès au remboursement natif ; administration des éditions, rôles et lots |
+| Profil des nouveaux lieux | Confirmé le 05/11 : fédération, monnaies/cashless et caisse actifs ; site personnalisé et autres modules optionnels désactivés. Valeurs dans `TiBillet/settings.py`, appliquées dans la création native ; aucune configuration JSON parallèle |
 | Gala live | Un seul accès utilisateur vers le gala explicitement désigné live ; les anciens soldes et accès au remboursement restent consultables |
 | Remboursements | Mécanisme TiBillet conservé ; message annonçant sept jours après la date du gala, puis coupure manuelle par les organisateurs. Aucune demande en attente ni coupure automatique à ajouter |
 | Cartes primaires | Gestion globale demandée, avec un réglage par carte autorisant ou refusant chaque lieu ; accès aux points de vente explicites |
@@ -310,7 +311,36 @@ Priorités :
 6. **Validation réelle :** téléphone V2 appairé, carte physique, deux lieux/éditions de test, recharge CAWL test, retour et webhook dans le bon contexte.
 7. **Production :** préparer la copie de test isolée puis une bascule contrôlée ; préserver AWS tant que la nouvelle chaîne n'est pas validée.
 
-## 18. Historique et maintenance du document
+## 18. Profil des nouveaux lieux — décision du 5 novembre 2026
+
+**Confirmé par l'utilisateur :** chaque nouvelle édition doit commencer avec les modules fédération, monnaies/cashless et caisse activés. Le module « Site web personnalisé » doit être désactivé. La connexion native de Lespass reste disponible : ce module ne constitue pas un autre système de connexion.
+
+| Réglage initial | Valeur retenue |
+|---|---|
+| Fédération (`module_federation`) | Activé |
+| Monnaies et cashless (`module_monnaie_locale`) | Activé |
+| Caisse (`module_caisse`) | Activé |
+| Site personnalisé (`module_pages`) | Désactivé |
+| Billetterie, adhésions, financement participatif | Désactivés au démarrage ; activation ultérieure possible |
+| Ressources, bénévolat, tireuses, kiosque, newsletter | Désactivés au démarrage |
+| Inventaire | Disponible avec la caisse ; ce n'est plus un interrupteur autonome du tableau de bord |
+| Nouveaux points de vente de caisse | Service direct (`service_direct=True`), sans gestion des commandes de table (`accepte_commandes=False`) |
+
+**Correction de méthode demandée par l'utilisateur :** rechercher et réutiliser la configuration native avant toute adaptation. L'essai d'un fichier JSON séparé et de son chargeur a été abandonné et retiré avant publication ou déploiement.
+
+**Mécanismes existants vérifiés :** `TiBillet/settings.py` contient les réglages de l'installation et le drapeau Gala. `BaseBillet.models.Configuration` contient les modules natifs par lieu et leurs valeurs initiales. `TenantCreateValidator.create_tenant` dans `BaseBillet/validators.py` consomme un emplacement préparé, obtient sa configuration native et la sauvegarde. `RootConfiguration` contient d'autres réglages communs (prestataires, intégrations), mais pas de profil de modules pour les nouveaux lieux. Aucun profil natif de modules prêt à l'emploi n'a été trouvé dans un fichier séparé.
+
+**Adaptation native :** le dictionnaire `GALA_NEW_VENUE_MODULES`, dans `TiBillet/settings.py`, porte les valeurs initiales. `TenantCreateValidator.create_tenant` les copie dans les champs natifs juste avant sa sauvegarde habituelle, uniquement lorsque `GALA_CASHLESS_PORTAL=1`. Ce code ne s'exécute ni au démarrage ni à chaque déploiement. Le garde natif refuse de recréer un lieu déjà lié au brouillon ; les réglages des lieux existants et les changements ultérieurs des administrateurs restent conservés. Les autres installations gardent leur initialisation habituelle. Un nouveau lieu Gala prend un emplacement en moteur V2, sans convertir un emplacement legacy.
+
+La création réutilisant des emplacements préparés, changer seulement les valeurs `default` du modèle ne garantit pas leur configuration. Les points de vente possèdent déjà les valeurs natives `service_direct=True` et `accepte_commandes=False` ; aucune nouvelle gestion des réglages restaurant n'est ajoutée. Les interrupteurs Ressources/Bénévolat pilotent surtout les menus : une fermeture effective des services demandera aussi de vérifier les routes.
+
+Les mails transactionnels de connexion/confirmation restent actifs indépendamment de la newsletter. Les réglages d'envoi des rapports comptables sont distincts ; aucune préférence de désactivation n'a encore été confirmée pour ces rapports. « Fédération » activée ne décide pas à elle seule de partager les monnaies ou les soldes entre éditions.
+
+**État :** l'adaptation native est implémentée dans le dépôt, sans nouveau fichier de configuration ni chargeur. Aucun lieu existant n'est reconfiguré par ce changement. La création réelle d'une nouvelle édition (domaine, certificat, monnaie, autorisation CAWL et matériel) reste un contrôle opérationnel distinct.
+
+Sources : [réglages de l'installation](../../TiBillet/settings.py), [création native](../../BaseBillet/validators.py), [tâche de création](../../onboard/tasks.py), [configuration du lieu](../../BaseBillet/models.py), [points de vente](../../laboutik/models.py), [modules et inventaire](../../Administration/admin/dashboard.py).
+
+## 19. Historique et maintenance du document
 
 | Date | Analyse / évolution |
 |---|---|
@@ -325,6 +355,8 @@ Priorités :
 | 03/11/2026 | Délai confirmé : demandes pendant les sept jours suivant la clôture du gala ; étude des incompatibilités actuelles CAWL, des non-réclamés et des droits multi-lieux |
 | 03/11/2026 | Demande explicite d'un réglage global par carte primaire pour autoriser ou refuser les lieux ; conception détaillée ajoutée dans PORTAIL-INTERLIEUX-GALAS.md |
 | 03/11/2026 | Simplification demandée : remboursement interne conservé, message des sept jours après la date du gala et coupure manuelle ; l'ancienne proposition de demandes en attente et d'expiration automatique est abandonnée |
+| 05/11/2026 | Profil des nouveaux lieux confirmé. À la demande de l'utilisateur, abandon du fichier JSON parallèle avant déploiement ; recherche de la configuration et de la création natives pour une adaptation minimale |
+| 05/11/2026 | Adaptation native autorisée : valeurs initiales dans `TiBillet/settings.py`, copiées dans `Configuration` par la création habituelle, uniquement pour les nouveaux lieux de l'installation Gala |
 
 **Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
 

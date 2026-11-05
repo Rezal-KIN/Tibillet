@@ -319,6 +319,27 @@ THEME_INSTANCE = os.environ.get('THEME_INSTANCE', '')
 # Root UI only; account, identity and payment services remain TiBillet's.
 GALA_CASHLESS_PORTAL = os.environ.get('GALA_CASHLESS_PORTAL', '0') == '1'
 
+# Valeurs initiales des modules pour un NOUVEAU lieu de l'installation Gala.
+# Copiées dans Configuration à la création uniquement ; les lieux existants
+# et les autres installations gardent leurs réglages natifs.
+# / Initial module values for NEW Gala venues only. Existing venues and other
+# installations keep their native settings; never reapply these at startup.
+GALA_NEW_VENUE_MODULES = {
+    'module_federation': True,
+    'module_monnaie_locale': True,
+    'module_caisse': True,
+    'module_inventaire': True,  # Drapeau historique ; l'inventaire suit la caisse.
+    'module_pages': False,
+    'module_billetterie': False,
+    'module_adhesion': False,
+    'module_crowdfunding': False,
+    'module_booking': False,
+    'module_benevolat': False,
+    'module_tireuse': False,
+    'module_kiosk': False,
+    'module_newsletter': False,
+}
+
 if PAYMENT_PROVIDER not in {'stripe', 'cawl'}:
     raise ValueError('PAYMENT_PROVIDER must be stripe or cawl')
 
