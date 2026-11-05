@@ -1493,62 +1493,62 @@ class TenantCreateValidator:
             waiting_config.tenant = tenant
             waiting_config.save()
 
+            with tenant_context(tenant):
+                ## Création du premier admin:
+                from django.contrib.auth.models import Group
+                staff_group, created = Group.objects.get_or_create(name="staff")
+
+                # Sans envoi d'email pour l'instant, on l'envoie quand tout sera bien terminé
+                user: TibilletUser = get_or_create_user(admin_email, send_mail=False)
+                user.client_admin.add(tenant)
+                user.is_staff = True
+                user.groups.add(staff_group)
+                user.save()
+
+                # Le premier admin reçoit le récap du matin et les rapports. C'est le seul
+                # abonné d'office : un admin ajouté plus tard s'inscrit lui-même dans
+                # l'admin (« Envoi des rapports »). Ajout par pk : le M2M vise le proxy
+                # HumanUser et refuse une instance TibilletUser.
+                # / The first admin gets the mails. Added by pk: the M2M targets HumanUser.
+                from comptabilite.models import ConfigurationDesRapports
+                ConfigurationDesRapports.get_solo().destinataires.add(user.pk)
+
+                config = Configuration.get_solo()
+                config.organisation = name
+                config.site_web = waiting_config.site_web
+                config.short_description = waiting_config.short_description
+                config.slug = slugify(name)
+                config.email = user.email
+
+                try:
+                    rootConf = RootConfiguration.get_solo()
+                    stripe.api_key = rootConf.get_stripe_api()
+                    config.stripe_mode_test = rootConf.stripe_mode_test
+                    info_stripe = stripe.Account.retrieve(waiting_config.id_acc_connect)
+                    # Un lieu sans site saisit souvent tibillet.org chez Stripe : ce
+                    # n'est pas son site, on ne le recopie pas.
+                    # / A venue without a website often types tibillet.org at Stripe.
+                    from BaseBillet.models import est_un_site_du_projet_tibillet
+                    site_web_declare_chez_stripe = info_stripe.business_profile.url
+                    if not est_un_site_du_projet_tibillet(site_web_declare_chez_stripe):
+                        config.site_web = site_web_declare_chez_stripe
+                    config.phone = info_stripe.business_profile.support_phone
+                    if rootConf.stripe_mode_test:
+                        config.stripe_connect_account_test = info_stripe.id
+                    else:
+                        config.stripe_connect_account = info_stripe.id
+                except Exception as e:
+                    logger.info("Stripe non ok")
+                    pass
+
+                if settings.GALA_CASHLESS_PORTAL:
+                    # Le garde contre la recréation est déjà passé : uniquement ce nouveau lieu.
+                    # / The existing-venue guard ran above: initialize this new venue only.
+                    for field, value in settings.GALA_NEW_VENUE_MODULES.items():
+                        setattr(config, field, value)
+                config.save()
+
         with tenant_context(tenant):
-            ## Création du premier admin:
-            from django.contrib.auth.models import Group
-            staff_group, created = Group.objects.get_or_create(name="staff")
-
-            # Sans envoi d'email pour l'instant, on l'envoie quand tout sera bien terminé
-            user: TibilletUser = get_or_create_user(admin_email, send_mail=False)
-            user.client_admin.add(tenant)
-            user.is_staff = True
-            user.groups.add(staff_group)
-            user.save()
-
-            # Le premier admin reçoit le récap du matin et les rapports. C'est le seul
-            # abonné d'office : un admin ajouté plus tard s'inscrit lui-même dans
-            # l'admin (« Envoi des rapports »). Ajout par pk : le M2M vise le proxy
-            # HumanUser et refuse une instance TibilletUser.
-            # / The first admin gets the mails. Added by pk: the M2M targets HumanUser.
-            from comptabilite.models import ConfigurationDesRapports
-            ConfigurationDesRapports.get_solo().destinataires.add(user.pk)
-
-            from BaseBillet.models import Configuration
-            config = Configuration.get_solo()
-            config.organisation = name
-            config.site_web = waiting_config.site_web
-            config.short_description = waiting_config.short_description
-            config.slug = slugify(name)
-            config.email = user.email
-
-            try:
-                rootConf = RootConfiguration.get_solo()
-                stripe.api_key = rootConf.get_stripe_api()
-                config.stripe_mode_test = rootConf.stripe_mode_test
-                info_stripe = stripe.Account.retrieve(waiting_config.id_acc_connect)
-                # Un lieu sans site saisit souvent tibillet.org chez Stripe : ce
-                # n'est pas son site, on ne le recopie pas.
-                # / A venue without a website often types tibillet.org at Stripe.
-                from BaseBillet.models import est_un_site_du_projet_tibillet
-                site_web_declare_chez_stripe = info_stripe.business_profile.url
-                if not est_un_site_du_projet_tibillet(site_web_declare_chez_stripe):
-                    config.site_web = site_web_declare_chez_stripe
-                config.phone = info_stripe.business_profile.support_phone
-                if rootConf.stripe_mode_test:
-                    config.stripe_connect_account_test = info_stripe.id
-                else:
-                    config.stripe_connect_account = info_stripe.id
-            except Exception as e:
-                logger.info("Stripe non ok")
-                pass
-
-            if settings.GALA_CASHLESS_PORTAL:
-                # Le garde contre la recréation est déjà passé : uniquement ce nouveau lieu.
-                # / The existing-venue guard ran above: initialize this new venue only.
-                for field, value in settings.GALA_NEW_VENUE_MODULES.items():
-                    setattr(config, field, value)
-            config.save()
-
             # Liaison / création du lieu coté Fedow :
             # S6 : TOUS les tenants (V1 et V2) ont un place sur le Fedow.
             # Le place V2 sert a accepter l'asset federe (FED) du reseau.

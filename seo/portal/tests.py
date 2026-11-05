@@ -464,6 +464,16 @@ class CollectiveTests(TenantTestCase):
         with patch('fedow_connect.models.FedowConfig.get_solo'):
             self.assertEqual(edition.prepare_currency().pk, edition.currency_id)
 
+    def test_failed_native_profile_does_not_leave_a_partially_initialized_edition(self):
+        draft = self.prepare_native_creation()
+        with patch('BaseBillet.models.Configuration.get_solo', side_effect=RuntimeError('Profil indisponible')):
+            with self.assertRaises(RuntimeError):
+                self.create_native_venue(draft)
+        self.other.refresh_from_db()
+        self.assertEqual(self.other.categorie, Client.WAITING_CONFIG)
+        self.assertFalse(GalaEdition.objects.filter(venue=self.other).exists())
+        self.assertFalse(Asset.objects.filter(tenant_origin=self.other).exists())
+
     def test_two_active_galas_reject_shared_foreign_currency_before_any_money_moves(self):
         from fedow_core.services import AssetService, TransactionService, WalletService
         currency_b = self.isolate_two_editions()
@@ -471,6 +481,9 @@ class CollectiveTests(TenantTestCase):
         federation.tenants.add(self.tenant, self.other)
         federation.assets.add(self.asset)
         self.assertEqual(list(AssetService.obtenir_assets_accessibles(self.other)), [currency_b])
+        from laboutik.views import _soldes_de_la_cascade_fiduciaire
+        self.assertEqual(_soldes_de_la_cascade_fiduciaire(
+            self.wallet, AssetService.obtenir_assets_accessibles(self.other)), {})
         before = Transaction.objects.count()
         for action in (Transaction.SALE, Transaction.REFILL, Transaction.REFUND):
             with self.assertRaises(ValidationError):
