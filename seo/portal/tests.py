@@ -22,7 +22,7 @@ from rest_framework.test import force_authenticate
 from AuthBillet.models import TibilletUser, Wallet
 from Customers.models import Client, Domain
 from QrcodeCashless.models import CarteCashless
-from fedow_core.models import Asset, Token
+from fedow_core.models import Asset, Token, Federation, Transaction
 from laboutik.models import CartePrimaire, PointDeVente
 from seo.portal.models import (CollectiveConfiguration, GalaEdition, PrimaryCard,
                                PrimaryCardAccess, PortalTransfer)
@@ -323,6 +323,7 @@ class CollectiveTests(TenantTestCase):
         # Seul un emplacement de la base de test est consommé.
         # / Consume only a slot from the isolated test database.
         with schema_context('public'):
+            self.second.delete()
             self.other.refresh_from_db()
             self.other.categorie = Client.WAITING_CONFIG
             self.other.save()
@@ -331,14 +332,18 @@ class CollectiveTests(TenantTestCase):
                                dns_choice='test', site_web='', short_description='',
                                save=lambda: None)
 
-    def create_native_venue(self, draft):
+    def create_native_venue(self, draft, wallet_ready=True):
         from BaseBillet.validators import TenantCreateValidator
+        wallet = Wallet.objects.filter(origin=self.other).first()
+        if wallet is None and wallet_ready:
+            wallet = Wallet.objects.create(origin=self.other, name='Portefeuille du nouveau lieu')
         with patch('BaseBillet.validators.schema_est_entierement_migre', return_value=True), \
              patch('BaseBillet.validators.get_or_create_user', return_value=self.user), \
              patch('BaseBillet.validators.RootConfiguration.get_solo', side_effect=Exception('Stripe absent du test')), \
              patch('fedow_connect.fedow_api.FedowAPI'), \
              patch('fedow_connect.models.FedowConfig.get_solo') as fedow:
             fedow.return_value.can_fedow.return_value = True
+            fedow.return_value.wallet = wallet if wallet_ready else None
             return TenantCreateValidator.create_tenant(draft)
 
     def test_native_creation_applies_gala_settings_once_and_preserves_existing_venue(self):
@@ -358,7 +363,19 @@ class CollectiveTests(TenantTestCase):
 
         venue = self.create_native_venue(draft)
         self.assertEqual(venue.pk, self.other.pk)
+        edition = GalaEdition.objects.get(venue=venue)
+        self.assertTrue(edition.currency_isolated)
+        self.assertNotEqual(edition.currency_id, self.asset.pk)
+        self.assertEqual(edition.currency.tenant_origin_id, venue.pk)
+        self.assertEqual(Asset.objects.filter(tenant_origin=venue).count(), 1)
         with tenant_context(venue):
+            from BaseBillet.models import Product
+            from kiosk.credit import trouver_le_produit_de_recharge_de_la_borne
+            product, free_price = trouver_le_produit_de_recharge_de_la_borne()
+            self.assertEqual(product.asset_id, edition.currency_id)
+            self.assertIsNotNone(free_price)
+            self.assertEqual(product.prices.count(), 4)
+            self.assertEqual(Product.objects.filter(asset=edition.currency).count(), 1)
             config = Configuration.get_solo()
             self.assertEqual(set(settings.GALA_NEW_VENUE_MODULES), set(before))
             for field, value in settings.GALA_NEW_VENUE_MODULES.items():
@@ -376,6 +393,7 @@ class CollectiveTests(TenantTestCase):
             TenantCreateValidator.create_tenant(draft)
         with tenant_context(venue):
             self.assertTrue(Configuration.get_solo().module_booking)
+            self.assertEqual(Asset.objects.filter(tenant_origin=venue).count(), 1)
         with tenant_context(self.tenant):
             current = Configuration.get_solo()
             self.assertEqual({name:getattr(current, name) for name in before}, before)
@@ -394,6 +412,8 @@ class CollectiveTests(TenantTestCase):
             config = Configuration.get_solo()
             self.assertTrue(config.module_pages)
             self.assertFalse(config.module_caisse)
+            self.assertFalse(Asset.objects.filter(tenant_origin=venue).exists())
+            self.assertFalse(GalaEdition.objects.filter(venue=venue).exists())
 
     def test_native_gala_creation_does_not_consume_legacy_slot(self):
         draft = self.prepare_native_creation()
@@ -406,3 +426,131 @@ class CollectiveTests(TenantTestCase):
             self.other.refresh_from_db()
         self.assertEqual(self.other.categorie, Client.WAITING_CONFIG)
         self.assertIsNone(draft.tenant)
+
+    def isolate_two_editions(self):
+        self.edition.currency_isolated = True
+        self.edition.currency = self.asset
+        self.edition.save()
+        with tenant_context(self.other):
+            other_wallet = Wallet.objects.create(origin=self.other, name='Emetteur B')
+            currency = Asset.objects.create(name='Monnaie B', category=Asset.TLF, currency_code='EUR',
+                                            tenant_origin=self.other, wallet_origin=other_wallet)
+        self.second.currency_isolated = True
+        self.second.currency = currency
+        self.second.save()
+        return currency
+
+    def test_currency_initialization_resumes_without_resetting_settings_or_duplicating_currency(self):
+        from BaseBillet.models import Configuration
+        from fedow_core.services import AssetService
+        draft = self.prepare_native_creation()
+        with self.assertRaises(ValidationError):
+            self.create_native_venue(draft, wallet_ready=False)
+        edition = GalaEdition.objects.get(venue=draft.tenant)
+        self.assertTrue(edition.currency_isolated)
+        self.assertIsNone(edition.currency_id)
+        self.assertFalse(AssetService.obtenir_assets_accessibles(draft.tenant).exists())
+        with self.assertRaises(ValidationError):
+            set_live(edition, self.manager)
+        with tenant_context(draft.tenant):
+            config = Configuration.get_solo()
+            config.module_booking = True
+            config.save()
+        self.create_native_venue(draft)
+        with tenant_context(draft.tenant):
+            self.assertTrue(Configuration.get_solo().module_booking)
+            self.assertEqual(Asset.objects.filter(tenant_origin=draft.tenant).count(), 1)
+        edition.refresh_from_db()
+        with patch('fedow_connect.models.FedowConfig.get_solo'):
+            self.assertEqual(edition.prepare_currency().pk, edition.currency_id)
+
+    def test_two_active_galas_reject_shared_foreign_currency_before_any_money_moves(self):
+        from fedow_core.services import AssetService, TransactionService, WalletService
+        currency_b = self.isolate_two_editions()
+        federation = Federation.objects.create(name='Partage explicite test', created_by=self.tenant)
+        federation.tenants.add(self.tenant, self.other)
+        federation.assets.add(self.asset)
+        self.assertEqual(list(AssetService.obtenir_assets_accessibles(self.other)), [currency_b])
+        before = Transaction.objects.count()
+        for action in (Transaction.SALE, Transaction.REFILL, Transaction.REFUND):
+            with self.assertRaises(ValidationError):
+                TransactionService.creer(sender=self.wallet, receiver=currency_b.wallet_origin, asset=self.asset,
+                                        montant_en_centimes=100, tenant=self.other, action=action)
+        self.assertEqual(Transaction.objects.count(), before)
+        self.assertEqual(WalletService.obtenir_solde(self.wallet, self.asset), 1250)
+        self.assertEqual(WalletService.obtenir_solde(self.wallet, currency_b), 0)
+        self.assertTrue(self.edition.enabled and self.second.enabled)
+
+    def test_isolated_gala_does_not_debit_or_refund_other_fedow_balances(self):
+        from laboutik.views import (lire_depensable_fed_frais, _debiter_legacy,
+                                   _vider_la_carte_sur_l_ancien_fedow, _lire_la_carte_sur_l_ancien_fedow)
+        currency_b = self.isolate_two_editions()
+        with tenant_context(self.other), patch('laboutik.views.FedowAPI') as api:
+            api.return_value.NFCcard.retrieve.return_value = {'wallet': {'tokens': [
+                {'asset_category': 'FED', 'value': 100000, 'asset': {'uuid': str(uuid4())}}]}}
+            self.assertEqual(lire_depensable_fed_frais(self.card), (0, True))
+            with self.assertRaises(ValidationError):
+                _debiter_legacy(self.card, 'PRIMARY', 100, uuid4())
+            self.assertIsNone(_vider_la_carte_sur_l_ancien_fedow(self.card, 'PRIMARY', False))
+            self.assertEqual(_lire_la_carte_sur_l_ancien_fedow(self.card).jetons, [])
+            api.assert_not_called()
+
+    def paid_topup(self, currency, venue, amount):
+        from decimal import Decimal
+        from ApiBillet.serializers import get_or_create_price_sold
+        from BaseBillet.models import Product, Paiement_stripe, LigneArticle
+        from PaiementCawl.models import CawlPayment
+        with tenant_context(venue):
+            product = Product.objects.get(asset=currency, methode_caisse=Product.RECHARGE_EUROS)
+            price_sold = get_or_create_price_sold(product.prices.get(free_price=True),
+                                                 custom_amount=Decimal(amount)/100)
+            payment = Paiement_stripe.objects.create(user=self.user)
+            line = LigneArticle.objects.create(pricesold=price_sold, qty=1, amount=amount)
+            payment.lignearticles.add(line)
+            CawlPayment.objects.create(payment=payment, merchant_id='isolated', amount=amount, test_mode=True)
+            Paiement_stripe.objects.filter(pk=payment.pk).update(status=Paiement_stripe.PAID, montant_encaisse=amount)
+            payment.refresh_from_db()
+            return payment
+
+    def test_online_and_stand_topups_share_one_currency_with_separate_refund_caps_per_gala(self):
+        from fedow_core.services import TransactionService, WalletService
+        from PaiementCawl.recharges import crediter_la_recharge
+        from PaiementCawl.remboursements import calculer_le_remboursable
+        currency_b = self.isolate_two_editions()
+        Token.objects.filter(wallet=self.wallet, asset=self.asset).update(value=0)
+        payment = self.paid_topup(self.asset, self.tenant, 2000)
+        self.config.live_venue = self.other
+        self.config.save(update_fields=['live_venue'])
+        with tenant_context(self.tenant):
+            tx = crediter_la_recharge(payment)
+            self.assertEqual(tx.asset_id, self.asset.pk)
+            self.assertEqual(crediter_la_recharge(payment).pk, tx.pk)
+            TransactionService.creer_recharge(sender_wallet=self.owner, receiver_wallet=self.wallet,
+                                             asset=self.asset, montant_en_centimes=1000, tenant=self.tenant)
+            TransactionService.creer_vente(sender_wallet=self.wallet, receiver_wallet=self.owner,
+                                           asset=self.asset, montant_en_centimes=1500, tenant=self.tenant)
+            result = calculer_le_remboursable(self.user)
+            self.assertEqual((result.solde, result.en_ligne, result.sur_place), (1500, 1500, 0))
+        with tenant_context(self.other):
+            TransactionService.creer_recharge(sender_wallet=currency_b.wallet_origin, receiver_wallet=self.wallet,
+                                             asset=currency_b, montant_en_centimes=700, tenant=self.other)
+            result = calculer_le_remboursable(self.user)
+            self.assertEqual((result.solde, result.en_ligne, result.sur_place), (700, 0, 700))
+            result = WalletService.rembourser_en_especes(self.card, self.other, currency_b.wallet_origin)
+            self.assertEqual(result['total_centimes'], 700)
+        self.assertEqual(WalletService.obtenir_solde(self.wallet, self.asset), 1500)
+        self.assertEqual(WalletService.obtenir_solde(self.wallet, currency_b), 0)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.user_id, self.user.pk)
+
+    def test_currency_binding_cannot_be_changed_to_another_gala_or_removed(self):
+        currency_b = self.isolate_two_editions()
+        for replacement in (currency_b, None):
+            self.edition.currency = replacement
+            with self.assertRaises(ValidationError):
+                self.edition.save()
+        self.edition.refresh_from_db()
+        self.assertEqual(self.edition.currency_id, self.asset.pk)
+        with self.assertRaises(ValidationError):
+            self.edition.currency_isolated = False
+            self.edition.save()

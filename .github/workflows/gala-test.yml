@@ -59,7 +59,11 @@ jobs:
           docker network inspect frontend >/dev/null 2>&1 || docker network create frontend
           # Only the application/proxy services: retain the existing databases,
           # caches and Mailpit even when the shared .env changes.
-          docker compose up -d --build --no-deps lespass_django lespass_celery fedow_django lespass_nginx fedow_nginx traefik
+          docker compose build lespass_django lespass_celery fedow_django lespass_nginx fedow_nginx traefik
+          # Migration additive AVANT de démarrer le nouveau code des services.
+          # / Apply additive migrations BEFORE starting the new service code.
+          docker compose run --rm --no-deps lespass_django poetry run python /DjangoFiles/manage.py migrate_schemas
+          docker compose up -d --no-deps lespass_django lespass_celery fedow_django lespass_nginx fedow_nginx traefik
           # Un conteneur Django recréé change d'adresse : nginx garde l'ancienne et répond 502.
           # / A recreated Django container changes address: nginx keeps the old one (502).
           docker compose restart fedow_nginx lespass_nginx
@@ -76,7 +80,6 @@ jobs:
             sleep 3
           done
           [ "$etat" = "true false" ] || { docker logs --tail 30 lespass_django; exit 1; }
-          docker exec lespass_django poetry run python /DjangoFiles/manage.py migrate_schemas
           docker exec lespass_django poetry run python /DjangoFiles/manage.py collectstatic --no-input -v 0
 
       - name: Domaines publics du lieu de test

@@ -55,9 +55,9 @@ def trouver_le_produit_de_recharge_de_la_borne():
     """
     from BaseBillet.models import Product
     from fedow_core.models import Asset
+    from seo.portal.models import currency_policy_for_venue
 
-    produit_de_recharge = (
-        Product.objects.filter(
+    produits = Product.objects.filter(
             methode_caisse=Product.RECHARGE_EUROS,
             archive=False,
             asset__category=Asset.TLF,
@@ -65,7 +65,11 @@ def trouver_le_produit_de_recharge_de_la_borne():
             asset__active=True,
             asset__archive=False,
         )
-        .select_related("asset")
+    policy = currency_policy_for_venue(connection.tenant)
+    if policy is not None:
+        produits = produits.filter(asset_id=policy.currency_id)
+    produit_de_recharge = (
+        produits.select_related("asset")
         .order_by("poids", "name")
         .first()
     )

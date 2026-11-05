@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Optional, List
 
 import stripe
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.text import slugify
@@ -1378,12 +1378,31 @@ class TenantCreateValidator:
     def create_tenant(waiting_config: WaitingConfiguration):
         name = waiting_config.organisation
         admin_email = waiting_config.email.lower()
+        from django.conf import settings
+        from fedow_connect.fedow_api import FedowAPI
+        from fedow_connect.models import FedowConfig
         if waiting_config.tenant:
+            if settings.GALA_CASHLESS_PORTAL and not getattr(waiting_config, 'created', False):
+                from seo.portal.models import GalaEdition
+                pending = GalaEdition.objects.filter(venue=waiting_config.tenant, currency_isolated=True).first()
+                if pending:
+                    # Reprendre une création incomplète, sans réinitialiser ses réglages.
+                    # / Resume incomplete creation without resetting venue settings.
+                    with tenant_context(waiting_config.tenant):
+                        FedowAPI()
+                        if not FedowConfig.get_solo().can_fedow():
+                            raise Exception('Error on install : can_fedow = False')
+                        pending.prepare_currency()
+                        config = Configuration.get_solo()
+                        activate(config.language)
+                        Product.objects.get_or_create(name=_("Free booking"), categorie_article=Product.FREERES)
+                    waiting_config.created = True
+                    waiting_config.error_message = ''
+                    waiting_config.save()
+                    return waiting_config.tenant
             raise Exception("Tenant already exists. ")
 
-        from django.conf import settings
-
-        with schema_context('public'):
+        with schema_context('public'), transaction.atomic():
             # Double check for unique name to avoid IntegrityError if name was taken since validation
             if Client.objects.filter(name=name).exists():
                 raise Exception(f"The name '{name}' is already taken. ")
@@ -1407,6 +1426,14 @@ class TenantCreateValidator:
 
             tenant = None
             for emplacement in emplacements_vides:
+                if settings.GALA_CASHLESS_PORTAL:
+                    # Ne jamais attribuer le même emplacement à deux galas.
+                    # / Never allocate the same prepared slot to two Galas.
+                    emplacement = Client.objects.select_for_update(skip_locked=True).filter(
+                        pk=emplacement.pk, categorie=Client.WAITING_CONFIG,
+                    ).first()
+                    if emplacement is None:
+                        continue
                 if schema_est_entierement_migre(emplacement.schema_name):
                     tenant = emplacement
                     break
@@ -1418,6 +1445,13 @@ class TenantCreateValidator:
                     "No fully migrated waiting tenant. "
                     "/ Aucun emplacement vide entièrement migré : lancer migrate_schemas "
                     "sur les emplacements WAITING_CONFIG. ")
+
+            if settings.GALA_CASHLESS_PORTAL:
+                from fedow_core.models import Asset
+                from seo.portal.models import GalaEdition
+                if (Asset.objects.filter(tenant_origin=tenant).exists()
+                        or GalaEdition.objects.filter(venue=tenant).exists()):
+                    raise serializers.ValidationError('Cet emplacement porte déjà une édition ou des monnaies.')
 
             # Slug du sous-domaine : on respecte le slug saisi à l'étape
             # « Votre lieu » (éditable, cf. onboard STEP_VENUE), avec repli sur
@@ -1438,6 +1472,11 @@ class TenantCreateValidator:
             tenant.on_trial = False
             tenant.categorie = Client.SALLE_SPECTACLE
             tenant.save()
+
+            if settings.GALA_CASHLESS_PORTAL:
+                # Fermé aux paiements tant que sa monnaie native n'est pas prête.
+                # / Payments stay closed until the native currency is ready.
+                GalaEdition.objects.create(venue=tenant, currency_isolated=True)
 
             Domain.objects.get_or_create(
                 domain=f'{slug}.{dns}',
@@ -1520,6 +1559,9 @@ class TenantCreateValidator:
             FedowAPI()
             if not FedowConfig.get_solo().can_fedow():
                 raise Exception('Error on install : can_fedow = False')
+
+            if settings.GALA_CASHLESS_PORTAL:
+                GalaEdition.objects.get(venue=tenant).prepare_currency()
 
             # Envoie du mail de connection et validation
             # get_or_create_user(admin_email, force_mail=True)

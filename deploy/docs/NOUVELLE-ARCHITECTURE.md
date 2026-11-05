@@ -29,6 +29,7 @@ L'utilisateur souhaite construire l'instance actuelle avec CAWL en test. Avant l
 | Adresse racine | Portail cashless commun demandé ; pas une reprise du contenu du site de communication ni une vitrine générique |
 | Gestion interlieux | Compte central avec cartes, monnaies et accès au remboursement natif ; administration des éditions, rôles et lots |
 | Profil des nouveaux lieux | Confirmé le 05/11 : fédération, monnaies/cashless et caisse actifs ; site personnalisé et autres modules optionnels désactivés. Valeurs dans `TiBillet/settings.py`, appliquées dans la création native ; aucune configuration JSON parallèle |
+| Monnaie de chaque gala | Cible confirmée le 05/11 : une monnaie locale distincte par édition, commune aux recharges CAWL et au stand. « Offline » signifie ici rechargé au stand, pas caisse sans Internet. Aucun crédit partagé entre éditions |
 | Gala live | Un seul accès utilisateur vers le gala explicitement désigné live ; les anciens soldes et accès au remboursement restent consultables |
 | Remboursements | Mécanisme TiBillet conservé ; message annonçant sept jours après la date du gala, puis coupure manuelle par les organisateurs. Aucune demande en attente ni coupure automatique à ajouter |
 | Cartes primaires | Gestion globale demandée, avec un réglage par carte autorisant ou refusant chaque lieu ; accès aux points de vente explicites |
@@ -282,11 +283,44 @@ Le connecteur de ce fork choisit le prestataire en ligne au niveau de l'installa
 
 Deux lieux peuvent donc séparer leur gestion TiBillet tout en utilisant le même compte marchand. Cela ne crée pas deux comptes CAWL ni une ventilation bancaire automatique. Deux comptes marchands différents ou un lieu en test et l'autre en réel ne sont pas un simple choix par lieu dans cette implémentation.
 
-La monnaie locale V2 vit dans `fedow_core` de Lespass. Le Fedow distant reste utilisé, notamment pour l'identité/origine des cartes et des fonctions du réseau : ne pas le supprimer en supposant que toute sa fonction a disparu. Les soldes par monnaie peuvent être distincts et certaines monnaies peuvent être partagées explicitement via fédération. Partager une carte, un agenda et une monnaie sont trois décisions différentes.
+La monnaie locale V2 vit dans `fedow_core` intégré à Lespass. Le service Fedow autonome (`fedow_django`, domaine `fedow.gala-test.rezal.fr`) est lui aussi hébergé sur la VM ; il reste utilisé notamment pour l'identité/origine des cartes et des fonctions du réseau. Ce n'est pas l'ancien service AWS : ne pas le supprimer ni modifier son rôle par confusion entre ces composants. Les soldes par monnaie peuvent être distincts et certaines monnaies peuvent être partagées explicitement via fédération. Partager une carte, un agenda et une monnaie sont trois décisions différentes.
 
 Les vrais mails de connexion/confirmation et les paiements CAWL de test peuvent coexister. Les tests automatisés doivent continuer à capturer leurs mails. La copie future de test doit être isolée et configurée avant démarrage de ses workers/services ; ce document ne prescrit pas une simple duplication de VM avec toutes les connexions de production actives.
 
 Sources : [CAWL / lieux autorisés](../../PaiementCawl/services.py), [configuration du SDK](../../payment_providers/cawl.py), [services monétaires](../../fedow_core/services.py), [isolation SMTP](../../TiBillet/mail_delivery.py), [runtime actuel](../estia/gala-test/README.md).
+
+### 15.1. Audit de création et de cloisonnement des monnaies — 5 novembre 2026
+
+**Décision confirmée :** une seule monnaie locale fiduciaire (TLF) par gala, avec un identifiant distinct pour chaque édition. Les recharges CAWL et les recharges au stand alimentent cette même monnaie. Le terme « offline » utilisé pendant l'échange désigne les recharges au stand ; il ne demande pas un fonctionnement de caisse sans connexion. La carte et l'identité sont réutilisables, les crédits ne passent pas d'une édition à l'autre.
+
+**Vérifié dans le code :**
+
+- La création native initialise le lieu, ses réglages, son administrateur et sa place/son portefeuille Fedow. L'activation des modules ne crée pas à elle seule une TLF locale. Le parcours Gala complète désormais cette étape avec le service natif V2.
+- `Asset.tenant_origin` identifie le lieu émetteur ; un solde `Token` est propre au couple portefeuille/UUID de monnaie. Une nouvelle monnaie ne doit reprendre ni les jetons ni l'identifiant de l'ancienne édition.
+- `AssetService.creer_asset` crée une monnaie locale. Le signal natif `creer_ou_mettre_a_jour_product_recharge` fabrique son produit de recharge et ses tarifs (1, 5, 10 et Libre). Ces mécanismes doivent être réutilisés dans le contexte du nouveau lieu.
+- Le parcours CAWL sélectionne un produit de recharge dont la monnaie TLF appartient au lieu courant. La recharge au stand passe par `TransactionService.creer_recharge`, comme le crédit CAWL. Les origines des paiements sont conservées sans créer deux monnaies « online/offline ».
+- Le remboursement CAWL existant calcule `min(solde de la monnaie, recharges CAWL de cette monnaie encore remboursables)`, dans le lieu courant. Avec une monnaie unique, ce plafond ne trace pas quels euros particuliers ont été dépensés en premier. Exemple : 20 € CAWL + 10 € au stand − 15 € dépensés = 15 € de solde et jusqu'à 15 € remboursables en ligne.
+- La caisse choisit les monnaies locales accessibles : celles du lieu et celles explicitement partagées par une `fedow_core.Federation`. Elle peut aussi compléter un paiement avec le FED du réseau lu sur le service Fedow hébergé sur la VM. Une isolation stricte des galas ne doit pas simplement supposer ce solde FED nul.
+- Le module public « Fédération / agenda » et le partage monétaire sont des mécanismes distincts. Le premier peut rester actif sans partager les crédits entre éditions.
+- Plusieurs monnaies TLF peuvent actuellement être créées pour un même lieu. La recharge en ligne et la cascade de caisse choisissent chacune une première monnaie/produit selon leur ordre : il faudra éviter une sélection ambiguë pour un gala.
+
+**Relevé en lecture seule sur la VM :** quatre monnaies locales existent, toutes rattachées au lieu `lespass` : Monnaie locale (TLF), Cadeau (TNF), Temps (TIM), Points fidélité (FID). Aucune `fedow_core.Federation` n'est configurée. Ce constat ne mesure ni les fonds FED du service autonome ni les soldes des personnes. Aucune monnaie ni aucun paiement n'a été créé ou modifié pendant l'audit.
+
+**Adaptation et critères de validation :**
+
+1. Initialiser une seule TLF propre au nouveau gala, via les services/signaux natifs ; laisser les monnaies et soldes existants intacts. Prévoir le rejeu et les créations interrompues sans doublon ni réinitialisation.
+2. Garantir une sélection non ambiguë de cette monnaie pour la recharge CAWL et au stand. Ne créer ni cadeau, points, temps ou FED commun par défaut pour une nouvelle édition.
+3. Limiter les dépenses du gala à ses monnaies autorisées ; vérifier aussi les chemins de complément, deux cartes et FED du service autonome, sans modifier le fonctionnement des installations hors Gala.
+4. Tester deux galas simultanément actifs avec le même compte et la même carte : un solde dans A ne doit pas permettre un paiement dans B ; la recharge de B ne doit créditer que B.
+5. Vérifier les plafonds et remboursements séparément par édition, ainsi qu'un retour/webhook CAWL tardif après changement du gala live : le paiement doit rester attaché à sa monnaie et son lieu d'origine.
+
+**Implémentation :** `GalaEdition.currency_isolated` et `currency` rattachent explicitement chaque nouvelle édition à sa seule TLF. La migration additive `seo.0008` laisse les éditions existantes à `False` / `NULL` et ne touche à aucune monnaie ni aucun solde. Le parcours natif réserve un emplacement V2 vide sous verrou, inscrit l'édition, puis utilise `AssetService.creer_asset` dans le contexte de ce lieu. Le signal natif crée le produit et ses quatre tarifs. Une initialisation monétaire interrompue peut être reprise sans recréer de monnaie.
+
+La sélection des monnaies, les recharges, les dépenses et les remboursements au stand sont limités à cette TLF **uniquement pour les nouvelles éditions explicitement cloisonnées**. Les fonds du réseau ne servent pas de complément dans ces éditions, et un remboursement ne clôture pas la carte réutilisable. Une édition sans monnaie prête ne peut pas devenir le gala live. Le service Fedow de la VM continue d'assurer ses rôles natifs ; les lieux existants ne sont pas convertis.
+
+**Validation :** les scénarios automatisés couvrent deux éditions actives avec une carte commune, les recharges CAWL et au stand dans une même TLF, le plafond natif de remboursement, la reprise sans doublon et le rejet d'une autre monnaie avant tout mouvement. Résultats d'exécution et état de déploiement à renseigner après validation sur une base isolée. Aucun paiement réel n'est nécessaire à ces contrôles.
+
+Sources : [création native](../../BaseBillet/validators.py), [modèles et fédérations monétaires](../../fedow_core/models.py), [services monétaires](../../fedow_core/services.py), [produits de recharge automatiques](../../fedow_core/signals.py), [choix du produit CAWL](../../kiosk/credit.py), [recharge CAWL](../../PaiementCawl/recharges.py), [plafond de remboursement](../../PaiementCawl/remboursements.py), [soldes et cascade de caisse](../../laboutik/views.py).
 
 ## 16. Comparaison des architectures discutées
 
@@ -357,6 +391,7 @@ Sources : [réglages de l'installation](../../TiBillet/settings.py), [création 
 | 03/11/2026 | Simplification demandée : remboursement interne conservé, message des sept jours après la date du gala et coupure manuelle ; l'ancienne proposition de demandes en attente et d'expiration automatique est abandonnée |
 | 05/11/2026 | Profil des nouveaux lieux confirmé. À la demande de l'utilisateur, abandon du fichier JSON parallèle avant déploiement ; recherche de la configuration et de la création natives pour une adaptation minimale |
 | 05/11/2026 | Adaptation native autorisée : valeurs initiales dans `TiBillet/settings.py`, copiées dans `Configuration` par la création habituelle, uniquement pour les nouveaux lieux de l'installation Gala |
+| 05/11/2026 | Audit monétaire : une TLF propre à chaque gala, commune aux recharges CAWL et au stand ; création automatique absente et chemins de partage/FED à traiter pour garantir le cloisonnement |
 
 **Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
 

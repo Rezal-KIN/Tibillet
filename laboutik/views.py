@@ -36,6 +36,7 @@ from rest_framework.views import APIView
 
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
+from seo.portal.models import currency_policy_for_venue
 from django.db import connection
 from django.db.models import (
     Case,
@@ -1486,6 +1487,8 @@ def lire_depensable_fed_frais(carte):
         répond pas. Une carte inconnue de l'ancien Fedow vaut (0, True) : il a répondu,
         et cette carte n'y a rien.
     """
+    if currency_policy_for_venue(connection.tenant) is not None:
+        return 0, True  # Cette édition n'accepte que sa monnaie dédiée. / Dedicated edition currency only.
     try:
         fedow_config = FedowConfig.get_solo()
         # On teste can_fedow() AVANT d'instancier FedowAPI : sinon, sur un tenant sans place,
@@ -1841,6 +1844,8 @@ def _debiter_legacy(carte, tag_id_carte_primaire, montant_centimes, uuid_transac
         uuid_de_la_transaction). L'uuid de la transaction distante sert au règlement de la
         vente (`reference_externe`) et au journal d'incident.
     """
+    if currency_policy_for_venue(connection.tenant) is not None:
+        raise DjangoValidationError(_('Cette édition n’accepte que sa monnaie dédiée.'))
     if not tag_id_carte_primaire:
         raise Exception("Débit legacy : aucune carte primaire pour signer le débit")
     # L'ancien Fedow accepte un montant nul : on ne lui envoie jamais.
@@ -1942,6 +1947,8 @@ def _vider_la_carte_sur_l_ancien_fedow(carte_client, tag_id_carte_primaire, vide
         illisible
     :raises Exception: l'ancien Fedow échoue, rien n'est fait
     """
+    if currency_policy_for_venue(connection.tenant) is not None:
+        return None
     if not FedowConfig.get_solo().can_fedow():
         return None
 
@@ -2248,6 +2255,8 @@ def _lire_la_carte_sur_l_ancien_fedow(carte_client):
     # On teste `can_fedow()` AVANT de créer `FedowAPI` : sur un lieu sans place Fedow,
     # sa création lancerait une création de place sur le serveur.
     # / Check can_fedow() BEFORE building FedowAPI.
+    if currency_policy_for_venue(connection.tenant) is not None:
+        return SimpleNamespace(statut='absente', jetons=[])
     configuration_fedow = FedowConfig.get_solo()
     if not configuration_fedow.can_fedow():
         return SimpleNamespace(statut="absente", jetons=[])
@@ -2531,8 +2540,7 @@ def _produits_de_recharge_du_lieu():
         ),
         to_attr="prix_euros",
     )
-    return (
-        Product.objects.filter(
+    produits = Product.objects.filter(
             methode_caisse__in=METHODES_RECHARGE,
             publish=True,
             archive=False,
@@ -2540,7 +2548,11 @@ def _produits_de_recharge_du_lieu():
             asset__archive=False,
             asset__active=True,
         )
-        .select_related("asset")
+    policy = currency_policy_for_venue(connection.tenant)
+    if policy is not None:
+        produits = produits.filter(asset_id=policy.currency_id)
+    return (
+        produits.select_related("asset")
         .prefetch_related(tarifs_en_euros)
         .order_by("poids", "name")
     )
@@ -2956,6 +2968,9 @@ def _asset_de_retour_consigne(articles_panier):
 
     if asset_a_crediter.category != Asset.TLF:
         return None, _("Un retour de consigne se rembourse en monnaie locale.")
+    policy = currency_policy_for_venue(connection.tenant)
+    if policy is not None and asset_a_crediter.pk != policy.currency_id:
+        return None, _('Cette consigne ne porte pas sur la monnaie de ce gala.')
 
     for article in articles_panier:
         if article["product"].asset_id != asset_a_crediter.uuid:
@@ -13734,7 +13749,12 @@ class PaiementViewSet(viewsets.ViewSet):
             )
 
         lignes_fedow_local = []
+        policy = currency_policy_for_venue(connection.tenant)
         for jeton_local in jetons_locaux:
+            if policy is not None and (
+                jeton_local.asset_id != policy.currency_id or not jeton_local.asset.active or jeton_local.asset.archive
+            ):
+                continue
             lignes_fedow_local.append(
                 _ligne_de_vidage(
                     jeton_local.asset.name,

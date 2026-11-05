@@ -21,9 +21,11 @@ REGLES / RULES:
 import logging
 from dataclasses import dataclass
 
+from django.core.exceptions import ValidationError
 from django.db import connection, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from fedow_core.exceptions import (
     CarteDejaLiee,
@@ -36,6 +38,7 @@ from fedow_core.models import Asset, Federation, Token, Transaction
 
 from AuthBillet.models import Wallet
 from QrcodeCashless.models import CarteCashless
+from seo.portal.models import currency_policy_for_venue
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +101,10 @@ class AssetService:
             assets = AssetService.obtenir_assets_accessibles(tenant=mon_lieu)
             → [ma_monnaie_locale, monnaie_federee_tibillet, ...]
         """
+        policy = currency_policy_for_venue(tenant)
+        if policy is not None:
+            return Asset.objects.filter(pk=policy.currency_id, active=True, archive=False).order_by('name')
+
         # Recuperer les UUIDs des assets federes avec ce tenant.
         # Get UUIDs of assets federated with this tenant.
         federations_du_tenant = Federation.objects.filter(
@@ -597,6 +604,12 @@ class WalletService:
         elif carte.wallet_ephemere is not None:
             wallet_carte = carte.wallet_ephemere
 
+        policy = currency_policy_for_venue(tenant)
+        if policy is not None and vider_carte:
+            raise ValidationError(_(
+                'Choisissez le remboursement sans clôturer cette carte réutilisable entre galas.'
+            ))
+
         # 2. Filtrer les tokens eligibles : TLF et TNF du tenant + FED.
         # Une carte sans portefeuille local n'a aucun token local.
         # / 2. Filter eligible tokens: tenant's TLF and TNF + FED.
@@ -615,11 +628,13 @@ class WalletService:
                 )
                 .select_related("asset", "asset__tenant_origin")
             )
+            if policy is not None:
+                tokens_eligibles = [token for token in tokens_eligibles if token.asset_id == policy.currency_id]
             # Instance CAWL : la monnaie d'un événement clôturé (désactivée ou archivée)
             # n'est plus remboursée, sa comptabilité est close.
             # / CAWL instance: a closed event's currency is no longer refunded.
             from PaiementCawl.services import enabled as cawl_enabled
-            if cawl_enabled():
+            if policy is not None or cawl_enabled():
                 tokens_eligibles = [
                     token for token in tokens_eligibles
                     if token.asset.active and not token.asset.archive
@@ -778,6 +793,13 @@ class TransactionService:
         """
         if metadata is None:
             metadata = {}
+
+        policy = currency_policy_for_venue(tenant)
+        if (policy is not None
+                and action in (Transaction.SALE, Transaction.QRCODE_SALE, Transaction.REFILL,
+                               Transaction.REFUND, Transaction.VOID)
+                and asset.pk != policy.currency_id):
+            raise ValidationError(_('Cette monnaie ne peut pas être utilisée dans ce gala.'))
 
         with transaction.atomic():
             # --- Debit du sender ---

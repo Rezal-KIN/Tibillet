@@ -68,6 +68,8 @@ def set_live(edition, actor):
             edition = GalaEdition.objects.select_for_update().get(pk=edition.pk)
             if not edition.enabled or not edition.venue.get_primary_domain():
                 raise ValidationError('Le lieu doit être activé et posséder un domaine.')
+            if edition.currency_isolated and edition.currency_id is None:
+                raise ValidationError('La monnaie du gala n’est pas encore prête.')
         config.live_venue = edition.venue if edition else None
         config.save(update_fields=['live_venue'])
         audit(actor, 'select_live', config.live_venue_id or 'none')
