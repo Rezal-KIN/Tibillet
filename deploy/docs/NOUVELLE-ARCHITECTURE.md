@@ -375,9 +375,58 @@ La création réutilisant des emplacements préparés, changer seulement les val
 
 Les mails transactionnels de connexion/confirmation restent actifs indépendamment de la newsletter. Les réglages d'envoi des rapports comptables sont distincts ; aucune préférence de désactivation n'a encore été confirmée pour ces rapports. « Fédération » activée ne décide pas à elle seule de partager les monnaies ou les soldes entre éditions.
 
-**État :** l'adaptation native est implémentée dans le dépôt, sans nouveau fichier de configuration ni chargeur. Aucun lieu existant n'est reconfiguré par ce changement. La création réelle d'une nouvelle édition (domaine, certificat, monnaie, autorisation CAWL et matériel) reste un contrôle opérationnel distinct.
+**État :** l'adaptation native est implémentée dans le dépôt, sans nouveau fichier de configuration ni chargeur. Aucun lieu existant n'est reconfiguré par ce changement. La validation applicative réelle d'une nouvelle édition est décrite ci-dessous ; domaine public, autorisation CAWL normale et matériel restent à terminer.
 
 Sources : [réglages de l'installation](../../TiBillet/settings.py), [création native](../../BaseBillet/validators.py), [tâche de création](../../onboard/tasks.py), [configuration du lieu](../../BaseBillet/models.py), [points de vente](../../laboutik/models.py), [modules et inventaire](../../Administration/admin/dashboard.py).
+
+
+### 18.1. Gala réellement créé et contrôlé sur la VM — 5 novembre 2026
+
+À la demande de l'utilisateur, création de **Gala de validation novembre 2026** par les vrais formulaires `/onboard/` (identité du gestionnaire existant, lieu, adresse passée, présentation), avec contrôle CSRF et traitement par le vrai worker Celery. Aucun code applicatif n'a été modifié pour ce contrôle. Le Gala actif du portail reste `lespass`.
+
+- Adresse prévue : `validation-novembre-2026.gala-test.rezal.fr` ; les essais utilisent le domaine dans l'en-tête Host sur le réseau interne de la VM. **Cette adresse n'est pas encore validée publiquement par Estia.**
+- Schéma natif attribué : `c2fe5a478a8e439e8a9eb1154a37bc1c` ; édition enregistrée automatiquement dans le collectif.
+- Une seule TLF nouvelle, `Monnaie Gala de validation novembre 2026`, avec son produit natif et ses quatre tarifs de recharge. Réexécuter la tâche de création ne doit pas créer de doublon.
+- Les modules correspondent au profil versionné de la section 18. Aucun catalogue ancien, événement ou point de vente n'est recopié. Le produit natif « Réservation gratuite » existe même si la billetterie est désactivée.
+- Deux cartes de validation créées par l'administration native, dans leur propre génération du nouveau lieu ; inscription d'un participant fictif par QR et confirmation via le mécanisme natif. Aucun droit administrateur pour ce participant.
+- Une carte opérateur autorisée sur les deux nouveaux points de vente par le portail interlieux ; déclaration au service Fedow de la VM confirmée. Elle n'a aucun accès au Gala précédent.
+- Un bar en service direct, un point Cashless et un article de caisse à 2 € créés par les formulaires natifs. **Utiliser l'administration `POSProduct` (« articles de caisse »)** : le formulaire générique des produits en ligne possède, lui, une condition de configuration CAWL. La création d'un article de caisse ne requiert pas d'autoriser CAWL.
+
+**Pages et services contrôlés :**
+
+| Contrôle | Résultat |
+|---|---|
+| Accueil, connexion, compte, soldes, administration, articles de caisse, points de vente, monnaies, cartes, entrée de caisse | Dix pages HTTP 200 à travers le vrai nginx et Gunicorn, avec une session autorisée pour les pages privées |
+| CSS et JavaScript référencés par ces pages | 68 fichiers statiques servis sans erreur |
+| Visiteur non connecté | Redirections vers la connexion aux endroits attendus |
+| Participant non administrateur | Administration du collectif refusée en 403 |
+| WebSocket du nouveau bar via nginx VM | Handshake 101 validé |
+| Espace interlieux | Carte, monnaie et historique du participant de validation visibles |
+| Passage portail → compte du nouveau Gala | Session native établie ; ticket utilisable une seule fois |
+| Sélection du Gala actif et désactivation | Testées dans une transaction ensuite annulée : aucun changement du Gala actif visible aux autres navigateurs ; fermeture du lieu en 403, accès de lecture autorisés conservés |
+| Mails de création et de confirmation | Capturés dans Mailpit par le marqueur interne ; le fonctionnement normal de la VM reste en envoi réel |
+
+**Scénario financier applicatif :** CAWL est simulé dans le seul processus de test ; aucune demande de débit bancaire n'est envoyée. Les vues et services métier, la base du nouveau Gala et le registre des cartes sont réels. Recharge en ligne de 20 €, retour rejoué sans double crédit ; recharge au stand de 10 € en espèces fictives, double envoi sans doublon ; deux boissons à 2 € réglées par la carte, vente et comptabilité cohérentes, double envoi sans double débit. Sur les 26 € restants, remboursement en ligne plafonné à 20 €, puis remboursement au stand des 6 € restants. Solde final zéro, carte toujours liée et réutilisable. Le remboursement simulé est rapproché jusqu'à `REFUNDED`, sans opération de test laissée en attente.
+
+Une tentative de paiement avec la monnaie de l'ancien lieu est refusée avant toute écriture. Les monnaies, jetons et transactions préexistants sont comparés par empreinte en excluant exclusivement le nouveau lieu et sa monnaie. La configuration privée des services et l'autorisation CAWL globale ne sont pas changées.
+
+**Limites explicites :** l'autorisation CAWL du nouveau lieu a été ajoutée seulement dans le processus de test ; `CAWL_TENANT_SCHEMAS` des services contient toujours uniquement `lespass`. Il reste à autoriser le schéma du nouveau Gala pour les paiements normaux, puis à valider un vrai aller-retour CAWL en préproduction après le proxy. Aucun téléphone, lecteur NFC ou terminal physique n'a encore été testé sur ce lieu.
+
+Le wildcard doit être cohérent de bout en bout : DNS, certificat, site nginx dédié sur Estia **et route Traefik de cette VM**, dont la règle actuelle ne nomme que le portail et `cashless`. Aucun de ces réglages n'a été modifié pendant les tests. Les anciennes adresses `cashless` et `fedow` restent en place tant que leurs usages n'ont pas été remplacés et vérifiés.
+
+### 18.2. Deux instances et deux branches — contrainte confirmée le 5 novembre 2026
+
+L'utilisateur demande une instance de développement/test et une instance de production, avec une branche par rôle. **Même application et mêmes images validées ; seules les clés et les paramètres propres à l'instance changent.** Les deux fonctionnent normalement avec `TEST=0`, `DEBUG=0`, des mails réels ; les paramètres CAWL sélectionnent les identifiants et le mode de test ou réel. Le mode de capture appartient aux tests automatisés ciblés, pas au fonctionnement quotidien de l'instance de développement.
+
+Les branches `development` et `production` sont préparées au même point de départ applicatif validé, sans renommer la branche de travail existante. Le workflow actuel reste lié à `tibillet-local-upstream` : la promotion entre ces nouvelles branches, les runners et la deuxième instance ne sont pas encore activés. Le rôle définitif de la VM actuelle attend la précision demandée à l'utilisateur.
+
+**Écart constaté :** le `dockerfile` copie déjà l'application et les sources du frontend dans l'image, mais les fichiers Compose actuels, y compris le fichier de production amont, montent encore `./:/DjangoFiles`. Ce montage recouvre le code embarqué. L'emballage final autonome n'est donc pas encore conforme à la cible demandée. Les volumes de bases, médias, sauvegardes et journaux restent naturellement persistants et propres à chaque instance.
+
+Avant duplication, prévoir une seule construction d'image depuis le commit validé, puis promotion de **cette même image identifiée par son digest**. Ne pas reconstruire deux variantes avec du code ou des corrections propres à un serveur. Les secrets sont injectés à l'exécution et ne doivent jamais entrer dans l'image. Le script amont `make release` cible `origin/main` et le dépôt Docker `tibillet/lespass` : il ne doit pas être lancé tel quel pour publier notre branche Gala.
+
+Le frontend applicatif est déjà servi avec revalidation (`Cache-Control: no-cache`) pour ses fichiers non versionnés ; les bibliothèques tierces possèdent encore des exceptions de cache long à prendre en compte lors d'une mise à jour de dépendances. Une mise à jour doit livrer les templates et les fichiers statiques du même artefact, puis vérifier le contenu servi. Une réponse HTTP 200 seule ne prouve pas que le navigateur reçoit la nouvelle version.
+
+Sources : [Dockerfile](../../dockerfile), [Compose actuel](../../docker-compose.yml), [Compose production amont](../../docker-compose.prod.yml), [overlay VM](../estia/gala-test/compose.estia.yml), [workflow](../../.github/workflows/gala-test.yml), [release amont](../../scripts/release.sh), [nginx](../../nginx_prod/lespass_prod.conf).
 
 ## 19. Historique et maintenance du document
 
@@ -397,6 +446,8 @@ Sources : [réglages de l'installation](../../TiBillet/settings.py), [création 
 | 05/11/2026 | Profil des nouveaux lieux confirmé. À la demande de l'utilisateur, abandon du fichier JSON parallèle avant déploiement ; recherche de la configuration et de la création natives pour une adaptation minimale |
 | 05/11/2026 | Adaptation native autorisée : valeurs initiales dans `TiBillet/settings.py`, copiées dans `Configuration` par la création habituelle, uniquement pour les nouveaux lieux de l'installation Gala |
 | 05/11/2026 | Audit monétaire : une TLF propre à chaque gala, commune aux recharges CAWL et au stand ; création automatique absente et chemins de partage/FED à traiter pour garantir le cloisonnement |
+
+| 05/11/2026 | Création réelle du Gala de validation, contrôle des pages, cartes, droits, caisse et remboursements simulés ; nouveau besoin confirmé de deux branches et deux instances avec les mêmes images |
 
 **Maintenance :** enrichir ce fichier après chaque nouvelle analyse ; dater les constats de VM, noter les décisions explicites et garder visibles les questions non résolues. Un changement de proposition doit mettre à jour la synthèse, pas seulement ajouter une note contradictoire en bas. Ne pas y consigner de secrets, identifiants complets de cartes ou liens de connexion contenant des jetons.
 
