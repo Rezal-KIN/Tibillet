@@ -13863,6 +13863,13 @@ class PaiementViewSet(viewsets.ViewSet):
         elif action_carte == "vider":
             vider_carte_flag = False
 
+        if vider_carte_flag and currency_policy_for_venue(connection.tenant) is not None:
+            # Garder la carte liée pour les autres éditions, avant tout mouvement.
+            # / Keep the card linked for other editions before any money movement.
+            return _render_erreur_toast(request, _(
+                'Choisissez le remboursement sans clôturer cette carte réutilisable entre galas.'
+            ))
+
         # Protection self-refund (meme check qu'en preview).
         # / Self-refund protection (same check as preview).
         if tag_id_client == tag_id_cm:

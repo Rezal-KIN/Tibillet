@@ -71,3 +71,23 @@ class CashlessPortalTests(SimpleTestCase):
         request.method = "POST"
         response = portal_space(request)
         self.assertEqual(response.status_code, 405)
+
+
+class IsolatedGalaCardRefundTests(SimpleTestCase):
+    def test_card_closure_returns_a_clear_message_before_card_lookup_or_money_movement(self):
+        from uuid import uuid4
+        from laboutik.views import PaiementViewSet
+        for closure in ({"vider_carte": "true"}, {"action_carte": "cloturer"}):
+            with self.subTest(closure=closure):
+                request = RequestFactory().post('/laboutik/paiement/vider_carte/', {
+                    'tag_id': 'ABCD1234', 'tag_id_cm': 'EFGH5678', 'uuid_pv': str(uuid4()), **closure,
+                })
+                with patch('laboutik.views.currency_policy_for_venue', return_value=SimpleNamespace(currency_id=uuid4())), \
+                     patch('laboutik.views._render_erreur_toast', return_value=HttpResponse('Choix à corriger')) as toast, \
+                     patch('laboutik.views.trouver_ou_rapatrier_la_carte') as lookup, \
+                     patch('laboutik.views.WalletService.rembourser_en_especes') as refund:
+                    response = PaiementViewSet().vider_carte(request)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('sans clôturer', str(toast.call_args.args[1]))
+                lookup.assert_not_called()
+                refund.assert_not_called()
