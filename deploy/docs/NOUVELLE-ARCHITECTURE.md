@@ -46,7 +46,7 @@ Constats réalisés le 3 novembre 2026 sur la version VM `122d9d374f50b51141c4dc
 |---|---|
 | `gala-test.rezal.fr` | Tenant technique `public`, accueil général TiBillet et assistant de création |
 | `cashless.gala-test.rezal.fr` | Lieu nommé Lespass, schéma `lespass`, moteur V2 ; administration et caisse du même lieu |
-| `fedow.gala-test.rezal.fr` | Service Fedow distant, pas un lieu métier supplémentaire |
+| `fedow.gala-test.rezal.fr` | Service Fedow autonome hébergé sur la VM, pas un lieu métier supplémentaire |
 | `galas-am-aix.rezal.fr` | Domaine imprimé des cartes ; DNS observé vers l'ancienne infrastructure AWS, distincte de la VM actuelle |
 
 Le mot `cashless` n'impose pas un logiciel séparé : cette adresse dessert un lieu qui porte aussi sa billetterie, ses pages et son administration. La racine générique vient de l'association du domaine au tenant public ; ce n'est pas une obligation métier pour le collectif.
@@ -227,7 +227,7 @@ Sources : [modèle Discovery](../../discovery/models.py), [claim](../../discover
 
 Le parcours natif `/qr/<uuid>/` :
 
-1. Valide l'UUID et retrouve la carte auprès du Fedow distant.
+1. Valide l'UUID et retrouve la carte auprès du service Fedow hébergé sur la VM.
 2. Lit le domaine du lieu d'origine de la carte.
 3. Peut rediriger vers le domaine principal de ce lieu.
 4. Propose la liaison à un compte ou la connexion du propriétaire.
