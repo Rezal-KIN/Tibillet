@@ -4,9 +4,15 @@
 # release manifest instead of the floating ${FEDOW_VERSION:-latest} tag.
 # Running docker-compose.yml alone (local/dev) is unaffected.
 services:
+  # Preserve the helper versions observed on the validated CAWL Smoke host.
+  fedow_nginx:
+    image: nginx@sha256:332d0beea97cff8c0d5d27976c0778a4b00345b9d74c2feaaf8efde548314948
+  fedow_memcached:
+    image: memcached@sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171
   fedow_django:
     image: ${FEDOW_IMAGE}
     # Native membership callbacks must return to this Gala's Lespass, even
     # while another Gala holds the shared public IP. Keep normal TLS checks.
     extra_hosts:
       - "${LESPASS_PUBLIC_DOMAIN}:host-gateway"
+      - "${LABOUTIK_PUBLIC_DOMAIN}:host-gateway"

@@ -35,7 +35,7 @@ for script in \
   card_stock.py import_card_stock_fedow.py import-gala-card-stock.py \
   deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
-  materialize-runtime-env.py preflight.sh reconcile-fedow-webhook.py reconcile-cawl-wallet-refunds.sh fedow-sqlite.py \
+  materialize-runtime-env.py migrate-test-domains.py preflight.sh reconcile-fedow-webhook.py reconcile-cawl-wallet-refunds.sh fedow-sqlite.py \
   reclaim-deployment-space.sh restore-postgres.sh \
   verify-backup-restore.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do

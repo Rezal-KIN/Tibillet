@@ -159,7 +159,7 @@ resource "aws_security_group" "runtime" {
   description = "Public HTTP/HTTPS and restricted emergency SSH for Gala ${var.gala_slug}."
   vpc_id      = var.vpc_id
 
-  ingress = [
+  ingress = concat([
     for cidr in var.ssh_emergency_cidrs : {
       description      = "Emergency SSH only; SSM remains the normal operational path"
       from_port        = 22
@@ -171,7 +171,17 @@ resource "aws_security_group" "runtime" {
       security_groups  = []
       self             = false
     }
-  ]
+    ], var.public_test_ingress ? [for port in [80, 443] : {
+      description      = "Independent CAWL test HTTP/HTTPS"
+      from_port        = port
+      to_port          = port
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
+  }] : [])
 
   dynamic "egress" {
     # Both Smoke hosts (Stripe and CAWL) keep the same restricted egress.
