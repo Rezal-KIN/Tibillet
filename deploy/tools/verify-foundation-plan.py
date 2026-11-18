@@ -387,7 +387,7 @@ def verify(plan: dict[str, object], slug: str, *, extra_new: frozenset[str] = fr
     else:
         allowed_retire = set()
     allowed_updates = re.compile(
-        r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy)\["?[a-z0-9-]+"?\]$'
+        r'^aws_iam_role_policy\.(?:active_switch_build|production_build|production_pipeline|production_validate|test_deploy|test_cawl_deploy)\["?[a-z0-9-]+"?\]$'
     )
     production_project = re.compile(r'^aws_codebuild_project\.(?:production|production_validate)\["[a-z0-9-]+"\]$')
     changes = plan.get("resource_changes")

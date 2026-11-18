@@ -21,6 +21,35 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_new_gala_preserves_computed_smoke_deploy_policy_identity(self):
+        # Adding a Gala defers the unchanged Smoke document/instance references.
+        # Both providers must accept that refresh without accepting a role change
+        # or a concrete permissions edit in the same Foundation operation.
+        for kind in ('test_deploy', 'test_cawl_deploy'):
+            address = f'aws_iam_role_policy.{kind}[0]'
+            name = 'tibillet-gala-paris-production-' + kind.replace('_', '-')
+            before = {'id': name + ':' + name, 'name': name, 'role': name,
+                      'policy': '{"Version":"2012-10-17","Statement":[]}'}
+            item = {'address': address, 'change': {
+                'actions': ['update'], 'before': before,
+                'after': {key: value for key, value in before.items() if key != 'policy'},
+                'after_unknown': {'policy': True},
+            }}
+            with self.subTest(provider=kind):
+                self.assertEqual(module.verify({'resource_changes': [item]}, 'bapts2026'),
+                                 [f'refresh-policy {address}'])
+                for mutation in (
+                    lambda v: v['change']['after'].update(role='different-role'),
+                    lambda v: v['change']['after'].update(name='different-policy'),
+                    lambda v: v['change'].update(actions=['delete', 'create']),
+                    lambda v: v['change'].update(after_unknown={'policy': True, 'role': True}),
+                    lambda v: v['change'].update(after_unknown={}, after={**before, 'policy': '{}'}),
+                ):
+                    bad = copy.deepcopy(item)
+                    mutation(bad)
+                    with self.assertRaises(ValueError):
+                        module.verify({'resource_changes': [bad]}, 'bapts2026')
+
     def test_smoke_mail_plan_can_only_add_submission_egress_to_both_smoke_hosts(self):
         rule = {"from_port": 587, "to_port": 587, "protocol": "tcp",
                 "cidr_blocks": ["0.0.0.0/0"], "ipv6_cidr_blocks": [],
