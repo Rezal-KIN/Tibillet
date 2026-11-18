@@ -7,6 +7,7 @@ import copy
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -50,6 +51,8 @@ ALIGNMENT_RETIREMENT_OPERATIONS = {
 }
 ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
 ENABLE_SMOKE_MAIL_REQUEST = "Enable Smoke Mail"
+ENABLE_PUBLIC_TEST_REQUEST = "Enable Public CAWL Test"
+RESERVE_TEST_ADDRESS_REQUEST = "Reserve CAWL Test Address"
 CAWL_SMOKE_SLUG = "gala-smoke-cawl"
 # Exactly the shared resources of the parallel CAWL chain (cawl-delivery.tf).
 CAWL_PLATFORM_ADDRESSES = frozenset({
@@ -334,6 +337,132 @@ def verify_smoke_mail_plan(plan: dict[str, object]) -> list[str]:
                     "ipv6_cidr_blocks", "prefix_list_ids", "security_groups", "self", "description"}):
             raise ValueError(f"Smoke mail may only add TCP 587 egress: {address}")
         accepted.append(address)
+    return accepted
+
+
+def safe_public_test_document(change, slug):
+    before, after = change.get('before'), change.get('after')
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return False
+    derived = {'content', 'default_version', 'document_version', 'latest_version',
+               'hash', 'hash_type', 'parameter', 'status'}
+    if {k: v for k, v in before.items() if k not in derived} != {
+            k: v for k, v in after.items() if k not in derived}:
+        return False
+    if set(change.get('after_unknown', {})) - (derived - {'content'}):
+        return False
+    try:
+        old, new = json.loads(before['content']), json.loads(after['content'])
+        old_commands = old['mainSteps'][0]['inputs']['runCommand']
+        new_commands = new['mainSteps'][0]['inputs']['runCommand']
+        if len(old_commands) != len(new_commands):
+            return False
+        different = [i for i, pair in enumerate(zip(old_commands, new_commands)) if pair[0] != pair[1]]
+        if len(different) != 1:
+            return False
+        index = different[0]
+        prior, later = shlex.split(old_commands[index]), shlex.split(new_commands[index])
+        if len(prior) not in {7, 8} or len(later) != 9 or prior[:7] != later[:7]:
+            return False
+        if prior[:4] != ['python3', '$repo/deploy/tools/runtime/reconcile-runtime.py',
+                         f'/etc/tibillet-gala/{slug}.conf', slug]:
+            return False
+        provider = prior[7] if len(prior) == 8 else 'stripe'
+        domain = 'gala-test.rezal.fr' if slug in {'gala-smoke', CAWL_SMOKE_SLUG} else 'galas-am-aix.rezal.fr'
+        if provider not in {'stripe', 'cawl'} or later[7:] != [provider, domain]:
+            return False
+        expected = copy.deepcopy(old)
+        expected['mainSteps'][0]['inputs']['runCommand'][index] = new_commands[index]
+        return expected == new
+    except (KeyError, TypeError, ValueError, IndexError):
+        return False
+
+
+def verify_test_address_plan(plan):
+    changes = plan.get('resource_changes')
+    if not isinstance(changes, list):
+        raise ValueError('Test address reservation requires resource_changes')
+    accepted = []
+    definitions = [resource for resource in plan.get('configuration', {}).get('root_module', {}).get('resources', [])
+                   if resource.get('address') == 'aws_eip.cawl_test_public']
+    # AWS reports association fields as computed on an unassociated new EIP.
+    # Check the actual configuration too: no instance or interface expression
+    # may be supplied, even when its planned value is still unknown.
+    unassociated = (len(definitions) == 1
+                    and set(definitions[0].get('expressions', {})) == {'domain', 'tags'}
+                    and definitions[0]['expressions']['domain'] == {'constant_value': 'vpc'})
+    for item in changes:
+        change = item.get('change', {})
+        actions = change.get('actions')
+        if actions == ['no-op'] or (item.get('mode') == 'data' and actions == ['read']):
+            continue
+        after = change.get('after', {})
+        if (item.get('address') == 'aws_eip.cawl_test_public[0]' and actions == ['create']
+                and after.get('domain') == 'vpc' and after.get('instance') is None
+                and after.get('network_interface') is None
+                and after.get('tags', {}).get('Name') == 'tibillet-gala-paris-cawl-test-public'
+                and after.get('tags', {}).get('Project') == 'tibillet-gala-paris'
+                and unassociated):
+            accepted.append('reserve-unassociated-test-address')
+            continue
+        raise ValueError('Test address reservation refuses changes to other resources or associations')
+    return accepted
+
+
+def verify_public_test_plan(plan):
+    accepted = []
+    changes = plan.get('resource_changes')
+    if not isinstance(changes, list):
+        raise ValueError('Public test plan requires resource_changes')
+    instance_address = f'module.gala["{CAWL_SMOKE_SLUG}"].aws_instance.runtime[0]'
+    instances = [item['change'].get('before', {}).get('id') for item in changes
+                 if item.get('address') == instance_address]
+    if len(instances) != 1 or not isinstance(instances[0], str):
+        raise ValueError('Public test requires the existing exact CAWL Smoke instance')
+    addresses = [item['change'].get('before', {}) for item in changes
+                 if item.get('address') == 'aws_eip.cawl_test_public[0]']
+    if (len(addresses) != 1 or not re.fullmatch(r'eipalloc-[0-9a-f]{8,17}', str(addresses[0].get('id')))
+            or addresses[0].get('tags', {}).get('Name') != 'tibillet-gala-paris-cawl-test-public'):
+        raise ValueError('Reserve the exact test address before enabling its association')
+    group_address = f'module.gala["{CAWL_SMOKE_SLUG}"].aws_security_group.runtime'
+    for item in changes:
+        address, change = item.get('address'), item.get('change', {})
+        actions = change.get('actions')
+        if actions == ['no-op'] or (item.get('mode') == 'data' and actions == ['read']):
+            continue
+        if address == 'aws_eip_association.cawl_test_public[0]' and actions == ['create']:
+            after = change.get('after', {})
+            if (after.get('instance_id') == instances[0]
+                    and after.get('allocation_id') == addresses[0]['id']
+                    and after.get('allow_reassociation') is False):
+                accepted.append(f'associate-reserved-test-address {address}')
+                continue
+        if address == group_address and actions == ['update']:
+            before, after = change.get('before', {}), change.get('after', {})
+            old, new = before.get('ingress', []), after.get('ingress', [])
+            additions = [rule for rule in new if rule not in old]
+            expected = [{
+                'description': 'Independent CAWL test HTTP/HTTPS', 'from_port': port, 'to_port': port,
+                'protocol': 'tcp', 'cidr_blocks': ['0.0.0.0/0'], 'ipv6_cidr_blocks': [],
+                'prefix_list_ids': [], 'security_groups': [], 'self': False,
+            } for port in [80, 443]]
+            canonical = lambda values: sorted(json.dumps(value, sort_keys=True) for value in values)
+            if (not has_unknown(change.get('after_unknown', {}))
+                    and before.get('tags', {}).get('Gala') == CAWL_SMOKE_SLUG
+                    and {k: v for k, v in before.items() if k != 'ingress'} == {k: v for k, v in after.items() if k != 'ingress'}
+                    and canonical(additions) == canonical(expected) and canonical(new) == canonical(old + additions)):
+                accepted.append(f'open-test-http-https {address}')
+                continue
+        document = re.fullmatch(r'aws_ssm_document\.production_deploy\["([a-z0-9-]+)"\]', str(address))
+        if actions == ['update'] and document and safe_public_test_document(change, document[1]):
+            accepted.append(f'configure-environment-domain {address}')
+            continue
+        if (address in {'aws_iam_role_policy.test_deploy[0]', 'aws_iam_role_policy.test_cawl_deploy[0]',
+                        'aws_iam_role_policy.active_switch_build["apply"]'}
+                and actions == ['update'] and safe_computed_policy_refresh(change)):
+            accepted.append(f'refresh-policy {address}')
+            continue
+        raise ValueError(f'Public test operation refuses {actions} on {address}')
     return accepted
 
 
@@ -673,7 +802,15 @@ def main() -> None:
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     bapts_phase = BAPTS_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
-    if os.environ.get("GALA_NAME", "") == ENABLE_SMOKE_MAIL_REQUEST:
+    if os.environ.get("GALA_NAME", "") == RESERVE_TEST_ADDRESS_REQUEST:
+        if args.slug != CAWL_SMOKE_SLUG:
+            raise ValueError('Test address reservation requires the exact Smoke slug')
+        changed = verify_test_address_plan(plan)
+    elif os.environ.get("GALA_NAME", "") == ENABLE_PUBLIC_TEST_REQUEST:
+        if args.slug != CAWL_SMOKE_SLUG:
+            raise ValueError('Public CAWL test requires the exact Smoke slug')
+        changed = verify_public_test_plan(plan)
+    elif os.environ.get("GALA_NAME", "") == ENABLE_SMOKE_MAIL_REQUEST:
         if args.slug != "gala-smoke":
             raise ValueError("Enable Smoke Mail requires the exact Stripe Smoke slug")
         changed = verify_smoke_mail_plan(plan)

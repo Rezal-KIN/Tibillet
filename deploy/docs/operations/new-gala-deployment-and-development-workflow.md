@@ -1,5 +1,10 @@
 # Protocole de déploiement d'un gala et de livraison quotidienne
 
+Pour un test CAWL et une production accessibles simultanément sous deux domaines,
+suivre l'option [deux environnements publics](two-public-environments.md).
+Sans cette option, le mécanisme historique ci-dessous partage une IP et les
+noms publics entre le gala actif et Smoke.
+
 **Statut vérifié le 6 octobre 2026 : Foundation, Test et Production exécutées avec
 succès sur une EC2 neuve, avec validation avant approbation.** Les preuves et les limites
 de l'essai sur une EC2 neuve figurent dans

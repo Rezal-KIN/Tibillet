@@ -11,6 +11,7 @@ module "gala" {
   platform             = each.value.platform
   payment_provider     = each.value.payment_provider
   domain               = each.value.domain
+  public_test_ingress  = var.enable_public_cawl_test && each.key == local.cawl_smoke_slug
   vpc_id               = var.vpc_id
   subnet_id            = var.subnet_id
   ami_id               = var.ec2_ami_id

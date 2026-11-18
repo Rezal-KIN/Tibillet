@@ -10,15 +10,19 @@ from pathlib import Path
 
 
 DOMAIN = "galas-am-aix.rezal.fr"
+TEST_DOMAIN = "gala-test.rezal.fr"
 ARN = re.compile(r"^arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/shared/integrations-[a-z-]+-[A-Za-z0-9]{6}$")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 # Smoke hosts use test credentials; gala-smoke-cawl is the CAWL Smoke.
 SMOKE_SLUGS = {"gala-smoke", "gala-smoke-cawl"}
 
 
-def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: str, payment_provider: str = "stripe") -> str:
+def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: str, payment_provider: str = "stripe", public_domain: str = DOMAIN) -> str:
     if not SLUG.fullmatch(slug) or slug == "bapts":
         raise ValueError("invalid Gala slug")
+    allowed_domains = {DOMAIN, TEST_DOMAIN} if slug in SMOKE_SLUGS else {DOMAIN}
+    if public_domain not in allowed_domains:
+        raise ValueError("public domain does not match the Gala environment")
     if not re.fullmatch(rf"arn:aws:secretsmanager:eu-west-3:318629836660:secret:tibillet-gala-paris/galas/{slug}/generated-[A-Za-z0-9]{{6}}", generated_arn):
         raise ValueError("Gala requires its own generated secret")
     mode = "test" if slug in SMOKE_SLUGS else "live"
@@ -37,10 +41,10 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
     if not re.search(rf'^GALA_SLUG=["\']?{slug}["\']?$', text, re.MULTILINE):
         raise ValueError("target config targets another Gala")
     replacements = {
-        "LESPASS_PUBLIC_DOMAIN": DOMAIN,
-        "FEDOW_PUBLIC_DOMAIN": f"fedow.{DOMAIN}",
-        "LABOUTIK_PUBLIC_DOMAIN": f"cashless.{DOMAIN}",
-        "HEALTHCHECK_URLS": f"https://fedow.{DOMAIN}/,https://cashless.{DOMAIN}/,https://{DOMAIN}/",
+        "LESPASS_PUBLIC_DOMAIN": public_domain,
+        "FEDOW_PUBLIC_DOMAIN": f"fedow.{public_domain}",
+        "LABOUTIK_PUBLIC_DOMAIN": f"cashless.{public_domain}",
+        "HEALTHCHECK_URLS": f"https://fedow.{public_domain}/,https://cashless.{public_domain}/,https://{public_domain}/",
         "GENERATED_SECRET_ARN": generated_arn,
         "SHARED_STRIPE_SECRET_ARN": stripe_arn,
         "PAYMENT_PROVIDER": payment_provider,
@@ -57,11 +61,13 @@ def update(text: str, slug: str, generated_arn: str, stripe_arn: str, mail_arn: 
 
 
 def main() -> None:
-    if len(sys.argv) not in {6, 7}:
-        raise SystemExit("usage: reconcile-runtime.py CONFIG GALA_SLUG GENERATED_ARN PAYMENT_ARN MAIL_ARN [PAYMENT_PROVIDER]")
+    if len(sys.argv) not in {6, 7, 8}:
+        raise SystemExit("usage: reconcile-runtime.py CONFIG GALA_SLUG GENERATED_ARN PAYMENT_ARN MAIL_ARN [PAYMENT_PROVIDER [PUBLIC_DOMAIN]]")
     config = Path(sys.argv[1])
     text = config.read_text(encoding="utf-8")
-    updated = update(text, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) == 7 else "stripe")
+    updated = update(text, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5],
+                     sys.argv[6] if len(sys.argv) >= 7 else "stripe",
+                     sys.argv[7] if len(sys.argv) == 8 else DOMAIN)
     fd, path = tempfile.mkstemp(prefix=f".{sys.argv[2]}.", dir=config.parent, text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as destination:

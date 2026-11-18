@@ -155,6 +155,9 @@ done
 # releases as well as first boot.
 timeout 900s docker exec lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py migrate_schemas'
+if [[ ( "$GALA_SLUG" == gala-smoke || "$GALA_SLUG" == gala-smoke-cawl ) && "$LESPASS_PUBLIC_DOMAIN" == gala-test.rezal.fr ]]; then
+  python3 "$SCRIPT_DIR/migrate-test-domains.py" --gala "$GALA_SLUG"
+fi
 timeout 600s docker exec -e DEBUG=1 lespass_django bash -lc \
   'cd /DjangoFiles && export PATH="/home/tibillet/.local/bin:$PATH" && poetry run python manage.py install'
 timeout 120s docker exec lespass_django bash -lc \

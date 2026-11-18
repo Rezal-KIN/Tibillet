@@ -4,7 +4,17 @@
 # release manifest instead of the floating ${LABOUTIK_VERSION:-latest} tag.
 # Running docker-compose.yml alone (local/dev) is unaffected.
 services:
+  # Pin the existing Smoke versions; a production promotion must not upgrade them.
+  laboutik_nginx:
+    image: nginx@sha256:332d0beea97cff8c0d5d27976c0778a4b00345b9d74c2feaaf8efde548314948
+  laboutik_memcached:
+    image: memcached@sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171
+  laboutik_redis:
+    image: redis@sha256:b362b5dff9d14d961dc3352db4776aba6a8c53ca2661d7c74ad2c121f82cdaea
+  laboutik_postgres:
+    image: postgres@sha256:611cad554d4f491ed6a0379f3ea897b375646a7dddff786e9fb9e4d964d9f25c
   laboutik_django:
     image: ${LABOUTIK_IMAGE}
     extra_hosts:
       - "${FEDOW_PUBLIC_DOMAIN}:host-gateway"
+      - "${LESPASS_PUBLIC_DOMAIN}:host-gateway"
