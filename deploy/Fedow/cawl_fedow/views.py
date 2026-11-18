@@ -133,13 +133,19 @@ def webhook(request):
             return HttpResponse(status=503)
         return HttpResponse(status=200)
     try:
+        if Webhook.objects.filter(event_id=event["id"]).exists():
+            return HttpResponse(status=200)
+        payment = event.get("payment")
+        # Read the bank before claiming the event: an HTTP timeout must not
+        # retain SQLite's global write lock. The claim and ledger credit stay
+        # atomic together, so failed processing can safely be delivered again.
+        snapshot = client.get_payment(payment["id"]) if (
+            payment and event["type"].startswith("payment.")) else None
         with transaction.atomic():
             _, created = Webhook.objects.get_or_create(event_id=event["id"])
             if not created:
                 return HttpResponse(status=200)
-            payment = event.get("payment")
-            if payment and event["type"].startswith("payment."):
-                snapshot = client.get_payment(payment["id"])
+            if snapshot is not None:
                 try:
                     reference = UUID(snapshot.reference)
                 except (ValueError, TypeError):
