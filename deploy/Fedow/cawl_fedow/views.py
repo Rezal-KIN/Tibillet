@@ -101,6 +101,9 @@ def webhook(request):
         event = client.verify_webhook(request.body, request.headers)
     except CawlError:
         return HttpResponse(status=400)
+    # The provider delivery diagnostic is signed but has no real bank payment.
+    if event["type"] == "payment.test":
+        return HttpResponse(status=200)
     # CAWL announces the final refund with payment.refunded, including when
     # its amount is smaller than the original refill. Never treat it as a mint.
     refund_payload = event.get("refund") if event["type"].startswith("refund.") else (

@@ -26,6 +26,10 @@ def webhook(request):
         event = client.verify_webhook(request.body, request.headers)
     except CawlError:
         return HttpResponse(status=400)
+    # CAWL's signed delivery diagnostic contains a fictitious payment ID.
+    # Acknowledge it without reading a bank payment or writing business data.
+    if event["type"] == "payment.test":
+        return HttpResponse(status=200)
     try:
         with transaction.atomic():
             _, created = CawlWebhook.objects.get_or_create(
