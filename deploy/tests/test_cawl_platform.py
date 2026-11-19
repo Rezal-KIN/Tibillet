@@ -155,6 +155,25 @@ class SmokeAndPromotionTests(unittest.TestCase):
 
 
 class RuntimeSecretTests(unittest.TestCase):
+    def test_public_test_domain_cannot_be_assigned_to_production(self):
+        for slug, provider in ((CAWL, 'cawl'), ('gala-smoke', 'stripe')):
+            generated = PREFIX + f'galas/{slug}/generated-AbC123'
+            shared = PREFIX + 'shared/integrations-stripe-test-AbC123'
+            original = f'GALA_SLUG="{slug}"\n'
+            result = preparer.update(original, slug, generated, shared, shared,
+                                     provider, 'gala-test.rezal.fr')
+            self.assertIn('LESPASS_PUBLIC_DOMAIN="gala-test.rezal.fr"', result)
+            self.assertIn('FEDOW_PUBLIC_DOMAIN="fedow.gala-test.rezal.fr"', result)
+            self.assertNotIn('PUBLIC_DOMAIN="galas-am-aix.rezal.fr"', result)
+            with self.assertRaises(ValueError):
+                preparer.update(original, slug, generated, shared, shared, provider, 'other.example.org')
+        with self.assertRaises(ValueError):
+            preparer.update('GALA_SLUG="bapts2026"\n', 'bapts2026',
+                            PREFIX + 'galas/bapts2026/generated-AbC123',
+                            PREFIX + 'shared/integrations-stripe-live-AbC123',
+                            PREFIX + 'shared/integrations-stripe-live-AbC123',
+                            'cawl', 'gala-test.rezal.fr')
+
     def test_cawl_smoke_requires_the_shared_test_secret_and_explicit_provider(self) -> None:
         generated = PREFIX + f"galas/{CAWL}/generated-AbC123"
         mail = PREFIX + "shared/integrations-mail-AbC123"

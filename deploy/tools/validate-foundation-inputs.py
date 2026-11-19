@@ -13,6 +13,9 @@ from pathlib import Path
 
 REGION = "eu-west-3"
 SHARED_DOMAIN = "galas-am-aix.rezal.fr"
+TEST_DOMAIN = "gala-test.rezal.fr"
+ENABLE_PUBLIC_TEST_REQUEST = "Enable Public CAWL Test"
+RESERVE_TEST_ADDRESS_REQUEST = "Reserve CAWL Test Address"
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 DOMAIN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$")
 INSTANCE_TYPE = re.compile(r"^t3\.(small|medium|large|xlarge)$")
@@ -85,6 +88,8 @@ def value(name: str) -> str:
 
 
 def gala_slug(name: str) -> str:
+    if name in {ENABLE_PUBLIC_TEST_REQUEST, RESERVE_TEST_ADDRESS_REQUEST}:
+        return CAWL_SMOKE_SLUG
     if name == ENABLE_SMOKE_MAIL_REQUEST:
         return "gala-smoke"
     if name in BAPTS_RETIREMENT_OPERATIONS:
@@ -141,6 +146,8 @@ def main() -> None:
     bapts_retirement = BAPTS_RETIREMENT_OPERATIONS.get(gala_name)
     enable_cawl_platform = gala_name == ENABLE_CAWL_PLATFORM_REQUEST
     enable_smoke_mail = gala_name == ENABLE_SMOKE_MAIL_REQUEST
+    enable_public_test = gala_name == ENABLE_PUBLIC_TEST_REQUEST
+    reserve_test_address = gala_name == RESERVE_TEST_ADDRESS_REQUEST
     # Set only by the Foundation CAWL pipeline; Foundation keeps Stripe.
     payment_provider = os.environ.get("PAYMENT_PROVIDER", "").strip() or "stripe"
     if payment_provider not in PAYMENT_PROVIDERS:
@@ -165,6 +172,30 @@ def main() -> None:
         fail("FOUNDATION_ROOT_VOLUME_SIZE_GIB must be between 40 and 512")
 
     catalog = read_catalog(args.catalog)
+    public_test = catalog.get("public_cawl_test_enabled", False)
+    reserved_address = catalog.get("public_cawl_test_address_reserved", False)
+    if type(public_test) is not bool or type(reserved_address) is not bool:
+        fail("public test flags must be boolean")
+    if enable_public_test and not reserved_address:
+        fail("Reserve CAWL Test Address must succeed before enabling the public test")
+    if enable_public_test or reserve_test_address:
+        required = ("gala-smoke", CAWL_SMOKE_SLUG)
+        if payment_provider != "stripe" or any(
+            catalog["galas"].get(target, {}).get("create_instance") is not True
+            for target in required
+        ):
+            fail("Public CAWL test setup requires both registered Smoke hosts and standard Foundation")
+    if reserve_test_address:
+        reserved_address = True
+        catalog["public_cawl_test_address_reserved"] = True
+    if enable_public_test:
+        public_test = True
+        catalog["public_cawl_test_enabled"] = True
+    if (public_test or reserved_address) and (
+        catalog["galas"].get(CAWL_SMOKE_SLUG, {}).get("payment_provider") != "cawl"
+        or catalog["galas"].get("gala-smoke", {}).get("payment_provider", "stripe") != "stripe"
+    ):
+        fail("public test requires the existing CAWL and Stripe Smoke provider identities")
     vpc_id, subnet_id, ec2_ami_id = (catalog.get(field) for field in ("vpc_id", "subnet_id", "ec2_ami_id"))
     if not isinstance(vpc_id, str) or not VPC.fullmatch(vpc_id):
         fail("catalog vpc_id is missing or invalid")
@@ -190,6 +221,13 @@ def main() -> None:
     for existing_slug, existing in galas.items():
         if not isinstance(existing, dict):
             fail(f"invalid catalog entry for {existing_slug}")
+        is_smoke = existing_slug in {"gala-smoke", CAWL_SMOKE_SLUG}
+        if public_test and is_smoke:
+            allowed = {SHARED_DOMAIN, TEST_DOMAIN} if enable_public_test else {TEST_DOMAIN}
+            if existing.get("domain") not in allowed:
+                fail(f"unexpected test domain for {existing_slug}")
+            existing["domain"] = TEST_DOMAIN
+            continue
         historical_smoke = existing_slug == "gala-smoke" and existing.get("domain") == "smoke.galas-am-aix.rezal.fr"
         if existing.get("domain") != SHARED_DOMAIN and not historical_smoke:
             fail(f"unexpected public domain for {existing_slug}; review the catalog before adding a Gala")
@@ -302,6 +340,8 @@ def main() -> None:
             if existing.get("protect_from_destruction") is not False:
                 fail("prepare Gala First Run Retirement before terminating its EC2")
             existing["create_instance"] = False
+    elif enable_public_test or reserve_test_address:
+        pass  # The reviewed operation only changes Smoke domains and public access.
     elif enable_smoke_mail:
         if payment_provider != "stripe" or any(
             not isinstance(galas.get(target), dict) or galas[target].get("create_instance") is not True
@@ -347,6 +387,8 @@ def main() -> None:
         # Derived from the catalogue so that every later Foundation run keeps
         # the CAWL chain once gala-smoke-cawl exists.
         "enable_cawl_platform": CAWL_SMOKE_SLUG in galas,
+        "enable_public_cawl_test": public_test,
+        "reserve_cawl_test_address": reserved_address,
     }
     args.catalog_output.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.output_tfvars.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")

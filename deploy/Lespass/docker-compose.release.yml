@@ -10,6 +10,15 @@
 # of running the validated digest (see .claude/NOTES.md, "Pipeline delivery").
 # !reset needs Docker Compose >= 2.24 — the gala EC2 runs v5.1.0, confirmed.
 services:
+  # These are the running Smoke helper digests, without a database version change.
+  lespass_nginx:
+    image: nginx@sha256:332d0beea97cff8c0d5d27976c0778a4b00345b9d74c2feaaf8efde548314948
+  lespass_memcached:
+    image: memcached@sha256:2046d6d2eb7cbd59470b533a101cbd67def3e718b04eb72478306dbc804a3171
+  lespass_redis:
+    image: redis@sha256:a7cee7c8178ff9b5297cb109e6240f5072cdaaafd775ce6b586c3c704b06458e
+  lespass_postgres:
+    image: postgres@sha256:f0cffcc050a9f1f3c78a9968e221badc1cdd02e2ae15b1de9b12bee1ba5ea2db
   lespass_django:
     image: ${LESPASS_IMAGE}
     build: !reset null

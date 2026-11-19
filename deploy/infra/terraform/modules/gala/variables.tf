@@ -50,3 +50,12 @@ variable "payment_provider" {
     error_message = "payment_provider must be stripe or cawl."
   }
 }
+variable "public_test_ingress" {
+  description = "Grant HTTP/HTTPS on the independent CAWL test host only."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.public_test_ingress || (var.gala_slug == "gala-smoke-cawl" && var.domain == "gala-test.rezal.fr")
+    error_message = "Only the CAWL Smoke on the approved test domain can have independent public ingress."
+  }
+}

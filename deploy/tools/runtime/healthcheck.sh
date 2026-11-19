@@ -91,10 +91,14 @@ for client in lespass_django lespass_celery; do
     "$LABOUTIK_PUBLIC_DOMAIN" "$FEDOW_PUBLIC_DOMAIN" \
     >/dev/null || fail "$client cashless domain is not routed to the local gateway"
 done
-timeout 15s docker exec fedow_django python -c \
-  'import socket,sys; addresses=[line.split()[0] for line in open("/etc/hosts") if sys.argv[1] in line.split()[1:]]; assert addresses and socket.gethostbyname(sys.argv[1]) in addresses' \
-  "$LESPASS_PUBLIC_DOMAIN" \
-  >/dev/null || fail "Fedow Lespass callback domain is not locally mapped"
+for peer in "fedow_django:$LESPASS_PUBLIC_DOMAIN" "fedow_django:$LABOUTIK_PUBLIC_DOMAIN" "laboutik_django:$LESPASS_PUBLIC_DOMAIN"; do
+  client="${peer%%:*}"
+  domain="${peer#*:}"
+  timeout 15s docker exec "$client" python -c \
+    'import socket,sys; addresses=[line.split()[0] for line in open("/etc/hosts") if sys.argv[1] in line.split()[1:]]; assert addresses and socket.gethostbyname(sys.argv[1]) in addresses' \
+    "$domain" \
+    >/dev/null || fail "$client callback domain is not locally mapped: $domain"
+done
 
 # HTTP can stay healthy while the Lespass background worker crashes. A release
 # is only healthy when the worker is running and responds through its broker.
