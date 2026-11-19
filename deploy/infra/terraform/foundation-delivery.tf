@@ -189,6 +189,16 @@ data "aws_iam_policy_document" "foundation_build" {
   }
 
   statement {
+    sid       = "ActivateOnlyCawlDeploymentDocumentVersions"
+    actions   = ["ssm:UpdateDocumentDefaultVersion"]
+    resources = [
+      for slug, gala in local.production_deploy_document_galas :
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:document/${local.name_prefix}-production-${slug}-deploy"
+      if gala.payment_provider == "cawl"
+    ]
+  }
+
+  statement {
     sid       = "UseOnlyApprovedGitHubConnection"
     actions   = ["codeconnections:GetConnection", "codeconnections:PassConnection", "codeconnections:UseConnection", "codestar-connections:GetConnection", "codestar-connections:PassConnection", "codestar-connections:UseConnection"]
     resources = [var.github_connection_arn]
