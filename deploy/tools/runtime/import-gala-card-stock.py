@@ -11,6 +11,17 @@ import tempfile
 from card_stock import EMPTY_STOCK, validate_catalogue, validate_unique, verified_cards
 
 
+def printed_card_domain(gala_slug, runtime_domain):
+    # The same immutable physical stock is qualified on Smoke and production.
+    # Printed QR URLs keep their production host while the paired test Place
+    # and callbacks use the independent test host.
+    if runtime_domain == 'gala-test.rezal.fr':
+        if gala_slug not in {'gala-smoke', 'gala-smoke-cawl'}:
+            raise ValueError('only Smoke can import physical stock on the test domain')
+        return 'galas-am-aix.rezal.fr'
+    return runtime_domain
+
+
 def load_lots(stock, bucket, region, domain):
     validate_catalogue(stock)
     lots = []
@@ -39,7 +50,8 @@ def main():
     if not stock['lots']:
         print(json.dumps({'status': 'no-stock-configured', 'lots': 0}))
         return
-    lots = load_lots(stock, args.bucket, args.region, args.domain)
+    lots = load_lots(stock, args.bucket, args.region,
+                     printed_card_domain(manifest['gala_slug'], args.domain))
     runtime = Path(__file__).resolve().parent
     spec = importlib.util.spec_from_file_location('refill_domain', runtime / 'configure-gala-refill-domain.py')
     refill = importlib.util.module_from_spec(spec)

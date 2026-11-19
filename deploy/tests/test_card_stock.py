@@ -124,6 +124,16 @@ class CardStockContractTests(unittest.TestCase):
         with patch.object(host.subprocess, 'run', side_effect=corrupted), self.assertRaises(ValueError):
             host.load_lots(CATALOGUE, 'private-stock', 'eu-west-3', DOMAIN)
 
+    def test_test_host_validates_the_same_immutable_printed_stock(self):
+        for slug in ('gala-smoke', 'gala-smoke-cawl'):
+            printed = host.printed_card_domain(slug, 'gala-test.rezal.fr')
+            self.assertEqual(stock.verified_cards(CSV, LOT, printed), stock.verified_cards(CSV, LOT, DOMAIN))
+        self.assertEqual(host.printed_card_domain('bapts2026', DOMAIN), DOMAIN)
+        with self.assertRaises(ValueError):
+            host.printed_card_domain('bapts2026', 'gala-test.rezal.fr')
+        with self.assertRaises(ValueError):
+            stock.verified_cards(CSV.replace(DOMAIN.encode(), b'other.example.org'), LOT, DOMAIN)
+
     def test_publication_never_overwrites_an_existing_object(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'lot.csv'
@@ -358,6 +368,17 @@ with patch.object(worker, 'call_command', wrong_origin):
     fails(lambda: run([{'generation': 30, 'cards': [row(5555)]}]))
 assert Card.objects.count() == count and Origin.objects.count() == origins
 fails(lambda: run(pairing={**identity, 'wallet_uuid': str(uuid4())}))
+# The paired test host differs from the QR printed on physical cards. The
+# native import still creates cards only under the exact paired test Place.
+Place.objects.filter(pk=place.pk).update(lespass_domain='gala-test.rezal.fr')
+test_lot = {'generation': 31, 'cards': [row(6666)]}
+with patch('django.core.management.load_command_class', return_value=native.Command()):
+    receipt = worker.import_stock(identity, 'gala-test.rezal.fr', lots + [test_lot])
+assert receipt['created'] == 1
+assert Card.objects.get(number_printed=test_lot['cards'][0][1]).origin.place_id == place.pk
+assert Wallet.objects.get(pk=wallet.pk).balance == 12345
+card.refresh_from_db(); assert card.user_id == user.pk
+Place.objects.filter(pk=place.pk).update(lespass_domain=domain)
 Place.objects.create(name=place.name, lespass_domain=domain)
 fails(lambda: run())
 assert Wallet.objects.get(pk=wallet.pk).balance == 12345
