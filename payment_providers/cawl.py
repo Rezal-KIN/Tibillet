@@ -152,6 +152,10 @@ class CawlGateway:
                 "customer": {"contactDetails": {"emailAddress": email}},
             },
             "cardPaymentMethodSpecificInput": {"authorizationMode": "SALE"},
+            # Apple Pay / Google Pay use the mobile input, even on desktop.
+            # Capture them like card refills so an authorisation alone never
+            # leaves the customer waiting for a separately triggered capture.
+            "mobilePaymentMethodSpecificInput": {"authorizationMode": "SALE"},
             "hostedCheckoutSpecificInput": {
                 "returnUrl": https_url(return_url),
                 "locale": "fr_FR",

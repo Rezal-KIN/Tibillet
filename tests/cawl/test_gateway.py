@@ -123,6 +123,8 @@ def test_hosted_checkout_serializes_official_sdk_objects(config):
     assert sent[0]["order"]["references"]["merchantReference"] == str(reference)
     assert sent[0]["order"]["amountOfMoney"] == {"amount": 2000, "currencyCode": "EUR"}
     assert sent[0]["cardPaymentMethodSpecificInput"]["authorizationMode"] == "SALE"
+    assert sent[0]["mobilePaymentMethodSpecificInput"]["authorizationMode"] == "SALE"
+    assert 'paymentProductId' not in sent[0]['mobilePaymentMethodSpecificInput']
     assert sent[0]["feedbacks"]["webhooksUrls"] == ["https://fedow.example/webhook_cawl/"]
     assert sent[0]["hostedCheckoutSpecificInput"]["sessionTimeout"] == HOSTED_CHECKOUT_TIMEOUT_MINUTES
 

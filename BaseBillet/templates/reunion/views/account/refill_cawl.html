@@ -6,14 +6,11 @@
     <p>{% translate "Choisissez le montant à ajouter. Votre solde sera crédité après confirmation du paiement." %}</p>
     <form method="post" action="/my_account/refill_wallet/">
         {% csrf_token %}
-        <label for="refill-amount" class="form-label">{% translate "Montant" %}</label>
-        <select name="amount" id="refill-amount" class="form-select mb-3" required>
-            <option value="500">5 €</option>
-            <option value="1000">10 €</option>
-            <option value="2000" selected>20 €</option>
-            <option value="5000">50 €</option>
-            <option value="10000">100 €</option>
-        </select>
+        <label for="refill-amount" class="form-label">{% translate "Montant à recharger (€)" %}</label>
+        <input type="number" name="amount_eur" id="refill-amount" class="form-control"
+               min="0.50" max="500" step="0.01" inputmode="decimal"
+               aria-describedby="refill-amount-help" placeholder="20,00" required>
+        <p id="refill-amount-help" class="form-text mb-3">{% translate "Saisissez le montant de votre choix, de 0,50 € à 500 €." %}</p>
         <button type="submit" class="btn btn-primary">{% translate "Continuer vers le paiement" %}</button>
     </form>
 </main>
