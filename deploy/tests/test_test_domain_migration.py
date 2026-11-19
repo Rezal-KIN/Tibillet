@@ -13,6 +13,17 @@ spec.loader.exec_module(module)
 
 
 class TestDomainMigrationTests(unittest.TestCase):
+    def test_old_django_shell_keeps_imports_visible_to_functions(self):
+        code = "import json\nfrom urllib.parse import urlsplit\ndef value():\n return urlsplit('https://example.invalid').hostname\nprint(json.dumps({'host':value()}))\n"
+        def old_shell(*args, **kwargs):
+            import contextlib
+            import io
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                exec(kwargs['input'], {}, {})
+            return subprocess.CompletedProcess(args[0], 0, output.getvalue(), '')
+        with patch.object(module.subprocess, 'run', side_effect=old_shell):
+            self.assertEqual(module.shell('laboutik', code), {'host':'example.invalid'})
+
     def test_only_exact_hosts_move(self):
         for original in [module.OLD, module.NEW, 'https://'+module.OLD, 'https://'+module.OLD+'/']:
             result = module.move_host(original, module.OLD, module.NEW)

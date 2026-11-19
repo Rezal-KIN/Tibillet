@@ -145,7 +145,11 @@ def shell(service, code):
     cwd, poetry = ('/home/fedow/Fedow', 'poetry') if service == 'fedow' else ('/DjangoFiles', '/home/tibillet/.local/bin/poetry')
     result = subprocess.run(['docker', 'exec', '-i', '-w', cwd, service+'_django',
                              poetry, 'run', 'python', 'manage.py', 'shell'],
-                            input=code, text=True, capture_output=True, timeout=60)
+                            # Older Django shells execute stdin with separate
+                            # globals/locals. Give imports and helper functions
+                            # one explicit namespace on all three versions.
+                            input='exec('+repr(code)+', {})\n',
+                            text=True, capture_output=True, timeout=60)
     if result.returncode:
         raise RuntimeError('Test domain migration refused in '+service+'; no secrets logged')
     return json.loads(result.stdout.strip().splitlines()[-1])
