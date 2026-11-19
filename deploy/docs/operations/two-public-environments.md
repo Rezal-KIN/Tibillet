@@ -71,6 +71,12 @@ Les healthchecks vérifient ces mappings. La production reçoit le courrier
 natif ; le test conserve la redirection de tous les destinataires vers la
 boîte de test. Ne pas activer les clés live dans Smoke.
 
+Les QR des cartes physiques restent imprimés avec le domaine de production.
+Le catalogue privé est vérifié à l'identique sur Smoke ; les cartes y restent
+liées au lieu et aux soldes de test. Pour tester le parcours web d'une carte,
+ouvrir son même chemin `/qr/<uuid>/` sous `gala-test.rezal.fr`. Scanner son QR
+imprimé ouvre la production. Configurer les caisses de test avec les URL de test.
+
 ## DNS OVH et préservation du local
 
 Conserver la zone enfant et la délégation de `gala-test.rezal.fr`. Les seules
