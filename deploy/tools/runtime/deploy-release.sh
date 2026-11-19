@@ -233,7 +233,7 @@ done
 # A fresh Gala must have a recoverable database snapshot before its first
 # release is marked deployed. Existing Galas are already covered by preflight.
 fedow_storage_state="$(python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" --check-only)"
-require_initial_backup_coverage "$fedow_storage_state"
+require_initial_backup_coverage "$fedow_storage_state" "$MANIFEST_PATH"
 # Seal only after an explicitly approved compatible backup succeeded.
 python3 "$SCRIPT_DIR/fedow-sqlite.py" initialize-storage "$REPO_ROOT" "$(runtime_dir)" >/dev/null
 install -d -m 0750 "$(release_dir)"

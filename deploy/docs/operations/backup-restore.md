@@ -53,6 +53,17 @@ un ancien dump PostgreSQL ne peut pas valider un nouveau stockage Fedow SQLite.
 
 ## Une sauvegarde après accord de l'utilisateur
 
+Si l'utilisateur exige explicitement de poursuivre une livraison sans nouvelle
+sauvegarde, l'opérateur peut enregistrer cette décision pour le seul manifeste
+concerné avec `release-backup-exception.py grant`. Le reçu privé est lié au SHA-256
+canonique de tout le manifeste, au gala et à une expiration maximale de 24 heures.
+Il est détenu par l'utilisateur du runtime (root sur AWS), mode 600. Il permet
+uniquement de poursuivre sans nouvelle sauvegarde ; identités, images, santé,
+preuve Smoke et approbation production restent contrôlées. Aucun marqueur de
+sauvegarde n'est créé ou antidaté. Tout autre manifeste et toute livraison après
+expiration retrouvent les exigences normales. Conserver le motif utilisateur et
+le reçu ; ne pas déduire cette exception du seul accord général de déploiement.
+
 Estimer d'abord le volume et vérifier les backups existants. Si un backup
 existant suffit, le contrôler plutôt que créer une copie supplémentaire.
 Après accord pour cette sauvegarde unique, choisir une seule fois son identifiant :

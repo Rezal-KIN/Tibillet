@@ -36,7 +36,7 @@ for script in \
   deploy-release-from-s3.sh deploy-release.sh \
   ensure-host-swap.sh fetch-runtime-secret.sh healthcheck.sh install-runtime-contract.sh lib.sh \
   materialize-runtime-env.py migrate-test-domains.py preflight.sh reconcile-fedow-webhook.py reconcile-cawl-wallet-refunds.sh fedow-sqlite.py \
-  reclaim-deployment-space.sh restore-postgres.sh \
+  reclaim-deployment-space.sh release-backup-exception.py restore-postgres.sh \
   verify-backup-restore.sh \
   start-stacks.sh stop-stacks.sh validate-release.py; do
   install -m 0755 "$REPO_ROOT/deploy/tools/runtime/$script" "$runtime_library/$script"

@@ -23,21 +23,30 @@ load_release_images "$MANIFEST_PATH"
 write_compose_environment
 
 last_backup_file="$(runtime_dir)/last-successful-backup"
+backup_exception=false
+if release_backup_exception "$MANIFEST_PATH"; then
+  backup_exception=true
+fi
 if [[ -s "$last_backup_file" ]]; then
   last_backup="$(cat "$last_backup_file")"
   [[ "$last_backup" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || fail "backup marker is invalid"
-  backup_epoch="$(date -u -d "${last_backup:0:8} ${last_backup:9:2}:${last_backup:11:2}:${last_backup:13:2}" +%s 2>/dev/null || true)"
-  now_epoch="$(date -u +%s)"
-  [[ -n "$backup_epoch" ]] || fail "cannot parse backup timestamp"
-  (( now_epoch - backup_epoch <= ${MAX_BACKUP_AGE_SECONDS:-86400} )) \
-    || fail "latest backup is too old; ask the user before creating a new backup"
+  if [[ "$backup_exception" != true ]]; then
+    backup_epoch="$(date -u -d "${last_backup:0:8} ${last_backup:9:2}:${last_backup:11:2}:${last_backup:13:2}" +%s 2>/dev/null || true)"
+    now_epoch="$(date -u +%s)"
+    [[ -n "$backup_epoch" ]] || fail "cannot parse backup timestamp"
+    (( now_epoch - backup_epoch <= ${MAX_BACKUP_AGE_SECONDS:-86400} )) \
+      || fail "latest backup is too old; ask the user before creating a new backup"
+  fi
 else
   # A missing backup is acceptable only before the first successful release.
   # The bootstrap keeps ALLOW_INITIAL_DEPLOY=true in its immutable config, so
   # that flag alone must never bypass backup checks on later deployments.
-  [[ "${ALLOW_INITIAL_DEPLOY:-false}" == "true" && ! -e "$(deployed_manifest_path)" ]] \
+  [[ "$backup_exception" == true || ( "${ALLOW_INITIAL_DEPLOY:-false}" == "true" && ! -e "$(deployed_manifest_path)" ) ]] \
     || fail "no successful backup marker exists; ask the user before creating a backup"
   last_backup="initial-deployment"
+fi
+if [[ "$backup_exception" == true ]]; then
+  printf 'Backup policy: explicit exact-release exception; no new backup created\n'
 fi
 
 check_fedow_storage

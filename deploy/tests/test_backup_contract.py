@@ -211,6 +211,41 @@ class BackupContractTests(unittest.TestCase):
             later = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
             self.assertNotEqual(later.returncode, 0)
             self.assertIn("no successful backup marker exists", later.stderr)
+            database = root / 'deploy/Fedow/sqlite-database/db.sqlite3'
+            database.parent.mkdir(parents=True)
+            with sqlite3.connect(database) as connection:
+                for table in ('django_migrations', 'fedow_core_configuration', 'fedow_core_wallet',
+                              'fedow_core_token', 'fedow_core_transaction', 'fedow_core_card'):
+                    connection.execute(f'CREATE TABLE "{table}" (id INTEGER PRIMARY KEY)')
+                    connection.execute(f'INSERT INTO "{table}" VALUES (1)')
+            (root / 'runtime/gala-verification/fedow-sqlite-storage.json').write_text(json.dumps({
+                'schema_version': 1, 'database': str(database.resolve()), 'state': 'ready'}))
+            # The user's explicit decision is scoped to these exact bytes,
+            # without manufacturing a fresh backup marker.
+            import hashlib
+            import time
+            digest = hashlib.sha256(json.dumps(json.loads(manifest.read_text()),
+                sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+            subprocess.run(['python3', str(RUNTIME / 'release-backup-exception.py'), 'grant',
+                '--root', str(root / 'runtime'), '--gala', 'gala-verification',
+                '--manifest-sha256', digest, '--expires-at', str(int(time.time()) + 3600),
+                '--reason', 'Explicit isolated QA approval'], check=True, capture_output=True)
+            permitted = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertEqual(permitted.returncode, 0, permitted.stderr)
+            marker = root / 'runtime/gala-verification/last-successful-backup'
+            self.assertFalse(marker.exists())
+            marker.write_text('20200101T000000Z\n')
+            permitted = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertEqual(permitted.returncode, 0, permitted.stderr)
+            self.assertEqual(marker.read_text(), '20200101T000000Z\n')
+            first = subprocess.run(['bash', '-c',
+                'source "$1"; GALA_SLUG=gala-verification; RUNTIME_ROOT="$2"; require_initial_backup_coverage initialized "$3"',
+                'first-release', str(RUNTIME / 'lib.sh'), str(root / 'runtime'), str(manifest)],
+                text=True, capture_output=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            changed = json.loads(manifest.read_text());changed['release_id'] = 'unapproved'
+            manifest.write_text(json.dumps(changed))
+            self.assertNotEqual(subprocess.run(command, env=env, capture_output=True).returncode, 0)
 
 
 if __name__ == "__main__":

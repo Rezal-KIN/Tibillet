@@ -49,8 +49,17 @@ disable_automatic_backups() {
   systemctl mask "$timer" "$service"
 }
 
+release_backup_exception() {
+  [[ -n "${1:-}" ]] || return 1
+  python3 "$(dirname "${BASH_SOURCE[0]}")/release-backup-exception.py" check \
+    --root "${RUNTIME_ROOT:-/var/lib/tibillet-gala}" --gala "$GALA_SLUG" --manifest "$1"
+}
+
 require_initial_backup_coverage() {
   local storage_state="$1"
+  if [[ -n "${2:-}" ]] && release_backup_exception "$2"; then
+    return 0
+  fi
   local marker="$(runtime_dir)/last-successful-backup"
   local metadata="$(runtime_dir)/last-successful-backup.metadata"
   [[ -s "$marker" ]] \
