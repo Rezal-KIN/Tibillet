@@ -221,8 +221,7 @@ def main() -> None:
     for existing_slug, existing in galas.items():
         if not isinstance(existing, dict):
             fail(f"invalid catalog entry for {existing_slug}")
-        is_smoke = existing_slug in {"gala-smoke", CAWL_SMOKE_SLUG}
-        if public_test and is_smoke:
+        if public_test and existing_slug == CAWL_SMOKE_SLUG:
             allowed = {SHARED_DOMAIN, TEST_DOMAIN} if enable_public_test else {TEST_DOMAIN}
             if existing.get("domain") not in allowed:
                 fail(f"unexpected test domain for {existing_slug}")

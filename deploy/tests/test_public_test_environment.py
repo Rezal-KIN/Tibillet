@@ -56,7 +56,7 @@ def public_plan():
             'instance_id': HOST, 'allocation_id': 'eipalloc-0123456789abcdef0', 'allow_reassociation': False}}},
         {'address': f'module.gala["{SMOKE}"].aws_security_group.runtime', 'change': {
             'actions': ['update'], 'before': group, 'after': {**group, 'ingress': rules}, 'after_unknown': {}}},
-        document('gala-smoke', 'stripe'), document(SMOKE, 'cawl'), document('bapts2026', 'cawl'),
+        document(SMOKE, 'cawl'), document('bapts2026', 'cawl'),
         {'address': 'aws_eip.cawl_test_public[0]', 'change': {'actions': ['no-op'], 'before': {
             'id': 'eipalloc-0123456789abcdef0', 'tags': {'Name': 'tibillet-gala-paris-cawl-test-public'}}}},
     ]}
@@ -75,8 +75,8 @@ class PublicTestTests(unittest.TestCase):
         self.assertTrue(output['enable_public_cawl_test'])
         self.assertTrue(after['public_cawl_test_enabled'])
         self.assertEqual(after['galas']['bapts2026'], before['galas']['bapts2026'])
-        for slug in ['gala-smoke', SMOKE]:
-            self.assertEqual(after['galas'][slug], {**before['galas'][slug], 'domain': NEW})
+        self.assertEqual(after['galas']['gala-smoke'], before['galas']['gala-smoke'])
+        self.assertEqual(after['galas'][SMOKE], {**before['galas'][SMOKE], 'domain': NEW})
         result, output, preserved = run(after, GALA_NAME='Gala Next', PAYMENT_PROVIDER='cawl')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(output['enable_public_cawl_test'])
@@ -114,7 +114,10 @@ class PublicTestTests(unittest.TestCase):
                 plan.verify_test_address_plan({'resource_changes': [item], 'configuration': bad})
 
     def test_exact_existing_host_http_https_and_domain_only_change_are_accepted(self):
-        self.assertEqual(len(plan.verify_public_test_plan(public_plan())), 5)
+        self.assertEqual(len(plan.verify_public_test_plan(public_plan())), 4)
+        bad = public_plan();bad['resource_changes'].append(document('gala-smoke', 'stripe'))
+        with self.assertRaises(ValueError):
+            plan.verify_public_test_plan(bad)
 
     def test_production_mutations_and_wider_ingress_or_commands_are_refused(self):
         mutations = [

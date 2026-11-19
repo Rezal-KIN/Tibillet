@@ -368,8 +368,8 @@ def safe_public_test_document(change, slug):
                          f'/etc/tibillet-gala/{slug}.conf', slug]:
             return False
         provider = prior[7] if len(prior) == 8 else 'stripe'
-        domain = 'gala-test.rezal.fr' if slug in {'gala-smoke', CAWL_SMOKE_SLUG} else 'galas-am-aix.rezal.fr'
-        if provider not in {'stripe', 'cawl'} or later[7:] != [provider, domain]:
+        domain = 'gala-test.rezal.fr' if slug == CAWL_SMOKE_SLUG else 'galas-am-aix.rezal.fr'
+        if provider != 'cawl' or later[7:] != [provider, domain]:
             return False
         expected = copy.deepcopy(old)
         expected['mainSteps'][0]['inputs']['runCommand'][index] = new_commands[index]
