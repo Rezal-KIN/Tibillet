@@ -7,9 +7,9 @@
         <div class="container-lg py-5">
             <div class="row">
                 <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
-                    <h1>{% trans 'Linking my TiBillet card' %}</h1>
-                    <p class="lead">{% trans 'One step to refill your card: enter your email, then use the Refill button.' %}</p>
-                    <p>
+                    <h1 class="text-white">{% trans 'Linking my TiBillet card' %}</h1>
+                    <p class="lead text-white">{% trans 'One step to refill your card: enter your email, then use the Refill button.' %}</p>
+                    <p class="text-white">
                         {% blocktranslate %}
                             In order to use my TiBillet account, refill my card and as a way
                             to recover my credits if I lose my card, I need to link my TiBillet card
@@ -53,20 +53,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <p class="form-text">{% translate "Registering your name is required by this collective." %}</p>
+                            <p class="form-text text-white">{% translate "Registering your name is required by this collective." %}</p>
                             {% include 'reunion/partials/field_errors.html' %}
                         {% endif %}
 
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" role="switch" name="newsletter"
                                    id="newsletter">
-                            <label class="form-check-label" for="newsletter">
+                            <label class="form-check-label text-white" for="newsletter">
                                 {% trans 'I want to receive the TiBillet newsletter' %}
                             </label>
                         </div>
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" role="switch" name="cgu" id="cgu" required>
-                            <label class="form-check-label" for="cgu">
+                            <label class="form-check-label text-white" for="cgu">
                                 {% blocktranslate %}
                                     I agree to
                                     <a href="https://tibillet.github.io/documentation_v3/les-bases-et-valeurs-tibillet/aspects-legaux-et-reglementaires/cgu-cgv/?h=cgu" target="_blank" rel="noopener">the terms and conditions</a>
