@@ -61,14 +61,22 @@ def migrate():
         assert len(roots) == 1, 'old and new apex coexist; manual review required'
         gala = Client.objects.get(schema_name=os.environ['SUB'], categorie=Client.SALLE_SPECTACLE)
         assert roots[0].tenant_id == gala.pk, 'apex is not the paired Gala tenant'
-        owners = {'public', os.environ['SUB'], os.environ['META']}
-        labels = {'', 'www.', 'm.', os.environ['SUB']+'.', os.environ['META']+'.'}
+        # META is a public hostname label (for example "agenda"), while the
+        # native installer names its tenant schema "meta". Resolve the exact
+        # primary aggregator domain instead of treating the label as a schema.
+        meta_label = os.environ['META']+'.'
+        aggregators = list(Domain.objects.select_for_update().select_related('tenant').filter(
+            domain__in=[meta_label+old, meta_label+new], is_primary=True))
+        assert len(aggregators) == 1 and aggregators[0].tenant.categorie == Client.META, 'unexpected aggregator domain owner'
+        public = Client.objects.get(schema_name='public', categorie=Client.ROOT)
+        owners = {'': gala.pk, 'www.': public.pk, os.environ['SUB']+'.': gala.pk,
+                  meta_label: aggregators[0].tenant_id, 'm.': aggregators[0].tenant_id}
         planned = []
-        for label in labels:
+        for label, owner in owners.items():
             rows = list(Domain.objects.select_for_update().select_related('tenant').filter(domain__in=[label+old, label+new]))
             assert len(rows) <= 1, 'old and new domain coexist; manual review required'
             for row in rows:
-                assert row.tenant.schema_name in owners, 'domain belongs to an unrelated tenant'
+                assert row.tenant_id == owner, 'domain belongs to an unrelated tenant'
                 planned.append((row, label+new))
         root = RootConfiguration.objects.select_for_update().get(pk=1)
         changes = patch_fields(RootConfiguration, root, {

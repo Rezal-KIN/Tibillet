@@ -60,7 +60,7 @@ spec=importlib.util.spec_from_file_location('migration',sys.argv[1]);m=importlib
 def fixture_model(name,**fields):
     return type(name,(models.Model,),{'__module__':__name__,'Meta':type('Meta',(),{'app_label':'qa'}),**fields})
 def text():return models.CharField(max_length=150)
-Client=fixture_model('Client',schema_name=text(),categorie=text());Client.SALLE_SPECTACLE='sale'
+Client=fixture_model('Client',schema_name=text(),categorie=text());Client.SALLE_SPECTACLE='sale';Client.META='meta';Client.ROOT='root'
 Domain=fixture_model('Domain',domain=models.CharField(max_length=150,unique=True),
     tenant=models.ForeignKey(Client,on_delete=models.PROTECT),is_primary=models.BooleanField(default=False))
 Root=fixture_model('Root',fedow_domain=text(),fedow_ip=text(),key=text())
@@ -76,7 +76,7 @@ with connection.schema_editor() as schema:
 old,new=m.OLD,m.NEW
 public=Client.objects.create(schema_name='public',categorie='root')
 gala=Client.objects.create(schema_name='festival',categorie='sale')
-meta=Client.objects.create(schema_name='agenda',categorie='meta')
+meta=Client.objects.create(schema_name='meta',categorie='meta')
 foreign=Client.objects.create(schema_name='unrelated',categorie='sale')
 for name,tenant in [('',gala),('www.',public),('festival.',gala),('agenda.',meta),('m.',meta)]:
     Domain.objects.create(domain=name+old,tenant=tenant,is_primary=name in {'','www.','agenda.'})
@@ -104,6 +104,20 @@ def run(code):
     with contextlib.redirect_stdout(io.StringIO()) as output:exec(code,{})
     return json.loads(output.getvalue().splitlines()[-1])
 snapshot=list(Domain.objects.values())
+# The aggregator hostname is "agenda", but its actual native schema is "meta".
+# A recognizable hostname must still not belong to another tenant or role.
+mobile=Domain.objects.get(domain='m.'+old)
+Domain.objects.filter(pk=mobile.pk).update(tenant=foreign)
+try:run(m.lespass_code(True))
+except AssertionError:pass
+else:raise AssertionError('unrelated mobile-domain owner accepted')
+assert list(Domain.objects.exclude(pk=mobile.pk).values())==[r for r in snapshot if r['id']!=mobile.pk]
+Domain.objects.filter(pk=mobile.pk).update(tenant=meta)
+Client.objects.filter(pk=meta.pk).update(categorie='sale')
+try:run(m.lespass_code(True))
+except AssertionError:pass
+else:raise AssertionError('non-aggregator owner accepted')
+Client.objects.filter(pk=meta.pk).update(categorie='meta')
 identity=run(m.lespass_code(False));assert list(Domain.objects.values())==snapshot
 run(m.lespass_code(True));assert run(m.lespass_code(False))['changes']==0
 assert not Domain.objects.filter(domain__endswith=old).exists()
