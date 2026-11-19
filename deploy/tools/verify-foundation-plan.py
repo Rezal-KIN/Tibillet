@@ -349,7 +349,8 @@ def safe_public_test_document(change, slug):
     if {k: v for k, v in before.items() if k not in derived} != {
             k: v for k, v in after.items() if k not in derived}:
         return False
-    if set(change.get('after_unknown', {})) - (derived - {'content'}):
+    if any(has_unknown(value) for key, value in change.get('after_unknown', {}).items()
+           if key not in derived - {'content'}):
         return False
     try:
         old, new = json.loads(before['content']), json.loads(after['content'])
@@ -425,6 +426,15 @@ def verify_public_test_plan(plan):
             or addresses[0].get('tags', {}).get('Name') != 'tibillet-gala-paris-cawl-test-public'):
         raise ValueError('Reserve the exact test address before enabling its association')
     group_address = f'module.gala["{CAWL_SMOKE_SLUG}"].aws_security_group.runtime'
+    # Updating a CAWL deployment document defers its ARN, even though its
+    # identity stays fixed. Permit that target's computed policy refresh only
+    # when its own document passes the domain-only check in this same plan.
+    cawl_documents = {
+        match[1] for item in changes
+        if (match := re.fullmatch(r'aws_ssm_document\.production_deploy\["([a-z0-9-]+)"\]', str(item.get('address'))))
+        and item.get('change', {}).get('actions') == ['update']
+        and safe_public_test_document(item['change'], match[1])
+    }
     for item in changes:
         address, change = item.get('address'), item.get('change', {})
         actions = change.get('actions')
@@ -460,6 +470,11 @@ def verify_public_test_plan(plan):
         if (address in {'aws_iam_role_policy.test_deploy[0]', 'aws_iam_role_policy.test_cawl_deploy[0]',
                         'aws_iam_role_policy.active_switch_build["apply"]'}
                 and actions == ['update'] and safe_computed_policy_refresh(change)):
+            accepted.append(f'refresh-policy {address}')
+            continue
+        policy = re.fullmatch(r'aws_iam_role_policy\.production_build\["([a-z0-9-]+)"\]', str(address))
+        if (policy and policy[1] in cawl_documents and actions == ['update']
+                and safe_computed_policy_refresh(change)):
             accepted.append(f'refresh-policy {address}')
             continue
         raise ValueError(f'Public test operation refuses {actions} on {address}')

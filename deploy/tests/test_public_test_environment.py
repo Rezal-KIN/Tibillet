@@ -115,9 +115,40 @@ class PublicTestTests(unittest.TestCase):
 
     def test_exact_existing_host_http_https_and_domain_only_change_are_accepted(self):
         self.assertEqual(len(plan.verify_public_test_plan(public_plan())), 4)
+        real_shape = public_plan()
+        real_shape['resource_changes'][3]['change']['after_unknown'] = {
+            'default_version': True, 'parameter': True, 'permissions': {},
+            'platform_types': [False, False], 'tags': {}, 'tags_all': {},
+            'attachments_source': [],
+        }
+        self.assertEqual(len(plan.verify_public_test_plan(real_shape)), 4)
+        real_shape['resource_changes'][3]['change']['after_unknown']['platform_types'] = [True]
+        with self.assertRaises(ValueError):
+            plan.verify_public_test_plan(real_shape)
         bad = public_plan();bad['resource_changes'].append(document('gala-smoke', 'stripe'))
         with self.assertRaises(ValueError):
             plan.verify_public_test_plan(bad)
+
+    def test_computed_production_policy_requires_same_cawl_domain_only_document(self):
+        address = 'aws_iam_role_policy.production_build["bapts2026"]'
+        before = {'name': 'existing', 'role': 'existing', 'policy': '{"Statement":[]}'}
+        policy = {'address': address, 'change': {
+            'actions': ['update'], 'before': before,
+            'after': {k: v for k, v in before.items() if k != 'policy'},
+            'after_unknown': {'policy': True}}}
+        value = public_plan(); value['resource_changes'].append(policy)
+        self.assertIn(f'refresh-policy {address}', plan.verify_public_test_plan(value))
+        for mutate in [
+            lambda p: p['resource_changes'].__setitem__(4, document('gala-smoke', 'stripe')),
+            lambda p: p['resource_changes'].pop(4),
+            lambda p: p['resource_changes'][-1].update(address='aws_iam_role_policy.production_build["other"]'),
+            lambda p: p['resource_changes'][-1]['change']['after'].update(role='other'),
+            lambda p: p['resource_changes'][-1]['change'].update(after_unknown={'policy': True, 'role': True}),
+            lambda p: p['resource_changes'][-1]['change'].update(after={**before, 'policy': '{}'}, after_unknown={}),
+        ]:
+            bad = copy.deepcopy(value); mutate(bad)
+            with self.assertRaises(ValueError):
+                plan.verify_public_test_plan(bad)
 
     def test_production_mutations_and_wider_ingress_or_commands_are_refused(self):
         mutations = [
