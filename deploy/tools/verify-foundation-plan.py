@@ -555,6 +555,12 @@ def verify(plan: dict[str, object], slug: str, *, extra_new: frozenset[str] = fr
         ):
             changed.append(f"create {address}")
             continue
+        if (actions == ['update'] and address == 'aws_iam_role_policy.foundation_build[0]'
+                and any(other.get('address') == f'aws_ssm_document.production_deploy["{slug}"]'
+                        and other.get('change', {}).get('actions') == ['create'] for other in changes)
+                and safe_cawl_document_version_addition(item['change'], slug)):
+            changed.append(f'allow-new-cawl-document-version {address}')
+            continue
         if actions == ["update"] and safe_gala_list_prefix_update(item["change"], address):
             changed.append(f"allow-own-backup-restore {address}")
             continue
@@ -626,6 +632,49 @@ def verify(plan: dict[str, object], slug: str, *, extra_new: frozenset[str] = fr
                     continue
         raise ValueError(f"Foundation refuses {actions} on {address}")
     return changed
+
+
+def safe_cawl_document_version_addition(change, slug):
+    """Add only the new Gala's document to Foundation's existing version grant."""
+    before, after = change.get('before'), change.get('after')
+    identity = 'tibillet-gala-paris-production-foundation-build'
+    if (not isinstance(before, dict) or not isinstance(after, dict)
+            or has_unknown(change.get('after_unknown', {}))
+            or before.get('name') != identity or before.get('role') != identity
+            or {k: v for k, v in before.items() if k != 'policy'}
+            != {k: v for k, v in after.items() if k != 'policy'}):
+        return False
+    try:
+        old, new = json.loads(before['policy']), json.loads(after['policy'])
+        if {k: v for k, v in old.items() if k != 'Statement'} != {
+                k: v for k, v in new.items() if k != 'Statement'}:
+            return False
+        sid = 'ActivateOnlyCawlDeploymentDocumentVersions'
+        prior = [s for s in old['Statement'] if s.get('Sid') == sid]
+        later = [s for s in new['Statement'] if s.get('Sid') == sid]
+        if len(prior) != 1 or len(later) != 1:
+            return False
+        canonical = lambda values: sorted(json.dumps(v, sort_keys=True) for v in values)
+        if canonical([s for s in old['Statement'] if s.get('Sid') != sid]) != canonical(
+                [s for s in new['Statement'] if s.get('Sid') != sid]):
+            return False
+        expected = {'Sid': sid, 'Effect': 'Allow', 'Action': 'ssm:UpdateDocumentDefaultVersion'}
+        for statement in (prior[0], later[0]):
+            if {k: v for k, v in statement.items() if k != 'Resource'} != expected:
+                return False
+        resources = lambda value: [value] if isinstance(value, str) else value
+        old_resources, new_resources = resources(prior[0]['Resource']), resources(later[0]['Resource'])
+        prefix = 'arn:aws:ssm:eu-west-3:318629836660:document/tibillet-gala-paris-production-production-'
+        addition = prefix + slug + '-deploy'
+        return (isinstance(old_resources, list) and bool(old_resources)
+                and isinstance(new_resources, list)
+                and all(isinstance(v, str) and re.fullmatch(re.escape(prefix) + r'[a-z0-9-]+-deploy', v)
+                        for v in old_resources)
+                and len(set(old_resources)) == len(old_resources)
+                and addition not in old_resources
+                and sorted(new_resources) == sorted(old_resources + [addition]))
+    except (KeyError, TypeError, AttributeError, json.JSONDecodeError):
+        return False
 
 
 def safe_image_policy_refresh(change, address):

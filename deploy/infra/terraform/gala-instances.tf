@@ -1,9 +1,10 @@
 module "gala" {
   source   = "./modules/gala"
   for_each = var.enable_additive_resources && var.enable_backup_storage ? var.galas : {}
-  # The existing Foundation pipeline updates its own CodeBuild role during
-  # the first maintenance run. Do that before creating generated secrets.
-  depends_on = [aws_iam_role_policy.foundation_build]
+  # Foundation's build role exists before it can run. A module-wide dependency
+  # on its growing document allowlist defers every existing Gala IAM document,
+  # turning one additive creation into unrelated trust/policy refreshes.
+  # Keep the actual resource dependencies expressed by the arguments below.
 
   project_name         = var.project_name
   aws_region           = var.aws_region

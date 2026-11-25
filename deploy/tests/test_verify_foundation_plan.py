@@ -21,6 +21,49 @@ def change(address: str, actions: list[str]) -> dict[str, object]:
 
 
 class FoundationPlanTests(unittest.TestCase):
+    def test_new_cawl_gala_adds_only_its_document_version_permission(self):
+        slug = 'gala-new'
+        prefix = 'arn:aws:ssm:eu-west-3:318629836660:document/tibillet-gala-paris-production-production-'
+        statement = {'Sid': 'ActivateOnlyCawlDeploymentDocumentVersions', 'Effect': 'Allow',
+                     'Action': 'ssm:UpdateDocumentDefaultVersion', 'Resource': [prefix + 'gala-existing-deploy']}
+        policy = {'Version': '2012-10-17', 'Statement': [statement,
+                  {'Sid': 'Unchanged', 'Effect': 'Allow', 'Action': 'logs:DescribeLogGroups', 'Resource': '*'}]}
+        name = 'tibillet-gala-paris-production-foundation-build'
+        before = {'id': name + ':' + name, 'name': name, 'role': name, 'policy': json.dumps(policy)}
+        later = copy.deepcopy(policy)
+        later['Statement'][0]['Resource'].append(prefix + slug + '-deploy')
+        update = {'address': 'aws_iam_role_policy.foundation_build[0]', 'change': {
+            'actions': ['update'], 'before': before,
+            'after': {**before, 'policy': json.dumps(later)}, 'after_unknown': {}}}
+        plan = {'resource_changes': [change(f'aws_ssm_document.production_deploy["{slug}"]', ['create']), update]}
+        self.assertIn('allow-new-cawl-document-version aws_iam_role_policy.foundation_build[0]',
+                      module.verify(plan, slug))
+        for mutate in (
+            lambda p: p['Statement'][0].update(Action='ssm:*'),
+            lambda p: p['Statement'][0].update(Resource=['*']),
+            lambda p: p['Statement'][0]['Resource'].append(prefix + 'other-deploy'),
+            lambda p: p['Statement'][0]['Resource'].pop(0),
+            lambda p: p['Statement'][1].update(Action='iam:*'),
+            lambda p: p['Statement'][0].update(Condition={'StringEquals': {'extra': 'value'}}),
+        ):
+            bad = copy.deepcopy(plan)
+            bad_policy = copy.deepcopy(later)
+            mutate(bad_policy)
+            bad['resource_changes'][1]['change']['after']['policy'] = json.dumps(bad_policy)
+            with self.assertRaises(ValueError):
+                module.verify(bad, slug)
+        for mutate in (
+            lambda p: p['resource_changes'].pop(0),
+            lambda p: p['resource_changes'][1]['change']['after'].update(role='other'),
+            lambda p: p['resource_changes'][1]['change'].update(after_unknown={'policy': True}),
+        ):
+            bad = copy.deepcopy(plan)
+            mutate(bad)
+            with self.assertRaises(ValueError):
+                module.verify(bad, slug)
+        with self.assertRaises(ValueError):
+            module.verify(plan, 'other-gala')
+
     def test_new_gala_preserves_computed_smoke_deploy_policy_identity(self):
         # Adding a Gala defers the unchanged Smoke document/instance references.
         # Both providers must accept that refresh without accepting a role change
