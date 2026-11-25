@@ -304,4 +304,3 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   du seul document demandé, créé dans le même plan, sans autre droit modifié.
   Ne pas remettre de dépendance globale du module gala sur cette politique :
   elle reporte inutilement les documents IAM des galas existants à l'apply.
-
