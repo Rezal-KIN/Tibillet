@@ -291,3 +291,17 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   CAWL ne peut pas être promu sur un gala Stripe, ni l'inverse.
 - **Fedow en mode CAWL** : ses settings exigeaient une clé Stripe au démarrage. Corrigé sur la branche CAWL
   (PR #115), à conserver si les settings Fedow sont re-synchronisés.
+# Sauvegardes et création additive d'un gala CAWL
+
+- `docker inspect .Config.Image` peut renvoyer `postgres@sha256:<64 hex>` sans
+  tag. Les scripts de sauvegarde et de restauration doivent accepter cette
+  référence officielle et conserver son digest dans les métadonnées.
+- Lors d'une restauration isolée, attendre PostgreSQL en TCP sur `127.0.0.1`.
+  L'entrypoint démarre d'abord un serveur temporaire sur socket Unix, puis
+  l'arrête ; `pg_isready` sans hôte peut réussir trop tôt et interrompre l'import.
+- L'ajout d'un gala CAWL étend uniquement la liste des documents autorisés pour
+  `ssm:UpdateDocumentDefaultVersion`. Le contrôleur Foundation vérifie l'ajout
+  du seul document demandé, créé dans le même plan, sans autre droit modifié.
+  Ne pas remettre de dépendance globale du module gala sur cette politique :
+  elle reporte inutilement les documents IAM des galas existants à l'apply.
+
