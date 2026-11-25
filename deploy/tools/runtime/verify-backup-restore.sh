@@ -65,7 +65,8 @@ for source_container in "${source_containers[@]}"; do
       *) image="$(docker inspect --format '{{.Config.Image}}' "$source_container")" ;;
     esac
   fi
-  [[ "$image" == postgres:* ]] || fail "unexpected PostgreSQL image for $source_container"
+  [[ "$image" == postgres:* || "$image" =~ ^postgres@sha256:[0-9a-f]{64}$ ]] \
+    || fail "unexpected PostgreSQL image for $source_container"
 
   # No host volume, published port, or network access; the restored data is
   # confined to container tmpfs and disappears when the drill ends.
@@ -77,7 +78,10 @@ for source_container in "${source_containers[@]}"; do
     -e POSTGRES_DB=postgres "$image")"
   ready=false
   for attempt in {1..30}; do
-    if docker exec "$drill_container" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+    # The image entrypoint starts a temporary Unix-socket server during initdb
+    # and stops it before exec'ing the final server. Wait for TCP so the dump
+    # cannot be imported into that temporary server while it is shutting down.
+    if docker exec "$drill_container" pg_isready -h 127.0.0.1 -U postgres -d postgres >/dev/null 2>&1; then
       ready=true
       break
     fi
@@ -85,8 +89,8 @@ for source_container in "${source_containers[@]}"; do
   done
   [[ "$ready" == true ]] || fail "isolated PostgreSQL did not start for $source_container"
   gzip -dc "$dump_file" | timeout 120s docker exec -i "$drill_container" \
-    psql -v ON_ERROR_STOP=1 -U postgres -d postgres >/dev/null
-  table_count="$(docker exec "$drill_container" psql -At -U postgres -d postgres \
+    psql -h 127.0.0.1 -v ON_ERROR_STOP=1 -U postgres -d postgres >/dev/null
+  table_count="$(docker exec "$drill_container" psql -h 127.0.0.1 -At -U postgres -d postgres \
     -c "SELECT count(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')")"
   [[ "$table_count" =~ ^[0-9]+$ && "$table_count" -gt 0 ]] \
     || fail "restore produced no application tables for $source_container"

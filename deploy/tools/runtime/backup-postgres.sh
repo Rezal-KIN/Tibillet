@@ -78,7 +78,8 @@ for container in "${containers[@]}"; do
   docker inspect "$container" >/dev/null 2>&1 || fail "PostgreSQL container not found: $container"
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == "true" ]] || fail "PostgreSQL container is not running: $container"
   image="$(docker inspect --format '{{.Config.Image}}' "$container")"
-  [[ "$image" == postgres:* ]] || fail "unexpected PostgreSQL image for $container"
+  [[ "$image" == postgres:* || "$image" =~ ^postgres@sha256:[0-9a-f]{64}$ ]] \
+    || fail "unexpected PostgreSQL image for $container"
   printf 'postgres_container=%s\npostgres_image_%s=%s\n' "$container" "$container" "$image" >> "$metadata"
 
   dump_file="$work_dir/${container}.sql.gz"

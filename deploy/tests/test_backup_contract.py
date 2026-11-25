@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import gzip
+import hashlib
 import os
 import sqlite3
 import subprocess
@@ -13,6 +15,76 @@ RUNTIME = Path(__file__).resolve().parents[1] / "tools/runtime"
 
 
 class BackupContractTests(unittest.TestCase):
+    def test_restore_uses_final_tcp_server_and_validates_postgres_images(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            saved = root / "uploaded"
+            saved.mkdir()
+            calls = root / "docker-calls"
+            scripts = {
+                "aws": '#!/bin/sh\ncp "$MOCK_UPLOADED"/* "$6/"\n',
+                "timeout": '#!/bin/sh\nshift\nexec "$@"\n',
+                "docker": (
+                    '#!/bin/sh\nprintf "%s\\n" "$*" >> "$MOCK_DOCKER_CALLS"\n'
+                    'case "$1" in\n'
+                    ' run) echo isolated-postgres ;;\n'
+                    ' rm) exit 0 ;;\n'
+                    ' exec) case "$*" in\n'
+                    '  *pg_isready*) exit 0 ;;\n'
+                    '  *"SELECT count"*) echo 7 ;;\n'
+                    '  *) cat >/dev/null ;;\n'
+                    ' esac ;;\n'
+                    ' *) exit 2 ;;\nesac\n'
+                ),
+            }
+            for name, content in scripts.items():
+                path = bin_dir / name
+                path.write_text(content)
+                path.chmod(0o755)
+            config = root / "gala.conf"
+            config.write_text(
+                f'GALA_SLUG=gala-verification\nAWS_REGION=eu-west-3\n'
+                f'BACKUP_BUCKET=test-bucket\nREPO_ROOT="{root}"\n'
+                f'RUNTIME_ROOT="{root / "runtime"}"\n')
+            (saved / "lespass_postgres.sql.gz").write_bytes(
+                gzip.compress(b'CREATE TABLE restored (id integer);\n'))
+            env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                   "MOCK_UPLOADED": str(saved), "MOCK_DOCKER_CALLS": str(calls)}
+            for image, accepted in (
+                ("postgres:13-bookworm", True),
+                ("postgres@sha256:" + "a" * 64, True),
+                ("postgres@sha256:short", False),
+                ("postgres@sha256:" + "g" * 64, False),
+                ("other/postgres@sha256:" + "a" * 64, False),
+                ("mysql:8", False),
+            ):
+                with self.subTest(image=image):
+                    calls.write_text("")
+                    (saved / "metadata.txt").write_text(
+                        'gala=gala-verification\nbackup_id=20261017T180001Z\n'
+                        'fedow_sqlite=0\npostgres_container=lespass_postgres\n'
+                        f'postgres_image_lespass_postgres={image}\n')
+                    (saved / "SHA256SUMS").write_text("".join(
+                        f'{hashlib.sha256((saved / name).read_bytes()).hexdigest()}  {name}\n'
+                        for name in ("lespass_postgres.sql.gz", "metadata.txt")))
+                    result = subprocess.run(
+                        ["bash", str(RUNTIME / "verify-backup-restore.sh"), str(config),
+                         "20261017T180001Z"], env=env, text=True, capture_output=True)
+                    if accepted:
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertIn("tables=7", result.stdout)
+                        self.assertIn(f"--network none --memory 512m", calls.read_text())
+                        self.assertIn(image, calls.read_text())
+                        self.assertIn("pg_isready -h 127.0.0.1", calls.read_text())
+                        self.assertIn("psql -h 127.0.0.1 -v ON_ERROR_STOP=1", calls.read_text())
+                        self.assertIn("psql -h 127.0.0.1 -At", calls.read_text())
+                    else:
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn("unexpected PostgreSQL image", result.stderr)
+                        self.assertEqual(calls.read_text(), "")
+
     def test_backup_checksums_are_portable_after_upload(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -23,7 +95,7 @@ class BackupContractTests(unittest.TestCase):
             docker.write_text(
                 "#!/bin/sh\n"
                 "case \"$1\" in\n"
-                "  inspect) case \"$3\" in *Mounts*) printf '%s' \"${MOCK_FEDOW_MOUNT:-}\" ;; *Config.Image*) echo postgres:13-bookworm ;; *Running*) echo true ;; esac; exit 0 ;;\n"
+                "  inspect) case \"$3\" in *Mounts*) printf '%s' \"${MOCK_FEDOW_MOUNT:-}\" ;; *Config.Image*) echo \"${MOCK_POSTGRES_IMAGE:-postgres:13-bookworm}\" ;; *Running*) echo true ;; esac; exit 0 ;;\n"
                 "  exec) printf 'CREATE TABLE backed_up (id integer);\\n'; exit 0 ;;\n"
                 "esac\nexit 2\n",
                 encoding="utf-8",
@@ -85,7 +157,9 @@ class BackupContractTests(unittest.TestCase):
                 db.execute(f'INSERT INTO "{table}" VALUES (1)')
             db.commit()
             hybrid = root / "hybrid"
-            env.update(MOCK_UPLOADED=str(hybrid), MOCK_FEDOW_MOUNT=str(mount))
+            pinned_image = 'postgres@sha256:' + 'a' * 64
+            env.update(MOCK_UPLOADED=str(hybrid), MOCK_FEDOW_MOUNT=str(mount),
+                       MOCK_POSTGRES_IMAGE=pinned_image)
             command[-2] = "20261017T180002Z"
             result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -94,6 +168,8 @@ class BackupContractTests(unittest.TestCase):
             self.assertTrue((hybrid / "fedow.sqlite3.gz").is_file())
             self.assertIn("fedow_sqlite=1", (hybrid / "metadata.txt").read_text())
             self.assertIn("backup_policy=explicit-per-backup", (hybrid / "metadata.txt").read_text())
+            self.assertIn("postgres_image_lespass_postgres=" + pinned_image,
+                          (hybrid / "metadata.txt").read_text())
             checked = subprocess.run(["sha256sum", "-c", "SHA256SUMS"], cwd=hybrid,
                                      text=True, capture_output=True, check=False)
             self.assertEqual(checked.returncode, 0, checked.stderr)
