@@ -98,3 +98,10 @@ moved {
   from = module.gala["gala-images-csv-2026-10-08"].aws_instance.runtime[0]
   to   = module.gala["gala-images-csv-2026-10-08"].aws_instance.retirable[0]
 }
+
+# Exact archived cafete event; its replacement has a separate protected EC2.
+# Used only by the reviewed two-phase Cafete November 2026 Retirement operation.
+moved {
+  from = module.gala["bapts2026"].aws_instance.runtime[0]
+  to   = module.gala["bapts2026"].aws_instance.retirable[0]
+}

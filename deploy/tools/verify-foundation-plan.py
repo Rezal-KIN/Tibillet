@@ -37,7 +37,13 @@ BAPTS_RETIREMENT_OPERATIONS = {
     "Prepare BalduBapts2026 Retirement": "prepare",
     "Retire BalduBapts2026": "retire",
 }
+CAFETE_SLUG = "bapts2026"
+CAFETE_RETIREMENT_OPERATIONS = {
+    "Prepare Cafete November 2026 Retirement": "prepare",
+    "Retire Cafete November 2026": "retire",
+}
 TEMPORARY_IDENTITIES = {
+    CAFETE_SLUG: ("i-0a3f206386b2c81ca", "vol-08fee254e12be2834"),
     BAPTS_SLUG: ("i-0b1c966b50fd97f80", "vol-0d7ded144bdc952e8"),
     VERIFICATION_SLUG: (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
     FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
@@ -213,6 +219,12 @@ def verify_verification_retirement_plan(
         # Removing a Production SSM document defers both Smoke policy
         # documents, even though the CAWL Smoke permission stays identical.
         allowed_policy_refreshes.add('aws_iam_role_policy.test_cawl_deploy[0]')
+    if targets == (CAFETE_SLUG,):
+        allowed_policy_refreshes.add('aws_iam_role_policy.test_cawl_deploy[0]')
+        allowed_policy_refreshes.update(
+            f'aws_iam_role_policy.{kind}["bapts2026-gala-20261127"]'
+            for kind in ('production_build', 'production_pipeline', 'production_validate')
+        )
     core: list[dict[str, object]] = []
     accepted: list[str] = []
     for item in changes:
@@ -224,6 +236,13 @@ def verify_verification_retirement_plan(
             raise ValueError(f"malformed Terraform change on {address}")
         actions = change.get("actions")
         if actions == ["no-op"] or (item.get("mode") == "data" and actions == ["read"]):
+            continue
+        if (targets == (CAFETE_SLUG,) and phase == 'retire'
+                and address == 'aws_iam_role_policy.foundation_build[0]'
+                and actions == ['update'] and safe_cawl_document_version_addition({
+                    'before': change.get('after'), 'after': change.get('before'),
+                    'after_unknown': change.get('after_unknown', {})}, CAFETE_SLUG)):
+            accepted.append(f'remove-retired-cawl-document-version {address}')
             continue
         if address in instance_addresses or address == switch_policy:
             core.append(item)
@@ -866,6 +885,7 @@ def main() -> None:
     first_run_phase = FIRST_RUN_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     bapts_phase = BAPTS_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
+    cafete_phase = CAFETE_RETIREMENT_OPERATIONS.get(os.environ.get("GALA_NAME", ""))
     if os.environ.get("GALA_NAME", "") == RESERVE_TEST_ADDRESS_REQUEST:
         if args.slug != CAWL_SMOKE_SLUG:
             raise ValueError('Test address reservation requires the exact Smoke slug')
@@ -878,6 +898,11 @@ def main() -> None:
         if args.slug != "gala-smoke":
             raise ValueError("Enable Smoke Mail requires the exact Stripe Smoke slug")
         changed = verify_smoke_mail_plan(plan)
+    elif cafete_phase:
+        if args.slug != CAFETE_SLUG:
+            raise ValueError("cafete retirement requires the exact old event slug")
+        changed = verify_verification_retirement_plan(plan, cafete_phase, slug=CAFETE_SLUG)
+        subprocess.run([sys.executable, str(Path(__file__).with_name("check-cafete-retirement.py"))], check=True)
     elif bapts_phase:
         if args.slug != BAPTS_SLUG:
             raise ValueError("BalduBapts2026 retirement requires the exact slug")

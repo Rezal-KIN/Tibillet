@@ -44,6 +44,12 @@ BAPTS_RETIREMENT_OPERATIONS = {
     "Prepare BalduBapts2026 Retirement": "prepare",
     "Retire BalduBapts2026": "retire",
 }
+CAFETE_SLUG = "bapts2026"
+CAFETE_REPLACEMENT = "bapts2026-gala-20261127"
+CAFETE_RETIREMENT_OPERATIONS = {
+    "Prepare Cafete November 2026 Retirement": "prepare",
+    "Retire Cafete November 2026": "retire",
+}
 # One-time operation creating the parallel CAWL chain and its Smoke host.
 ENABLE_CAWL_PLATFORM_REQUEST = "Enable CAWL Platform"
 ENABLE_SMOKE_MAIL_REQUEST = "Enable Smoke Mail"
@@ -92,6 +98,8 @@ def gala_slug(name: str) -> str:
         return CAWL_SMOKE_SLUG
     if name == ENABLE_SMOKE_MAIL_REQUEST:
         return "gala-smoke"
+    if name in CAFETE_RETIREMENT_OPERATIONS:
+        return CAFETE_SLUG
     if name in BAPTS_RETIREMENT_OPERATIONS:
         return BAPTS_SLUG
     if name in ALIGNMENT_RETIREMENT_OPERATIONS:
@@ -144,6 +152,7 @@ def main() -> None:
     first_run_retirement = first_run_retirement_phase(gala_name)
     alignment_retirement = ALIGNMENT_RETIREMENT_OPERATIONS.get(gala_name)
     bapts_retirement = BAPTS_RETIREMENT_OPERATIONS.get(gala_name)
+    cafete_retirement = CAFETE_RETIREMENT_OPERATIONS.get(gala_name)
     enable_cawl_platform = gala_name == ENABLE_CAWL_PLATFORM_REQUEST
     enable_smoke_mail = gala_name == ENABLE_SMOKE_MAIL_REQUEST
     enable_public_test = gala_name == ENABLE_PUBLIC_TEST_REQUEST
@@ -260,6 +269,11 @@ def main() -> None:
     if not bapts_retirement and isinstance(bapts, dict) and bapts.get("create_instance") is True:
         fail("finish BalduBapts2026 Retirement before other Foundation operations")
 
+    if not cafete_retirement:
+        old_cafete = galas.get(CAFETE_SLUG)
+        if isinstance(old_cafete, dict) and old_cafete.get("create_instance") is True:
+            fail("finish Cafete November 2026 Retirement before other Foundation operations from this retirement revision")
+
     new_gala = {
         "platform": "v1",
         "domain": domain,
@@ -277,7 +291,25 @@ def main() -> None:
         new_gala["payment_provider"] = "cawl"
     if payment_provider == "cawl" and CAWL_SMOKE_SLUG not in galas:
         fail("run Enable CAWL Platform before creating a CAWL Gala")
-    if bapts_retirement:
+    if cafete_retirement:
+        existing = galas.get(CAFETE_SLUG)
+        replacement = galas.get(CAFETE_REPLACEMENT)
+        if (payment_provider != "cawl" or not isinstance(existing, dict)
+                or existing.get("create_instance") is not True
+                or existing.get("payment_provider") != "cawl"
+                or not isinstance(replacement, dict)
+                or replacement.get("create_instance") is not True
+                or replacement.get("payment_provider") != "cawl"):
+            fail("cafete retirement requires both exact CAWL event entries")
+        if cafete_retirement == "prepare":
+            if existing.get("protect_from_destruction") is not True:
+                fail("cafete retirement is already prepared or has unexpected protection")
+            existing["protect_from_destruction"] = False
+        else:
+            if existing.get("protect_from_destruction") is not False:
+                fail("prepare Cafete November 2026 Retirement before retirement")
+            existing["create_instance"] = False
+    elif bapts_retirement:
         existing = galas.get(BAPTS_SLUG)
         if not isinstance(existing, dict) or existing.get("create_instance") is not True:
             fail("BalduBapts2026 EC2 is absent from the active catalog")

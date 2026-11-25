@@ -48,6 +48,12 @@ BAPTS_RETIREMENT = {
 }
 # Archive made while this exact test EC2 was stopped, before any retirement.
 BAPTS_IDENTITY = ("i-0b1c966b50fd97f80", "vol-0d7ded144bdc952e8", "snap-02ac5a5b7fb219952")
+CAFETE_SLUG = "bapts2026"
+CAFETE_RETIREMENT = {
+    "Prepare Cafete November 2026 Retirement": "prepare",
+    "Retire Cafete November 2026": "retire",
+}
+CAFETE_IDENTITY = ("i-0a3f206386b2c81ca", "vol-08fee254e12be2834")
 ARCHIVE_IDENTITIES = {**ALIGNMENT_IDENTITIES, BAPTS_SLUG: BAPTS_IDENTITY}
 
 
@@ -80,6 +86,7 @@ def verify_validation_retirement(
         if not isinstance(volume_id, str) or not re.fullmatch(r"vol-[0-9a-f]{8,17}", volume_id):
             raise RuntimeError(f"invalid root volume in plan for {slug}")
         exact_temporary = {
+            CAFETE_SLUG: CAFETE_IDENTITY,
             "gala-verification": (VERIFICATION_INSTANCE_ID, VERIFICATION_VOLUME_ID),
             FIRST_RUN_SLUG: (FIRST_RUN_INSTANCE_ID, FIRST_RUN_VOLUME_ID),
             **{name: identity[:2] for name, identity in ARCHIVE_IDENTITIES.items()},
@@ -96,7 +103,7 @@ def verify_validation_retirement(
         if phase == "prepare":
             found = aws("ec2", "describe-instances", "--instance-ids", instance_id)
             instances = [item for group in found.get("Reservations", []) for item in group.get("Instances", [])]
-            allowed_states = {"running", "stopped"} if slug in ARCHIVE_IDENTITIES else {"running"}
+            allowed_states = {"running", "stopped"} if slug in ARCHIVE_IDENTITIES or slug == CAFETE_SLUG else {"running"}
             if len(instances) != 1 or instances[0].get("State", {}).get("Name") not in allowed_states:
                 raise RuntimeError(f"prepared EC2 is not in an allowed state: {slug}")
             tags = {item["Key"]: item["Value"] for item in instances[0].get("Tags", [])}
@@ -252,6 +259,13 @@ def main() -> None:
     first_run_phase = FIRST_RUN_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     alignment_phase = ALIGNMENT_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
     bapts_phase = BAPTS_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    cafete_phase = CAFETE_RETIREMENT.get(os.environ.get("GALA_NAME", ""))
+    if cafete_phase:
+        if args.slug != CAFETE_SLUG or not args.foundation_plan:
+            raise ValueError("cafete retirement requires the exact plan and slug")
+        verify_validation_retirement(json.loads(args.foundation_plan.read_text(encoding="utf-8")),
+                                     cafete_phase, args.project_name, targets=(CAFETE_SLUG,))
+        return
     if bapts_phase:
         if args.slug != BAPTS_SLUG or not args.foundation_plan:
             raise ValueError("BalduBapts2026 retirement requires the exact plan and slug")

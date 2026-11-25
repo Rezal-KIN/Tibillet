@@ -149,3 +149,30 @@ Le contrôle de plan vérifie aussi les prérequis de retrait sur AWS. Tant que 
 retrait en deux phases n'est pas terminé, les autres opérations Foundation sont
 refusées pour éviter une recréation involontaire liée au déplacement Terraform.
 Le DNS public et l'infrastructure Stockholm restent inchangés.
+
+## Retrait de l'évènement cafète de novembre 2026
+
+L'ancien gala technique `bapts2026` est distinct du remplacement
+`bapts2026-gala-20261127`. Le retrait vise uniquement son ancienne EC2 et son
+volume racine, jamais ceux du remplacement. Le contrôleur vérifie en lecture
+seule que l'ancien hôte est arrêté, que le remplacement détient l'EIP et le
+marqueur actif, et que les trois dumps privés sont couverts par une restauration
+isolée réussie. Une archive modifiée depuis cette preuve bloque le retrait.
+Aucun snapshot SSD ni nouveau dump n'est créé par cette procédure.
+
+Après revue du périmètre et accord pour la suppression définitive, utiliser
+Foundation CAWL avec la révision contenant les contrôles de retrait :
+
+1. `GalaName=Prepare Cafete November 2026 Retirement` ne peut modifier que la
+   protection de terminaison et le drapeau de suppression du volume racine de
+   l'ancienne EC2. Attendre la réussite complète.
+2. `GalaName=Retire Cafete November 2026` retire cette EC2, son volume racine,
+   son ancienne pipeline Production, ses deux projets CodeBuild, son document
+   SSM et ses trois politiques de livraison dédiées. Les mises à jour des
+   politiques communes retirent uniquement les anciennes références.
+
+Les archives S3, les clés nécessaires à leur restauration, les rôles historiques
+et les journaux sont conservés. Le catalogue garde l'ancienne entrée avec
+`create_instance=false` pour empêcher sa recréation implicite. Les deux phases
+recalculent et contrôlent leur propre plan ; un aperçu de la seconde phase
+avant préparation n'est pas exécutable.

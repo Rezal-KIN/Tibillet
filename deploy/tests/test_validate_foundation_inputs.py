@@ -74,13 +74,31 @@ class FoundationInputTests(unittest.TestCase):
 
     def test_retirable_ec2_count_and_precondition_share_one_allowlist(self) -> None:
         module = (ROOT / "infra/terraform/modules/gala/main.tf").read_text(encoding="utf-8")
-        self.assertIn('retirable_gala_slugs = ["baldubapts2026", "gala-validation", "gala-validation-2", '
+        self.assertIn('retirable_gala_slugs = ["bapts2026", "baldubapts2026", "gala-validation", "gala-validation-2", '
                       '"gala-verification", "gala-first-run-20260926", '
                       '"gala-alignement-vanilla-2026-10-10", "gala-alignement-final-2026-10-10", '
                       '"gala-premier-lancement-2026-10-05", "gala-import-cartes-2026-10-07", '
                       '"gala-images-csv-2026-10-08"]', module)
         retirable = module.split('resource "aws_instance" "retirable" {', 1)[1]
         self.assertEqual(retirable.count("contains(local.retirable_gala_slugs, var.gala_slug)"), 2)
+
+    def test_cafete_retirement_only_updates_old_event_in_two_phases(self):
+        base = {"create_instance": True, "protect_from_destruction": True,
+                "payment_provider": "cawl", "domain": "galas-am-aix.rezal.fr"}
+        catalog = {"version": 1, "galas": {
+            "bapts2026": dict(base), "bapts2026-gala-20261127": dict(base),
+            "gala-smoke-cawl": dict(base)}}
+        failed, _, _ = run(catalog, GALA_NAME="Retire Cafete November 2026", PAYMENT_PROVIDER="cawl")
+        self.assertNotEqual(failed.returncode, 0)
+        prepared, output, proposal = run(catalog, GALA_NAME="Prepare Cafete November 2026 Retirement", PAYMENT_PROVIDER="cawl")
+        self.assertEqual(prepared.returncode, 0, prepared.stderr)
+        self.assertFalse(proposal['galas']['bapts2026']['protect_from_destruction'])
+        self.assertTrue(proposal['galas']['bapts2026']['create_instance'])
+        self.assertEqual(proposal['galas']['bapts2026-gala-20261127'], base)
+        retired, _, final = run(proposal, GALA_NAME="Retire Cafete November 2026", PAYMENT_PROVIDER="cawl")
+        self.assertEqual(retired.returncode, 0, retired.stderr)
+        self.assertFalse(final['galas']['bapts2026']['create_instance'])
+        self.assertEqual(final['galas']['bapts2026-gala-20261127'], base)
 
     def test_temporary_gala_retirement_is_two_phase_and_preserves_aix(self) -> None:
         base = {
