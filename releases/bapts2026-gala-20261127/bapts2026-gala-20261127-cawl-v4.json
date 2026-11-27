@@ -1,0 +1,46 @@
+{
+  "application_repository": "Rezal-KIN/Tibillet",
+  "card_stock": {
+    "lots": [
+      {
+        "generation": 1,
+        "key": "card-stock/de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567.csv",
+        "rows": 3510,
+        "sha256": "de7b01ae32c3b25f58c5994665dde545b54aae672e515b4a31f90615eeb91567"
+      },
+      {
+        "generation": 2,
+        "key": "card-stock/bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab.csv",
+        "rows": 1755,
+        "sha256": "bc63f83f5af83c5b952f7227ba488d06ec70cd57ccb20e7bc6120df3ef1ba6ab"
+      },
+      {
+        "generation": 3,
+        "key": "card-stock/7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461.csv",
+        "rows": 1755,
+        "sha256": "7e8467d6125471f6272ed039aa45c01dd219b899f6bf91aecb787f9c49bc4461"
+      }
+    ],
+    "schema_version": 1
+  },
+  "fedow_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/cawl/fedow@sha256:dfde15b13ead3db67d388d9029c3bbdcb51442e82824ef37fdf4910ea01a26e5",
+  "fork_commit": "1823ce4de1d09793ba568567c3b6fe596cfe9088",
+  "gala_slug": "bapts2026-gala-20261127",
+  "image_builds": {
+    "fedow": {
+      "base_image": "tibillet/fedow@sha256:17951150aba8facf9cc7e9213edf4d3406bde78b9ee17802671684961053be83",
+      "source_commit": "1823ce4de1d09793ba568567c3b6fe596cfe9088"
+    },
+    "laboutik": {
+      "base_image": "tibillet/laboutik@sha256:012f3f1a14b532766f6faa9b6dc55ce53b0f2e65de7035066b96e86b30c006e9",
+      "source_commit": "1823ce4de1d09793ba568567c3b6fe596cfe9088"
+    }
+  },
+  "laboutik_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/cawl/laboutik@sha256:deb53b5b1775da7b11128644107990d52f6d1b3a183fe6cb7e5b8009a40efcad",
+  "lespass_image": "318629836660.dkr.ecr.eu-west-3.amazonaws.com/tibillet-gala-paris/cawl/lespass@sha256:7137b8d2774ab12086ead8605fa47883d457d7f86e64ff5f693eebf2e8fee4eb",
+  "platform": "v1",
+  "release_id": "bapts2026-gala-20261127-cawl-v4",
+  "schema_generation": "v1",
+  "tibillet_upstream_commit": "1823ce4de1d09793ba568567c3b6fe596cfe9088",
+  "traefik_image": "traefik@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0"
+}
