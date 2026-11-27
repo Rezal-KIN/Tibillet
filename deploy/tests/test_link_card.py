@@ -26,6 +26,8 @@ class LinkCardContractTests(unittest.TestCase):
         partial = (ROOT / "BaseBillet/templates/reunion/partials/account/balance_summary.html").read_text()
         self.assertIn("{% if has_card is False %}", partial)
         self.assertIn('href="/my_account/link_card/"', partial)
+        # Encadré blanc : un bouton clair y serait invisible (vu en production le 27/11).
+        self.assertNotIn("btn-outline-light", partial)
 
 
 if __name__ == "__main__":
