@@ -62,6 +62,23 @@
 </div>
 {% endif %}
 
+{# FR : Solde de la carte en haut de « Mon compte » + recharge directe, sans passer par « Ma tirelire ». #}
+{# EN: Card balance on top of "My account" + direct refill, without going through "My wallet". #}
+<section class="card mb-3" data-testid="account-balance">
+    <div class="card-body d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+        <div hx-get="/my_account/balance_summary/" hx-trigger="load" hx-swap="innerHTML" class="order-1">
+            <div class="spinner-border spinner-border-sm" role="status" aria-label="{% translate 'Loading list' %}"></div>
+        </div>
+        {% if config.show_refill_button %}
+        <a href="/my_account/refill_wallet/" class="btn btn-primary btn-lg order-2 w-100"
+           style="max-width: 24rem;" data-testid="account-refill-button">
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+            {% translate "Recharger ma carte" %}
+        </a>
+        {% endif %}
+    </div>
+</section>
+
 <div class="row row-cols-1 row-cols-md-2 g-3 text-center mb-3">
     <div class="col">
         <a class="w-100 btn btn-lg btn-outline-primary{% if account_tab == 'balance' %} active" aria-current="page{% endif %}"

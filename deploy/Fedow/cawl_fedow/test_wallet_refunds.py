@@ -62,11 +62,11 @@ class RefundFixture:
         self.responses.setdefault(payment_id, []).append(response)
         return response
 
-    def recharge(self, amount=2000):
+    def recharge(self, amount=2000, fee=0):
         checkout = Checkout.objects.create(wallet=self.wallet, place=self.place, asset=self.asset,
-            merchant_id=self.config.merchant_id, test_mode=True, amount=amount,
+            merchant_id=self.config.merchant_id, test_mode=True, amount=amount, fee=fee,
             hosted_checkout_id='hosted-' + uuid4().hex)
-        snapshot = PaymentSnapshot('payment-' + uuid4().hex, str(checkout.pk), amount, 'EUR', 'CAPTURED')
+        snapshot = PaymentSnapshot('payment-' + uuid4().hex, str(checkout.pk), amount + fee, 'EUR', 'CAPTURED')
         self.payments[snapshot.id] = snapshot
         credit_checkout(checkout, self.request, snapshot)
         checkout.refresh_from_db()
@@ -98,6 +98,26 @@ class WalletRefundTests(RefundFixture, TestCase):
         self.assertEqual(Transaction.objects.filter(action=Transaction.CREATION).count(), 1)
         self.assertEqual(Transaction.objects.filter(action=Transaction.REFILL).count(), 1)
         self.assertTrue(all(entry.verify_hash() for entry in Transaction.objects.all()))
+
+    def test_service_fee_is_never_refunded(self):
+        # FR : 20,20 € payés, 20 € crédités : seul le solde est remboursable.
+        # EN: 20.20 paid, 20.00 credited: only the balance can be refunded.
+        self.recharge(2000, fee=20)
+        self.assertEqual(self.balance(), 2000)
+        batch = self.reserve()
+        self.assertEqual(batch.amount, 2000)
+        reconcile_pending_refunds()
+        self.assertEqual(refund_summary(batch)['refunded'], 2000)
+        self.assertEqual(self.gateway.refund.call_args.args[1], 2000)
+        self.assertEqual(self.balance(), 0)
+
+    def test_partially_spent_recharge_with_fee_refunds_only_the_rest(self):
+        self.recharge(1000, fee=20)
+        self.spend(400)
+        batch = self.reserve()
+        reconcile_pending_refunds()
+        self.assertEqual(refund_summary(batch)['refunded'], 600)
+        self.assertEqual(self.gateway.refund.call_args.args[1], 600)
 
     def test_allocates_multiple_recharges_without_exceeding_any_payment(self):
         self.recharge(500)

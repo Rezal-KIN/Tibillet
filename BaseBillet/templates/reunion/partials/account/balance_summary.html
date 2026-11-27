@@ -1,0 +1,14 @@
+{% load i18n %}
+{# FR : Solde utilisable, gros et lisible sur fond sombre (surtout sur mobile). #}
+{# EN: Spendable balance, large and readable on the dark background (mobile first). #}
+<div class="balance-summary text-center text-md-end" data-testid="balance-summary">
+    {% if balance is not None %}
+        <div class="small text-uppercase opacity-75">{% translate "Solde de ma carte" %}</div>
+        <div class="display-5 fw-bold lh-1" data-testid="balance-amount">{{ balance|floatformat:2 }}&nbsp;€</div>
+        {% if gift %}
+            <div class="small opacity-75">{% blocktranslate with gift=gift|floatformat:2 %}dont {{ gift }} € offerts{% endblocktranslate %}</div>
+        {% endif %}
+    {% else %}
+        <div class="small opacity-75">{% translate "Solde momentanément indisponible, réessayez dans un instant." %}</div>
+    {% endif %}
+</div>

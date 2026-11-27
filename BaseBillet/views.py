@@ -1054,6 +1054,39 @@ class MyAccount(viewsets.ViewSet):
         return place_info.get(place_uuid)
 
     @action(detail=False, methods=['GET'])
+    def balance_summary(self, request):
+        """
+        FR : Solde en euros utilisable ici (en ligne + caisse + cadeau), affiché en
+        grand sur « Mon compte » et « Ma tirelire ». Chargé en htmx pour ne pas
+        bloquer la page si Fedow est lent.
+        EN: Spendable euro balance here (online + cash + gift), lazy-loaded via htmx.
+        """
+        context = {'balance': None, 'gift': None,
+                   'show_refill_button': Configuration.get_solo().show_refill_button}
+        try:
+            wallet = FedowAPI().wallet.cached_retrieve_by_signature(request.user).validated_data
+            place_uuid = str(FedowConfig.get_solo().fedow_place_uuid)
+            total = gift = 0
+            for token in wallet.get('tokens') or []:
+                category = token.get('asset_category')
+                if category not in ('FED', 'TLF', 'TNF'):
+                    continue
+                asset = token.get('asset') or {}
+                origin = (asset.get('place_origin') or {}).get('uuid')
+                federated = [str(uuid) for uuid in asset.get('place_uuid_federated_with') or []]
+                if not (token.get('is_primary_stripe_token') or category == 'FED'
+                        or str(origin) == place_uuid or place_uuid in federated):
+                    continue
+                total += token.get('value') or 0
+                if category == 'TNF':
+                    gift += token.get('value') or 0
+            context['balance'] = Decimal(total) / 100
+            context['gift'] = Decimal(gift) / 100
+        except Exception as error:
+            logger.error(f"balance_summary : {type(error).__name__}")
+        return render(request, "reunion/partials/account/balance_summary.html", context=context)
+
+    @action(detail=False, methods=['GET'])
     def tokens_table(self, request):
         config = Configuration.get_solo()
         fedowAPI = FedowAPI()
@@ -1173,7 +1206,12 @@ class MyAccount(viewsets.ViewSet):
                     # formulaire de montant est une page complète, on y navigue.
                     # EN: Refill buttons call this route via htmx; navigate to the full form.
                     return HttpResponseClientRedirect('/my_account/refill_wallet/')
-                return render(request, 'reunion/views/account/refill_cawl.html', get_context(request))
+                from payment_providers.cawl import REFILL_FEE_CENTS
+                context = get_context(request)
+                # FR : Frais fixes affichés avant paiement ; Fedow facture la même valeur.
+                # EN: Fixed fee shown before payment; Fedow charges the same shared value.
+                context['refill_fee'] = Decimal(REFILL_FEE_CENTS) / 100
+                return render(request, 'reunion/views/account/refill_cawl.html', context)
             from PaiementCawl.validators import RefillAmountInput
             validator = RefillAmountInput(data=request.data)
             if not validator.is_valid():

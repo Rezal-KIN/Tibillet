@@ -147,14 +147,19 @@ class DataAchatDepuisClientValidator(serializers.Serializer):
             total_sended = dround(total_sended)
             self.initial_data['total'] = total_sended
 
-        total_temp = Decimal(0)
-        for art in value:
-            total_temp += dround(art.get('pk').prix * art.get('qty'))
+        # FR (Gala) : prix happy hour résolus côté serveur ; hors happy hour et hors
+        # marge de bascule, le calcul est identique au natif (prix des articles en base).
+        # EN (Gala): server-side happy hour prices; otherwise identical to native.
+        from happy_hour_laboutik.services import resolve_prices
+        try:
+            total_temp = resolve_prices(value, total_sended if total_sended else None)
+        except ValueError:
+            total_temp = None
 
         # On vérifie que les virgules du total soit max 0.00
-        if total_sended:
+        if total_sended or total_temp is None:
             # valuer absolue pour les retour consigne négatives
-            if abs(total_sended) != abs(total_temp):
+            if total_temp is None or abs(total_sended) != abs(total_temp):
                 error_msg = _(
                     f"ERREUR /wv/paiement -> SERIALIZER DataAchatDepuisClientValidator -> validate_articles() -> total_temp : {total_temp} - total_sended : {total_sended} - self.initial_data : {self.initial_data}")
                 logger.error(f"{error_msg}")

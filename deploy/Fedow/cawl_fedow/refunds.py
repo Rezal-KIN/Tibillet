@@ -186,7 +186,10 @@ def reconcile_wallet_refund(refund, submit=True):
         return
 
     snapshot = client.get_payment(refund.checkout.provider_payment_id)
-    snapshot.check_order(refund.checkout.pk, refund.checkout.amount)
+    # FR : Le paiement bancaire inclut les frais ; le plafond de remboursement
+    # reste le montant crédité (checkout.amount) : les frais ne sont jamais rendus.
+    # EN: The bank payment includes the fee; the refund ceiling stays the credited amount.
+    snapshot.check_order(refund.checkout.pk, refund.checkout.amount + refund.checkout.fee)
     if snapshot.id != refund.checkout.provider_payment_id or not snapshot.captured:
         note_error(refund, "payment_requires_reconciliation", review=True)
         return

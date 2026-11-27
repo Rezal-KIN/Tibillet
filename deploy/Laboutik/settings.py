@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     'more_admin_filters',
     'fedow_connect',
     'htmxview',
+    # AM-Rezal (Gala) : prix happy hour, sans modifier les tables natives.
+    'happy_hour_laboutik',
     # 'debug_toolbar',
 ]
 
@@ -114,7 +116,8 @@ JET_SIDE_MENU_ITEMS = {
         {'app_label': 'APIcashless', 'label': "Articles", 'items': [
             {'name': 'articles'},
             {'name': 'categorie'},
-            {'name': 'groupementcategorie'}
+            {'name': 'groupementcategorie'},
+            {'name': 'happy_hour_laboutik.happyhour', 'label': "Happy hour (horaires)"},
         ]},
         {'app_label': 'APIcashless', 'label': "Points de ventes", 'items': [
             {'name': 'pointdevente'},

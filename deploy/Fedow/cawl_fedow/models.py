@@ -9,7 +9,11 @@ class Checkout(models.Model):
     asset = models.ForeignKey("fedow_core.Asset", on_delete=models.PROTECT)
     merchant_id = models.CharField(max_length=128)
     test_mode = models.BooleanField(default=True)
+    # FR : amount = montant crédité au portefeuille ; fee = frais de service
+    # facturés en plus, jamais crédités ni remboursés. CAWL encaisse amount + fee.
+    # EN: amount is credited; fee is charged on top, never credited nor refunded.
     amount = models.PositiveIntegerField()
+    fee = models.PositiveIntegerField(default=0)
     hosted_checkout_id = models.CharField(max_length=128, unique=True, null=True)
     checkout_url = models.URLField(max_length=1000, blank=True)
     provider_payment_id = models.CharField(max_length=128, unique=True, null=True)

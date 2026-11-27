@@ -21,6 +21,12 @@ class CawlError(Exception):
 # EN: Hosted checkout lifetime; past it (plus a margin) an unpaid order expires.
 HOSTED_CHECKOUT_TIMEOUT_MINUTES = 60
 HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES = 15
+# FR : Frais de service fixes ajoutés à chaque recharge en ligne (centimes). Ils
+# sont payés en plus du montant crédité et ne sont jamais remboursés. Source
+# unique : Fedow facture avec cette valeur, Lespass l'affiche avant paiement.
+# EN: Fixed online refill service fee (cents), charged on top of the credited
+# amount and never refunded. Single source for Fedow (charge) and Lespass (display).
+REFILL_FEE_CENTS = 20
 # FR : Statuts HCP définitifs sans paiement. / Final hosted checkout states without payment.
 HOSTED_CHECKOUT_ABANDONED = {"CANCELLED_BY_CONSUMER", "CLIENT_NOT_ELIGIBLE_FOR_SELECTED_PAYMENT_PRODUCT"}
 

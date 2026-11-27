@@ -13,6 +13,7 @@ COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/management/commands/install.py 
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/management/commands/reconcile_cawl_wallet_refunds.py /home/fedow/Fedow/cawl_fedow/management/commands/reconcile_cawl_wallet_refunds.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/migrations/0001_initial.py /home/fedow/Fedow/cawl_fedow/migrations/0001_initial.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/migrations/0002_walletrefundrequest_walletrefund_and_more.py /home/fedow/Fedow/cawl_fedow/migrations/0002_walletrefundrequest_walletrefund_and_more.py
+COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/migrations/0003_checkout_fee.py /home/fedow/Fedow/cawl_fedow/migrations/0003_checkout_fee.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/migrations/__init__.py /home/fedow/Fedow/cawl_fedow/migrations/__init__.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/models.py /home/fedow/Fedow/cawl_fedow/models.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/services.py /home/fedow/Fedow/cawl_fedow/services.py

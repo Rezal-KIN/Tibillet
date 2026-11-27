@@ -8,7 +8,7 @@ from rest_framework import serializers
 from fedow_core.models import Asset, Configuration, Token, Transaction, Wallet
 from fedow_core.serializers import TransactionW2W
 from payment_providers.cawl import (
-    HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES, HOSTED_CHECKOUT_TIMEOUT_MINUTES,
+    HOSTED_CHECKOUT_EXPIRY_MARGIN_MINUTES, HOSTED_CHECKOUT_TIMEOUT_MINUTES, REFILL_FEE_CENTS,
     CawlConfiguration, CawlError, CawlGateway,
 )
 from cawl_fedow.models import Checkout
@@ -33,8 +33,14 @@ class VerifiedCawlRefill(TransactionW2W):
         raise serializers.ValidationError("Recharge CAWL incohérente.")
 
 
+def charged_amount(checkout):
+    """Montant réellement encaissé par CAWL. / Amount actually charged by CAWL."""
+    return checkout.amount + checkout.fee
+
+
 def create_checkout(request, amount):
     client = gateway()
+    fee = REFILL_FEE_CENTS
     config = Configuration.get_solo()
     # FR : On conserve l'asset et les soldes existants. Le nom historique STRIPE_FED_FIAT
     # ne déclenche aucun appel Stripe dans ce nouveau parcours.
@@ -47,7 +53,7 @@ def create_checkout(request, amount):
         Wallet.objects.filter(pk=request.wallet.pk).update(name=F('name'))
         Wallet.objects.select_for_update().get(pk=request.wallet.pk)
         existing = Checkout.objects.filter(
-            wallet=request.wallet, place=request.place, amount=amount, refill__isnull=True,
+            wallet=request.wallet, place=request.place, amount=amount, fee=fee, refill__isnull=True,
             # FR : On ne réutilise qu'une page encore valide pendant toute la marge.
             # EN: Only reuse a hosted page that stays valid for the whole margin.
             created_at__gte=timezone.now() - timedelta(
@@ -61,12 +67,12 @@ def create_checkout(request, amount):
                 raise CawlError('Une demande de paiement est déjà en cours.')
             return existing
         checkout = Checkout.objects.create(
-            wallet=request.wallet, place=request.place, asset=asset, amount=amount,
+            wallet=request.wallet, place=request.place, asset=asset, amount=amount, fee=fee,
             merchant_id=client.configuration.merchant_id, test_mode=client.configuration.test_mode,
         )
     try:
         result = client.create_checkout(
-            reference=checkout.uuid, amount=amount,
+            reference=checkout.uuid, amount=charged_amount(checkout),
             return_url=f"https://{domain}/my_account/{checkout.uuid}/return_refill_wallet/",
             webhook_url=f"https://{os.environ['DOMAIN']}/webhook_cawl/",
             email=request.wallet.user.email,
@@ -94,7 +100,9 @@ def credit_checkout(checkout, request, snapshot=None):
             snapshot = client.get_checkout_payment(checkout.hosted_checkout_id)
     if snapshot is None:
         return False
-    snapshot.check_order(checkout.uuid, checkout.amount)
+    # FR : La banque doit avoir encaissé montant + frais ; seul le montant est crédité.
+    # EN: The bank must hold amount + fee; only the amount is credited.
+    snapshot.check_order(checkout.uuid, charged_amount(checkout))
     with transaction.atomic():
         # FR : SQLite ne fait pas de SELECT FOR UPDATE. Cette écriture prend
         # son verrou avant toute lecture qui précède le crédit monétaire.
