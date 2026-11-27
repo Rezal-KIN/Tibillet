@@ -295,10 +295,6 @@ def index(request):
                     data['monnaie_principale_name'] = monnaie_principale_name
                     data['currency_code'] = configuration.currency_code
                     data['stripe_wisepos'] = Terminal.objects.filter(type=Terminal.STRIPE_WISEPOS).exists()
-                    # FR (Gala) : prix happy hour en vigueur + délai avant le prochain changement.
-                    # EN (Gala): current happy hour prices + countdown to the next change.
-                    from happy_hour_laboutik.services import apply_to_payload
-                    data['happy_hour'] = apply_to_payload(data['data'])
                     return Response(data, status=status.HTTP_200_OK)
                 else:
                     logger.error("/wv/index Carte sans nom !")

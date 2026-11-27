@@ -134,3 +134,42 @@ def resolve_prices(lines, total_sent, now=None):
         # EN: In-memory override for this request only, never saved.
         line['pk'].prix = unit_price(line['pk'], chosen)
     return total(chosen)
+
+
+def install(validator_cls, serializer_cls):
+    """
+    FR : Branche le happy hour sur LaBoutik sans modifier son code source :
+    - le validateur natif reçoit des articles dont le prix en mémoire est déjà
+      résolu (normal ou happy hour), puis fait son propre contrôle de total ;
+    - le sérialiseur natif des points de vente renvoie les prix en vigueur et le
+      délai avant le prochain changement.
+    Hors happy hour et hors marge de bascule, le code natif s'exécute à l'identique.
+    EN: Wraps native LaBoutik methods; native code runs unchanged outside happy hour.
+    """
+    from decimal import InvalidOperation
+
+    if getattr(validator_cls.validate_articles, 'happy_hour_wrapped', False):
+        return
+    native_validate = validator_cls.validate_articles
+    native_representation = serializer_cls.to_representation
+
+    def validate_articles(self, value):
+        total = self.initial_data.get('total')
+        try:
+            sent = Decimal(str(total)).quantize(Decimal('1.00')) if total else None
+            resolve_prices(value, sent)
+        except (ValueError, InvalidOperation):
+            # FR : Aucun barème autorisé ne correspond : on applique les prix en vigueur,
+            # le contrôle natif refuse alors la vente (jamais d'ancien prix hors marge).
+            # EN: No allowed price set matches: apply current prices so native refuses.
+            resolve_prices(value, None)
+        return native_validate(self, value)
+
+    def to_representation(self, instance):
+        data = native_representation(self, instance)
+        apply_to_payload([data])
+        return data
+
+    validate_articles.happy_hour_wrapped = True
+    validator_cls.validate_articles = validate_articles
+    serializer_cls.to_representation = to_representation

@@ -21,3 +21,10 @@ class HappyHourLaboutikConfig(AppConfig):
         article_admin = staff_admin_site._registry.get(Articles)
         if article_admin and HappyHourPriceInline not in article_admin.inlines:
             article_admin.inlines = [HappyHourPriceInline, *article_admin.inlines]
+
+        # FR : Prix servis aux caisses et contrôle des totaux, sans modifier le code natif.
+        # EN: Prices sent to terminals and total checks, without editing native code.
+        from webview.serializers import PointDeVenteSerializer
+        from webview.validators import DataAchatDepuisClientValidator
+        from happy_hour_laboutik.services import install
+        install(DataAchatDepuisClientValidator, PointDeVenteSerializer)

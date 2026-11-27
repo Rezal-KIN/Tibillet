@@ -176,13 +176,73 @@ class HappyHourTests(unittest.TestCase):
         lines = [{"pk": self.article("retour", "-1.00", methode="CR"), "qty": Decimal(2)}]
         self.assertEqual(self.services.resolve_prices(lines, Decimal("2.00"), self.at(23, 0)), Decimal("-2.00"))
 
+    # --- branchement sur le code natif (sans le modifier) ------------------------
+
+    def native_classes(self):
+        from decimal import Decimal as D
+        calls = []
+
+        class Validator:
+            def __init__(self, total):
+                self.initial_data = {"total": total}
+
+            def validate_articles(self, value):
+                # Contrôle natif : total recalculé depuis article.prix.
+                total = sum((line["pk"].prix * line["qty"] for line in value), D(0))
+                if self.initial_data["total"] and abs(D(self.initial_data["total"])) != abs(total):
+                    raise AssertionError("native refusal")
+                calls.append("native")
+                return value
+
+        class Serializer:
+            def to_representation(self, instance):
+                return {"id": "pv1", "articles": [{"id": "pinte", "prix": "7.50"}]}
+
+        return Validator, Serializer, calls
+
+    def test_wrapped_validator_lets_native_check_the_resolved_prices(self):
+        Validator, Serializer, calls = self.native_classes()
+        self.services.install(Validator, Serializer)
+        self.services.install(Validator, Serializer)  # idempotent
+        now = self.at(23, 0)
+        original_state = self.services.state
+        self.services.state = lambda now_=None: original_state(now)
+        lines = self.lines()
+        self.assertIs(Validator("12.00").validate_articles(lines), lines)
+        self.assertEqual(calls, ["native"])
+        with self.assertRaises(AssertionError):
+            Validator("16.00").validate_articles(self.lines())
+
+    def test_wrapped_validator_is_native_outside_happy_hour(self):
+        Validator, Serializer, calls = self.native_classes()
+        self.services.install(Validator, Serializer)
+        original_state = self.services.state
+        self.services.state = lambda now_=None: original_state(self.at(21, 0))
+        lines = self.lines()
+        Validator("16.00").validate_articles(lines)
+        self.assertEqual(lines[0]["pk"].prix, Decimal("7.50"))
+        with self.assertRaises(AssertionError):
+            Validator("12.00").validate_articles(self.lines())
+
+    def test_wrapped_serializer_sends_current_prices(self):
+        Validator, Serializer, _ = self.native_classes()
+        self.services.install(Validator, Serializer)
+        self.prices["pinte"] = (Decimal("5.50"), "VT")
+        original_state = self.services.state
+        self.services.state = lambda now_=None: original_state(self.at(22, 45))
+        data = Serializer().to_representation(object())
+        self.assertEqual(data["articles"][0]["prix"], "5.50")
+        self.assertTrue(data["happy_hour"]["active"])
+
 
 class HappyHourWiringTests(unittest.TestCase):
-    def test_native_view_and_validator_delegate_to_the_module(self):
+    def test_native_view_and_validator_stay_identical_to_tibillet(self):
         views = (ROOT / "views.py").read_text()
         validators = (ROOT / "validators.py").read_text()
-        self.assertIn("data['happy_hour'] = apply_to_payload(data['data'])", views)
-        self.assertIn("total_temp = resolve_prices(value, total_sended if total_sended else None)", validators)
+        self.assertNotIn("happy_hour", views)
+        self.assertNotIn("happy_hour", validators)
+        apps = (ROOT / "happy_hour_laboutik" / "apps.py").read_text()
+        self.assertIn("install(DataAchatDepuisClientValidator, PointDeVenteSerializer)", apps)
 
     def test_image_ships_app_migration_template_and_settings(self):
         dockerfile = (ROOT / "Dockerfile").read_text()

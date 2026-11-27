@@ -33,31 +33,8 @@ def source_function(filename, name, scope, class_name=None):
     return scope[name]
 
 
-def install_happy_hour(test, actif=False):
-    """Charge le vrai module happy hour avec une plage désactivée (cas natif)."""
-    import importlib.util
-    import sys
-    schedule = types.SimpleNamespace(actif=actif, debut=None, fin=None)
-    models = types.ModuleType("happy_hour_laboutik.models")
-    models.HappyHour = types.SimpleNamespace(get_solo=lambda: schedule)
-    models.HappyHourPrice = types.SimpleNamespace(objects=Mock())
-    spec = importlib.util.spec_from_file_location(
-        "happy_hour_laboutik.services", ROOT / "happy_hour_laboutik" / "services.py")
-    services = importlib.util.module_from_spec(spec)
-    modules = {"happy_hour_laboutik": types.ModuleType("happy_hour_laboutik"),
-               "happy_hour_laboutik.models": models, "happy_hour_laboutik.services": services}
-    patcher = patch.dict(sys.modules, modules)
-    patcher.start()
-    test.addCleanup(patcher.stop)
-    spec.loader.exec_module(services)
-    return models
-
-
 class ArticlePricesTests(unittest.TestCase):
-    """Happy hour désactivé : comportement natif TiBillet strictement conservé."""
-
     def setUp(self):
-        self.happy_hour_models = install_happy_hour(self)
         self.scope = {
             "Decimal": Decimal,
             "os": os,
@@ -85,8 +62,6 @@ class ArticlePricesTests(unittest.TestCase):
         rows = [{"pk": beer, "qty": 2}, {"pk": water, "qty": 3}]
         self.assertIs(self.validate_total("11.00", rows), rows)
         self.assertEqual(beer.prix, Decimal("4.00"))
-        # Plage désactivée : aucune lecture de prix happy hour.
-        self.happy_hour_models.HappyHourPrice.objects.filter.assert_not_called()
 
     def test_old_discounted_total_is_rejected_without_changing_article_price(self):
         beer = types.SimpleNamespace(prix=Decimal("4.00"))
@@ -144,7 +119,6 @@ class ArticlePricesTests(unittest.TestCase):
         self.assertEqual(article["prix"], "4.00")
         self.assertNotIn("happy_hour", article)
         self.assertNotIn("prix_normal", article)
-        self.assertEqual(response.data["happy_hour"], {"active": False, "seconds_until_change": None})
 
 
 if __name__ == "__main__":
