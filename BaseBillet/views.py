@@ -1061,10 +1061,12 @@ class MyAccount(viewsets.ViewSet):
         bloquer la page si Fedow est lent.
         EN: Spendable euro balance here (online + cash + gift), lazy-loaded via htmx.
         """
-        context = {'balance': None, 'gift': None,
-                   'show_refill_button': Configuration.get_solo().show_refill_button}
+        # ?part=link : seulement le bouton « Associer ma carte » (si aucune carte liée).
+        context = {'balance': None, 'gift': None, 'has_card': None,
+                   'link_only': request.GET.get('part') == 'link'}
         try:
             wallet = FedowAPI().wallet.cached_retrieve_by_signature(request.user).validated_data
+            context['has_card'] = bool(wallet.get('has_user_card'))
             place_uuid = str(FedowConfig.get_solo().fedow_place_uuid)
             total = gift = 0
             for token in wallet.get('tokens') or []:
@@ -1085,6 +1087,55 @@ class MyAccount(viewsets.ViewSet):
         except Exception as error:
             logger.error(f"balance_summary : {type(error).__name__}")
         return render(request, "reunion/partials/account/balance_summary.html", context=context)
+
+    @action(detail=False, methods=['GET', 'POST'])
+    def link_card(self, request):
+        """
+        FR : Chemin inverse du QR code : une personne déjà connectée (et souvent déjà
+        rechargée en ligne) associe sa carte physique en saisissant le numéro imprimé.
+        Liaison native TiBillet (Fedow `linkwallet_card_number`) : le solde de la carte
+        (recharges en caisse) rejoint celui du compte.
+        EN: Reverse of the QR flow: a signed-in user links a physical card by its
+        printed number, using the native Fedow card-number link (wallet fusion).
+        """
+        template = 'reunion/views/account/link_card.html'
+        context = get_context(request)
+        context['account_tab'] = 'card'
+        if not request.user.email_valid:
+            messages.add_message(request, messages.WARNING,
+                                 _("Confirmez d'abord votre adresse e-mail (lien reçu par mail) pour associer une carte."))
+            return render(request, template, context)
+        fedow = FedowAPI()
+        try:
+            wallet = fedow.wallet.retrieve_by_signature(request.user).validated_data
+        except Exception as error:
+            logger.error(f"link_card wallet : {type(error).__name__}")
+            messages.add_message(request, messages.ERROR, _("Service momentanément indisponible, réessayez."))
+            return render(request, template, context)
+        context['has_card'] = bool(wallet.get('has_user_card'))
+        if request.method == 'GET' or context['has_card']:
+            return render(request, template, context)
+
+        number = re.sub(r'[\s-]', '', request.POST.get('card_number', '')).upper()
+        if not re.fullmatch(r'[A-Z0-9]{8}', number):
+            messages.add_message(request, messages.ERROR,
+                                 _("Le numéro doit comporter 8 caractères (lettres et chiffres), tel qu'imprimé sur la carte."))
+            return render(request, template, context)
+        try:
+            card = fedow.NFCcard.linkwallet_card_number(user=request.user, card_number=number)
+        except Exception as error:
+            logger.warning(f"link_card {number} : {type(error).__name__}")
+            messages.add_message(request, messages.ERROR, _(
+                "Carte introuvable ou déjà associée à un compte. Vérifiez le numéro, "
+                "ou adressez-vous au stand cashless."))
+            return render(request, template, context)
+        # FR : Le solde affiché doit refléter la fusion immédiatement.
+        # EN: Drop the short wallet cache so the merged balance shows at once.
+        cache.delete(f"wallet_user_{request.user.wallet.uuid}")
+        messages.add_message(request, messages.SUCCESS, _(
+            "Carte %(number)s associée : son solde est regroupé avec celui de votre compte.") % {
+            'number': card.get('number_printed', number)})
+        return redirect('/my_account/')
 
     @action(detail=False, methods=['GET'])
     def tokens_table(self, request):

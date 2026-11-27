@@ -1,0 +1,29 @@
+{% extends 'reunion/account_base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Associer ma carte" %}{% endblock %}
+
+{% block account_page %}
+<section class="card mb-3">
+    <div class="card-body">
+        <h1 class="card-title">{% translate "Associer ma carte" %}</h1>
+        {% if has_card %}
+            <p class="lead">{% translate "Une carte est déjà associée à votre compte." %}</p>
+            <p>{% translate "Si vous l'avez perdue, déclarez-la perdue depuis « Ma carte TiBillet », puis associez la nouvelle." %}</p>
+            <a href="/my_account/card/" class="btn btn-outline-primary">{% translate "Ma carte TiBillet" %}</a>
+        {% elif user.email_valid %}
+            <p class="lead">{% translate "Vous avez déjà un compte et vous venez de recevoir une carte ? Associez-la ici." %}</p>
+            <p>{% translate "Le solde de la carte (recharges en caisse) et celui de votre compte (recharges en ligne) seront regroupés. Vous pourrez ensuite payer et recharger avec la même carte." %}</p>
+            <form method="post" action="/my_account/link_card/" class="mt-3" style="max-width: 28rem;">
+                {% csrf_token %}
+                <label for="card-number" class="form-label">{% translate "Numéro imprimé sur la carte (8 caractères)" %}</label>
+                <input type="text" name="card_number" id="card-number" class="form-control form-control-lg text-uppercase"
+                       maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                       placeholder="AB12CD34" required>
+                <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">{% translate "Associer cette carte" %}</button>
+            </form>
+        {% endif %}
+        <a href="/my_account/" class="btn btn-secondary w-100 mt-3" style="max-width: 28rem;">{% translate "Retour à mon compte" %}</a>
+    </div>
+</section>
+{% endblock %}

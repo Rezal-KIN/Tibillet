@@ -1,4 +1,13 @@
 {% load i18n %}
+{% if link_only %}
+  {# FR : Chemin inverse : compte déjà créé (souvent rechargé en ligne), carte pas encore liée. #}
+  {% if has_card is False %}
+    <a href="/my_account/link_card/" class="btn btn-outline-light btn-lg w-100" style="max-width: 24rem;"
+       data-testid="account-link-card-button">
+      <i class="bi bi-link-45deg" aria-hidden="true"></i> {% translate "Associer ma carte" %}
+    </a>
+  {% endif %}
+{% else %}
 {# FR : Solde utilisable, gros et lisible sur fond sombre (surtout sur mobile). #}
 {# EN: Spendable balance, large and readable on the dark background (mobile first). #}
 <div class="balance-summary text-center text-md-end" data-testid="balance-summary">
@@ -12,3 +21,4 @@
         <div class="small opacity-75">{% translate "Solde momentanément indisponible, réessayez dans un instant." %}</div>
     {% endif %}
 </div>
+{% endif %}

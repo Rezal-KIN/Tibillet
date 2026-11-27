@@ -69,13 +69,17 @@
         <div hx-get="/my_account/balance_summary/" hx-trigger="load" hx-swap="innerHTML" class="order-1">
             <div class="spinner-border spinner-border-sm" role="status" aria-label="{% translate 'Loading list' %}"></div>
         </div>
-        {% if config.show_refill_button %}
-        <a href="/my_account/refill_wallet/" class="btn btn-primary btn-lg order-2 w-100"
-           style="max-width: 24rem;" data-testid="account-refill-button">
-            <i class="bi bi-plus-circle" aria-hidden="true"></i>
-            {% translate "Recharger ma carte" %}
-        </a>
-        {% endif %}
+        <div class="order-2 d-flex flex-column gap-2 w-100 align-items-center align-items-md-end">
+            {% if config.show_refill_button %}
+            <a href="/my_account/refill_wallet/" class="btn btn-primary btn-lg w-100"
+               style="max-width: 24rem;" data-testid="account-refill-button">
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                {% translate "Recharger ma carte" %}
+            </a>
+            {% endif %}
+            <div hx-get="/my_account/balance_summary/?part=link" hx-trigger="load" hx-swap="outerHTML"
+                 class="w-100 d-flex justify-content-center justify-content-md-end"></div>
+        </div>
     </div>
 </section>
 
