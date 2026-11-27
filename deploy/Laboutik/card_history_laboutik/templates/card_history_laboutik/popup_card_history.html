@@ -1,0 +1,104 @@
+{% load i18n %}
+{# AM-Rezal (Gala) : historique d'une carte, mode gérant. Même conteneur que « Vérifier carte » (#popup-cashless). #}
+<div id="popup-cashless" class="BF-col popup-cashless-conteneur gala-historique" style="background-color:#1a1e25;">
+  {% if error_msg %}
+    <div class="gh-erreur">{{ error_msg }}</div>
+  {% else %}
+    <div class="gh-defilement">
+      <div class="gh-entete">
+        <div class="gh-titre"><i class="fas fa-history"></i> Historique carte {{ card.number }}</div>
+        <div class="gh-solde">{{ balance }} €</div>
+      </div>
+      <div class="gh-infos">
+        <span>Tag {{ card.tag_id }}</span>
+        <span>Lot {{ card.generation }}</span>
+        {% if card.linked_to_account %}
+          <span class="gh-ok">Associée à un compte{% if card.email %} ({{ card.email }}){% endif %}</span>
+        {% else %}
+          <span>Carte anonyme (non associée)</span>
+        {% endif %}
+        {% for b in balances %}<span>{{ b.asset }} : {{ b.euros }} €</span>{% endfor %}
+      </div>
+
+      <div class="gh-section">Toutes les opérations ({{ operations_total }}){% if truncated %} — les 200 plus récentes{% endif %}</div>
+      {% if operations %}
+        <table class="gh-table">
+          {% for op in operations %}
+            <tr>
+              <td class="gh-date">{{ op.datetime }}</td>
+              <td>{{ op.label }}{% if op.online %} <span class="gh-badge">en ligne</span>{% endif %}
+                <div class="gh-detail">{{ op.from }} → {{ op.to }} · {{ op.asset }}</div></td>
+              <td class="gh-montant {% if op.sign > 0 %}gh-plus{% elif op.sign < 0 %}gh-moins{% endif %}">
+                {% if op.sign > 0 %}+{% elif op.sign < 0 %}−{% endif %}{{ op.euros }} €</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="gh-vide">Aucune opération : carte jamais utilisée.</div>
+      {% endif %}
+
+      {% if online_refills %}
+        <div class="gh-section">Recharges en ligne (CAWL)</div>
+        <table class="gh-table">
+          {% for r in online_refills %}
+            <tr>
+              <td class="gh-date">{{ r.created_at }}</td>
+              <td>{% if r.credited %}Payée et créditée{% elif r.status == 'CANCELLED' %}Abandonnée{% elif r.status == 'CREATED' %}Page ouverte, non payée{% else %}{{ r.status }}{% endif %}
+                {% if r.fee %}<div class="gh-detail">+ {{ r.fee_euros }} € de frais</div>{% endif %}</td>
+              <td class="gh-montant">{{ r.euros }} €</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+
+      {% if online_refunds %}
+        <div class="gh-section">Remboursements en ligne</div>
+        <table class="gh-table">
+          {% for r in online_refunds %}
+            <tr><td class="gh-date">{{ r.updated_at }}</td><td>{{ r.status }}</td>
+              <td class="gh-montant">{{ r.euros }} €</td></tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+
+      <div class="gh-section">Détail en caisse (LaBoutik)</div>
+      {% if sales %}
+        <table class="gh-table">
+          {% for s in sales %}
+            <tr>
+              <td class="gh-date">{{ s.datetime }}</td>
+              <td>{{ s.article }}{% if s.qty != 1 %} × {{ s.qty }}{% endif %}
+                <div class="gh-detail">{{ s.pos }}{% if s.payment %} · {{ s.payment }}{% endif %}{% if s.by %} · {{ s.by }}{% endif %}</div></td>
+              <td class="gh-montant">{{ s.total }} €</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="gh-vide">Aucun passage en caisse.</div>
+      {% endif %}
+    </div>
+  {% endif %}
+  <div class="popup-retour-actions">
+    {% include "elements/bouton_return.html" %}
+  </div>
+</div>
+<style>
+  .gala-historique { color: #fff; justify-content: space-between; }
+  .gala-historique .gh-defilement { width: 100%; max-width: 900px; overflow-y: auto; flex: 1; padding: 12px; box-sizing: border-box; }
+  .gala-historique .gh-entete { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .gala-historique .gh-titre { font-size: 1.6rem; font-weight: bold; }
+  .gala-historique .gh-solde { font-size: 2.2rem; font-weight: bold; color: #4caf50; }
+  .gala-historique .gh-infos { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 4px; opacity: .85; }
+  .gala-historique .gh-ok { color: #4caf50; }
+  .gala-historique .gh-section { margin-top: 18px; padding-bottom: 4px; border-bottom: 1px solid #3b567f; font-weight: bold; text-transform: uppercase; }
+  .gala-historique .gh-table { width: 100%; border-collapse: collapse; }
+  .gala-historique .gh-table td { padding: 6px 4px; border-bottom: 1px solid #2a2f38; vertical-align: top; }
+  .gala-historique .gh-date { white-space: nowrap; opacity: .8; width: 1%; }
+  .gala-historique .gh-detail { font-size: .85rem; opacity: .7; }
+  .gala-historique .gh-montant { text-align: right; white-space: nowrap; font-weight: bold; }
+  .gala-historique .gh-plus { color: #4caf50; }
+  .gala-historique .gh-moins { color: #ff6b6b; }
+  .gala-historique .gh-badge { font-size: .75rem; background: #3b567f; padding: 1px 6px; border-radius: 8px; }
+  .gala-historique .gh-vide, .gala-historique .gh-erreur { padding: 24px; text-align: center; opacity: .85; }
+  .gala-historique .gh-erreur { font-size: 1.5rem; margin: auto; }
+</style>

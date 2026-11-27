@@ -1,9 +1,12 @@
 from django.urls import path, re_path
 from fedowallet_django.urls import urlpatterns as native_urls
+from cawl_fedow.history import CardHistoryAPI
 from cawl_fedow.views import CawlWalletAPI, stripe_disabled, webhook
 
 urlpatterns = [
     path("webhook_cawl/", webhook, name="cawl-webhook"),
+    # Mode gérant LaBoutik : historique d'une carte, lecture seule, lieu signé.
+    path("card_history/<str:pk>/", CardHistoryAPI.as_view({"get": "retrieve"})),
     path("wallet/get_federated_token_refill_checkout/", CawlWalletAPI.as_view({"post": "get_federated_token_refill_checkout"})),
     path("wallet/<uuid:pk>/retrieve_from_refill_checkout/", CawlWalletAPI.as_view({"get": "retrieve_from_refill_checkout"})),
     path("wallet/global_asset_bank_stripe_deposit/", stripe_disabled),

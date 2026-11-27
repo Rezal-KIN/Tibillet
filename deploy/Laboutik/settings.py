@@ -88,6 +88,8 @@ INSTALLED_APPS = [
     'htmxview',
     # AM-Rezal (Gala) : prix happy hour, sans modifier les tables natives.
     'happy_hour_laboutik',
+    # AM-Rezal (Gala) : historique d'une carte en mode gérant.
+    'card_history_laboutik',
     # 'debug_toolbar',
 ]
 

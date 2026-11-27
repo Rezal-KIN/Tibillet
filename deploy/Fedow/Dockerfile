@@ -22,6 +22,8 @@ COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/tests.py /home/fedow/Fedow/cawl
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/test_wallet_refunds.py /home/fedow/Fedow/cawl_fedow/test_wallet_refunds.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/urls.py /home/fedow/Fedow/cawl_fedow/urls.py
 COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/views.py /home/fedow/Fedow/cawl_fedow/views.py
+COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/history.py /home/fedow/Fedow/cawl_fedow/history.py
+COPY --chown=fedow:fedow deploy/Fedow/cawl_fedow/test_card_history.py /home/fedow/Fedow/cawl_fedow/test_card_history.py
 COPY --chown=fedow:fedow payment_providers/__init__.py /home/fedow/Fedow/payment_providers/__init__.py
 COPY --chown=fedow:fedow payment_providers/cawl.py /home/fedow/Fedow/payment_providers/cawl.py
 RUN poetry run pip install --no-cache-dir onlinepayments-sdk-python3==10.2.0

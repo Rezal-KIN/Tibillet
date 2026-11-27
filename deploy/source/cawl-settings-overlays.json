@@ -20,7 +20,7 @@
     ],
     [
       "    'htmxview',\n    # 'debug_toolbar',\n",
-      "    'htmxview',\n    # AM-Rezal (Gala) : prix happy hour, sans modifier les tables natives.\n    'happy_hour_laboutik',\n    # 'debug_toolbar',\n"
+      "    'htmxview',\n    # AM-Rezal (Gala) : prix happy hour, sans modifier les tables natives.\n    'happy_hour_laboutik',\n    # AM-Rezal (Gala) : historique d'une carte en mode gérant.\n    'card_history_laboutik',\n    # 'debug_toolbar',\n"
     ],
     [
       "            {'name': 'groupementcategorie'}\n        ]},\n",

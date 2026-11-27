@@ -88,4 +88,60 @@
       }, POLL_MS)
     })()
   </script>
+  <script>
+    // AM-Rezal (Gala) : « Historique carte » dans le menu, réservé au mode gérant.
+    // Le menu natif concatène `addPluginFunctionsToMenu()` : on enveloppe cette fonction
+    // au moment où LaBoutik la définit, sans modifier ses fichiers JavaScript.
+    // EN (Gala): manager-mode "Card history" menu entry, wrapping the native plugin hook.
+    (function () {
+      let nativeMenu = null
+      Object.defineProperty(window, 'addPluginFunctionsToMenu', {
+        configurable: true,
+        get: function () {
+          return function () {
+            const base = nativeMenu ? nativeMenu() : ''
+            if (!window.glob || glob.passageModeGerant !== true) return base
+            return base + `<div class="menu-burger-item BF-ligne-deb" onclick="galaHistoriqueCarte()">
+              <i class="fas fa-history"></i><div>HISTORIQUE CARTE</div></div>`
+          }
+        },
+        set: function (value) { nativeMenu = value }
+      })
+
+      const boutonRetour = `<div class="popup-conteneur-bt-retour BF-col">
+        <bouton-basique id="popup-retour" traiter-texte="1" texte="RETOUR|2rem||return-uppercase" couleur-fond="#3b567f"
+          icon="fa-undo-alt||2.5rem" width="400px" height="120px" onclick="fn.popupAnnuler();"></bouton-basique></div>`
+
+      function message(texte) {
+        fn.popup({ message: `<div class="BF-col"><div class="ft-1r mb16px">${texte}</div></div>`, boutons: boutonRetour, type: 'attent' })
+      }
+
+      window.galaHistoriqueCarte = function () {
+        const menu = document.querySelector('#menu-burger-conteneur')
+        if (menu) menu.classList.remove('burger-show')
+        if (glob.modeGerant !== true) {
+          message('Activez d\'abord le MODE GÉRANT.E (cadenas du menu).')
+          return
+        }
+        rfid.muteEtat('message', `<div style="white-space: pre-line; text-align: center;">Historique carte\nAttente lecture carte</div>`)
+        rfid.muteEtat('data', { typeCheckCarte: 'historiqueGala' })
+        rfid.muteEtat('callbackOk', function (donnees) {
+          sys.ajax({
+            type: 'post', url: '/gala/card_history/', dataType: 'form', dataTypeReturn: 'text',
+            csrfToken: glob.csrf_token,
+            attente: { largeur: 80, couleur: '#0F0', nbc: 8, rpt: 4, epaisseur: 8 },
+            data: { tag_id_client: donnees.tagId, tag_id_cm: glob.tagIdCm }
+          }, function (retour) {
+            if (typeof retour === 'string' && retour.indexOf('popup-cashless') !== -1) {
+              document.querySelector('#contenu').insertAdjacentHTML('beforeend', retour)
+            } else {
+              message('Historique indisponible, réessayez.')
+            }
+          }, function () { message('Réseau indisponible, réessayez.') })
+        })
+        rfid.muteEtat('tagIdIdentite', 'client1')
+        rfid.lireTagId()
+      }
+    })()
+  </script>
 {% endblock script %}

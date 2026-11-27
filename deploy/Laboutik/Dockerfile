@@ -21,9 +21,13 @@ COPY --chown=tibillet:tibillet deploy/Laboutik/happy_hour_laboutik/admin.py /Dja
 COPY --chown=tibillet:tibillet deploy/Laboutik/happy_hour_laboutik/services.py /DjangoFiles/happy_hour_laboutik/services.py
 COPY --chown=tibillet:tibillet deploy/Laboutik/happy_hour_laboutik/migrations/__init__.py /DjangoFiles/happy_hour_laboutik/migrations/__init__.py
 COPY --chown=tibillet:tibillet deploy/Laboutik/happy_hour_laboutik/migrations/0001_initial.py /DjangoFiles/happy_hour_laboutik/migrations/0001_initial.py
+COPY --chown=tibillet:tibillet deploy/Laboutik/card_history_laboutik/__init__.py /DjangoFiles/card_history_laboutik/__init__.py
+COPY --chown=tibillet:tibillet deploy/Laboutik/card_history_laboutik/apps.py /DjangoFiles/card_history_laboutik/apps.py
+COPY --chown=tibillet:tibillet deploy/Laboutik/card_history_laboutik/views.py /DjangoFiles/card_history_laboutik/views.py
+COPY --chown=tibillet:tibillet deploy/Laboutik/card_history_laboutik/templates/card_history_laboutik/popup_card_history.html /DjangoFiles/card_history_laboutik/templates/card_history_laboutik/popup_card_history.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/accueil.html /DjangoFiles/webview/templates/accueil.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/login.html /DjangoFiles/webview/templates/login.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/kiosk_base.html /DjangoFiles/htmxview/templates/kiosk/base.html
 COPY --chown=tibillet:tibillet deploy/Laboutik/source_templates/infos.html /DjangoFiles/htmxview/templates/appsettings/infos.html
 COPY --chown=tibillet:tibillet deploy/source/admin-templates/admin/base_site.html /DjangoFiles/source_templates/admin/base_site.html
-RUN python3 -m compileall -q happy_hour_laboutik webview/views.py webview/validators.py administration/management/commands/install.py Cashless/settings.py
+RUN python3 -m compileall -q happy_hour_laboutik card_history_laboutik webview/views.py webview/validators.py administration/management/commands/install.py Cashless/settings.py
