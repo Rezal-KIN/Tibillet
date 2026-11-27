@@ -304,3 +304,20 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   du seul document demandé, créé dans le même plan, sans autre droit modifié.
   Ne pas remettre de dépendance globale du module gala sur cette politique :
   elle reporte inutilement les documents IAM des galas existants à l'apply.
+
+# Happy hour et frais de recharge (Gala bapts2026, 27/11/2026)
+
+- **Happy hour LaBoutik** : l'ancienne version (retirée en `4e20db20`) figeait les prix au
+  chargement de la caisse ; le serveur refusait ensuite les ventes à la bascule horaire.
+  Les prix ne sont envoyés aux téléphones qu'au passage de la carte primaire
+  (`valider_carte_maitresse`) ; recharger la page renvoie à l'écran carte primaire.
+  La fonction native `reloadData()` refait la même requête avec la carte mémorisée.
+- **Réintroduction** (module `deploy/Laboutik/happy_hour_laboutik`) : prix happy hour
+  par article (table liée, pas de colonne ajoutée à `Articles`), plage quotidienne ;
+  le payload porte le délai avant bascule, le script de `accueil.html` recharge les prix
+  quand la caisse est libre ; le validateur accepte ancien/nouveau prix 5 min autour
+  d'une bascule et débite le prix affiché. Après un changement d'horaires dans l'admin,
+  les caisses ne le voient qu'au prochain chargement (repasser la carte primaire).
+- **Frais CAWL** : `REFILL_FEE_CENTS` (payment_providers/cawl.py) est la source unique ;
+  `Checkout.fee` les mémorise ; CAWL encaisse amount + fee, le wallet reçoit amount,
+  le remboursement est plafonné à amount (frais jamais remboursés).
