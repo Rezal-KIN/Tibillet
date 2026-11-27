@@ -244,6 +244,11 @@ class HappyHourWiringTests(unittest.TestCase):
         apps = (ROOT / "happy_hour_laboutik" / "apps.py").read_text()
         self.assertIn("install(DataAchatDepuisClientValidator, PointDeVenteSerializer)", apps)
 
+    def test_app_config_is_declared_for_django_2_2(self):
+        # LaBoutik runs Django 2.2: without default_app_config, ready() never runs.
+        init = (ROOT / "happy_hour_laboutik" / "__init__.py").read_text()
+        self.assertIn("default_app_config = 'happy_hour_laboutik.apps.HappyHourLaboutikConfig'", init)
+
     def test_image_ships_app_migration_template_and_settings(self):
         dockerfile = (ROOT / "Dockerfile").read_text()
         for name in ("apps.py", "models.py", "admin.py", "services.py", "migrations/0001_initial.py"):

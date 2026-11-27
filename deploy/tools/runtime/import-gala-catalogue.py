@@ -6,7 +6,8 @@ FR :
 - Crée ou met à jour catégories, articles et points de vente par leur nom ; la liste
   d'articles de chaque point de vente devient exactement celle de l'Excel.
 - Ne supprime rien. Les points de vente/articles absents de l'Excel sont laissés tels
-  quels, sauf ceux listés dans GALA_CATALOGUE_HIDE (masqués, jamais supprimés).
+  quels, sauf ceux listés dans GALA_CATALOGUE_HIDE (points de vente masqués) ou
+  GALA_CATALOGUE_ARCHIVE (articles archivés), jamais supprimés.
 - Les prix happy hour et la plage horaire nécessitent le module happy_hour_laboutik.
 - DRY_RUN=1 : tout est calculé dans une transaction annulée à la fin.
 EN: Idempotent Gala catalogue import; never deletes; DRY_RUN=1 rolls everything back.
@@ -22,6 +23,7 @@ from APIcashless.models import Articles, Categorie, PointDeVente
 
 catalogue = json.loads(os.environ['GALA_CATALOGUE_JSON'])
 hide = [name for name in os.environ.get('GALA_CATALOGUE_HIDE', '').split('|') if name]
+archive = [name for name in os.environ.get('GALA_CATALOGUE_ARCHIVE', '').split('|') if name]
 dry_run = os.environ.get('DRY_RUN') == '1'
 
 ICONS = {'Bières ATS': 'fa-beer', 'Cocktails ATS': 'fa-cocktail', 'Shots ATS': 'fa-glass-whiskey',
@@ -93,6 +95,14 @@ try:
             updated = PointDeVente.objects.filter(name=name, hidden=False).update(hidden=True)
             if updated:
                 report['hidden'].append(name)
+
+        # Articles retirés des caisses : archivés (le signal natif les retire des
+        # points de vente), jamais supprimés : l'historique des ventes est conservé.
+        for name in archive:
+            for article in Articles.objects.filter(name=name, archive=False):
+                article.archive = True
+                article.save()
+                report['hidden'].append('article:' + name)
 
         # Article « Carte perdue » (1 €) dans le point de vente des recharges.
         lost = catalogue.get('carte_perdue')
