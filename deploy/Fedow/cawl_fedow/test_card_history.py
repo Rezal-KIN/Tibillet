@@ -90,6 +90,15 @@ class CardHistoryTests(TestCase):
         self.assertEqual(self.get('nothex!!').status_code, 400)
         self.assertEqual(self.get('FFFFFFFF').status_code, 404)
 
+    def test_lookup_by_printed_number_returns_the_tag(self):
+        key = self.key
+        signature = sign_message(key.encode('utf8'), get_private_key(self.private)).decode()
+        response = APIClient().get('/card_history/number/abcd1234/', HTTP_AUTHORIZATION='Api-Key ' + key,
+                                   HTTP_SIGNATURE=signature)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['card']['tag_id'], 'ABCD1234')
+        self.assertEqual(APIClient().get('/card_history/number/ABCD1234/').status_code, 403)
+
     def test_read_only(self):
         before = Transaction.objects.count()
         self.get()

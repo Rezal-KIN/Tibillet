@@ -16,5 +16,8 @@ class CardHistoryLaboutikConfig(AppConfig):
         from card_history_laboutik.views import card_history
 
         if not any(getattr(p, 'name', None) == 'gala-card-history' for p in root_urls.urlpatterns):
-            # En tête : les motifs natifs `url('wv/')` cherchent aussi en milieu de chemin.
-            root_urls.urlpatterns.insert(0, path('gala/card_history/', card_history, name='gala-card-history'))
+            # En tête : les motifs natifs `url('wv/')` cherchent aussi en milieu de chemin, et
+            # l'onglet admin doit passer avant l'include `adminstaff/`.
+            from card_history_laboutik.primary_cards import urls as primary_card_urls
+            root_urls.urlpatterns[0:0] = [path('gala/card_history/', card_history, name='gala-card-history'),
+                                          *primary_card_urls()]

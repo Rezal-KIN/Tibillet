@@ -1,0 +1,160 @@
+{% extends "admin/base_site.html" %}
+{% comment %}AM-Rezal (Gala) : onglet « Cartes primaires (NFC) ». Enchaîne les étapes natives : carte, membre, carte primaire.{% endcomment %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="/adminstaff/">Accueil</a> › Membres &amp; Cartes › Cartes primaires (NFC)</div>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div id="cp" style="max-width: 720px;">
+  <h1>Cartes primaires (NFC)</h1>
+  <p>Posez une carte pour la rendre primaire, modifier ses points de vente ou son mode gérant, ou la retirer.</p>
+
+  <fieldset class="module aligned">
+    <h2>1. La carte</h2>
+    <div class="form-row" id="cp-scan-row" style="display:none;">
+      <button type="button" class="button default" id="cp-scan" style="font-size:1.1rem;padding:10px 18px;">📱 Scanner la carte</button>
+      <span id="cp-scan-status" style="margin-left:10px;"></span>
+    </div>
+    <div class="form-row">
+      <label for="cp-number">Numéro imprimé sur la carte</label>
+      <input type="text" id="cp-number" maxlength="20" autocomplete="off" autocapitalize="characters"
+             spellcheck="false" placeholder="ex. 26C266C5" style="text-transform:uppercase;font-size:1.1rem;">
+      <button type="button" class="button" id="cp-find">Rechercher</button>
+      <p class="help">Sur ordinateur : tapez le numéro imprimé (un lecteur USB « clavier » fonctionne aussi dans ce champ).</p>
+    </div>
+  </fieldset>
+
+  <div id="cp-message" style="display:none;margin:12px 0;padding:10px;border-radius:4px;"></div>
+
+  <fieldset class="module aligned" id="cp-form" style="display:none;">
+    <h2>2. <span id="cp-title"></span></h2>
+    <div class="form-row" id="cp-customer" style="display:none;"></div>
+    <div class="form-row">
+      <label for="cp-nom">Nom</label><input type="text" id="cp-nom" maxlength="50">
+    </div>
+    <div class="form-row">
+      <label for="cp-prenom">Prénom</label><input type="text" id="cp-prenom" maxlength="50">
+    </div>
+    <div class="form-row">
+      <label>Points de vente</label>
+      <div>
+        {% for pdv in points_de_vente %}
+          <label style="display:block;width:auto;float:none;"><input type="checkbox" class="cp-pos" value="{{ pdv.pk }}"> {{ pdv.name }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="form-row">
+      <label style="width:auto;float:none;"><input type="checkbox" id="cp-gerant"> Mode gérant.e (offrir, historique carte…)</label>
+    </div>
+    <div class="submit-row" style="text-align:left;">
+      <button type="button" class="button default" id="cp-save">Enregistrer la carte primaire</button>
+      <button type="button" class="button" id="cp-remove" style="display:none;background:#ba2121;color:#fff;">Retirer la carte primaire</button>
+    </div>
+  </fieldset>
+</div>
+
+<script>
+(function () {
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value
+  const $ = (id) => document.getElementById(id)
+  let current = null
+
+  function message(text, ok) {
+    const box = $('cp-message')
+    box.style.display = 'block'
+    box.style.background = ok ? '#dff0d8' : '#f2dede'
+    box.style.color = ok ? '#2b542c' : '#a94442'
+    box.textContent = text
+  }
+
+  async function post(url, data) {
+    const response = await fetch(url, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify(data)
+    })
+    let json = {}
+    try { json = await response.json() } catch (e) { json = { error: 'Réponse invalide du serveur.' } }
+    if (!response.ok) throw new Error(json.error || ('Erreur ' + response.status))
+    return json
+  }
+
+  function show(card) {
+    current = card
+    $('cp-form').style.display = 'block'
+    $('cp-title').textContent = (card.primary ? 'Carte primaire ' : 'Nouvelle carte primaire ') + card.number + ' (NFC ' + card.tag_id + ')'
+    $('cp-nom').value = card.nom || ''
+    $('cp-prenom').value = card.prenom || ''
+    const customer = $('cp-customer')
+    if (card.customer_email) {
+      customer.style.display = 'block'
+      customer.textContent = '⚠️ Carte liée au compte client ' + card.customer_email + ' : le nom ne sera pas modifié.'
+      $('cp-nom').disabled = $('cp-prenom').disabled = true
+    } else {
+      customer.style.display = 'none'
+      $('cp-nom').disabled = $('cp-prenom').disabled = false
+    }
+    const pos = card.primary ? card.primary.pos : []
+    document.querySelectorAll('.cp-pos').forEach(box => { box.checked = pos.indexOf(box.value) !== -1 })
+    $('cp-gerant').checked = !!(card.primary && card.primary.gerant)
+    $('cp-remove').style.display = card.primary ? 'inline-block' : 'none'
+  }
+
+  async function lookup(value, mode) {
+    $('cp-form').style.display = 'none'
+    message('Recherche de la carte…', true)
+    try {
+      const card = await post('/adminstaff/cartes-primaires/carte/', { value: value, mode: mode })
+      $('cp-message').style.display = 'none'
+      show(card)
+    } catch (error) { message(error.message, false) }
+  }
+
+  $('cp-find').addEventListener('click', () => lookup($('cp-number').value, 'numero'))
+  $('cp-number').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); lookup($('cp-number').value, 'numero') } })
+
+  // Téléphone Android + Chrome : lecture NFC native du navigateur (Web NFC).
+  if ('NDEFReader' in window) {
+    $('cp-scan-row').style.display = 'block'
+    $('cp-scan').addEventListener('click', async () => {
+      try {
+        const reader = new NDEFReader()
+        const controller = new AbortController()
+        await reader.scan({ signal: controller.signal })
+        $('cp-scan-status').textContent = 'Approchez la carte du téléphone…'
+        reader.onreading = (event) => {
+          controller.abort()
+          $('cp-scan-status').textContent = ''
+          lookup(event.serialNumber, 'scan')
+        }
+        reader.onreadingerror = () => { $('cp-scan-status').textContent = 'Lecture impossible, réessayez.' }
+      } catch (error) { message('NFC indisponible : ' + error.message, false) }
+    })
+  }
+
+  $('cp-save').addEventListener('click', async () => {
+    if (!current) return
+    const pos = Array.from(document.querySelectorAll('.cp-pos:checked')).map(box => box.value)
+    try {
+      const result = await post('/adminstaff/cartes-primaires/enregistrer/', {
+        tag_id: current.tag_id, nom: $('cp-nom').value, prenom: $('cp-prenom').value,
+        pos: pos, gerant: $('cp-gerant').checked
+      })
+      show(result.card)
+      message('Carte primaire ' + result.card.number + ' enregistrée. Le barman peut l’utiliser tout de suite.', true)
+    } catch (error) { message(error.message, false) }
+  })
+
+  $('cp-remove').addEventListener('click', async () => {
+    if (!current || !confirm('Retirer la carte primaire ' + current.number + ' ? Elle redeviendra une carte normale.')) return
+    try {
+      const result = await post('/adminstaff/cartes-primaires/retirer/', { tag_id: current.tag_id })
+      show(result.card)
+      message('Carte ' + result.card.number + ' : ce n’est plus une carte primaire.', true)
+    } catch (error) { message(error.message, false) }
+  })
+})()
+</script>
+{% endblock %}

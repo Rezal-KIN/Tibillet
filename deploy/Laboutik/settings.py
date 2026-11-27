@@ -114,6 +114,7 @@ JET_SIDE_MENU_ITEMS = {
             {'name': 'membre'},
             {'name': 'cartecashless'},
             {'name': 'cartemaitresse'},
+            {'url': '/adminstaff/cartes-primaires/', 'label': "Cartes primaires (NFC)"},
         ]},
         {'app_label': 'APIcashless', 'label': "Articles", 'items': [
             {'name': 'articles'},

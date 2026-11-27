@@ -25,6 +25,10 @@
     [
       "            {'name': 'groupementcategorie'}\n        ]},\n",
       "            {'name': 'groupementcategorie'},\n            {'name': 'happy_hour_laboutik.happyhour', 'label': \"Happy hour (horaires)\"},\n        ]},\n"
+    ],
+    [
+      "            {'name': 'membre'},\n            {'name': 'cartecashless'},\n            {'name': 'cartemaitresse'},\n        ]},\n",
+      "            {'name': 'membre'},\n            {'name': 'cartecashless'},\n            {'name': 'cartemaitresse'},\n            {'url': '/adminstaff/cartes-primaires/', 'label': \"Cartes primaires (NFC)\"},\n        ]},\n"
     ]
   ]
 }

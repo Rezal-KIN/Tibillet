@@ -6,6 +6,7 @@ from cawl_fedow.views import CawlWalletAPI, stripe_disabled, webhook
 urlpatterns = [
     path("webhook_cawl/", webhook, name="cawl-webhook"),
     # Mode gérant LaBoutik : historique d'une carte, lecture seule, lieu signé.
+    path("card_history/number/<str:number>/", CardHistoryAPI.as_view({"get": "by_number"})),
     path("card_history/<str:pk>/", CardHistoryAPI.as_view({"get": "retrieve"})),
     path("wallet/get_federated_token_refill_checkout/", CawlWalletAPI.as_view({"post": "get_federated_token_refill_checkout"})),
     path("wallet/<uuid:pk>/retrieve_from_refill_checkout/", CawlWalletAPI.as_view({"get": "retrieve_from_refill_checkout"})),

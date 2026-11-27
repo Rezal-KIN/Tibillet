@@ -126,3 +126,13 @@ class CardHistoryAPI(viewsets.ViewSet):
         if card.origin.place_id != request.place.pk:
             return Response("Carte d'un autre lieu.", status=status.HTTP_403_FORBIDDEN)
         return Response(card_history(card, request.place), status=status.HTTP_200_OK)
+
+    def by_number(self, request, number=None):
+        """Même lecture, à partir du numéro imprimé (saisie sur ordinateur)."""
+        if not number or not re.fullmatch(r'[0-9A-Za-z]{8}', number):
+            return Response("Numéro de carte invalide.", status=status.HTTP_400_BAD_REQUEST)
+        card = get_object_or_404(Card.objects.select_related('origin', 'user', 'wallet_ephemere'),
+                                 number_printed=number.upper())
+        if card.origin.place_id != request.place.pk:
+            return Response("Carte d'un autre lieu.", status=status.HTTP_403_FORBIDDEN)
+        return Response(card_history(card, request.place), status=status.HTTP_200_OK)
