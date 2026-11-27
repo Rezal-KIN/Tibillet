@@ -100,6 +100,8 @@ def describe(card):
 def page(request):
     from APIcashless.models import PointDeVente
     from administration.adminstaff import staff_admin_site
+    # Comme les vues natives de l'admin : le menu Jet résout ses liens pour ce site.
+    request.current_app = staff_admin_site.name
     context = dict(staff_admin_site.each_context(request))
     context.update({
         'title': 'Cartes primaires (NFC)',

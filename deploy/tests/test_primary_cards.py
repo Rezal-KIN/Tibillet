@@ -34,6 +34,8 @@ class PrimaryCardsWiringTests(unittest.TestCase):
                       "adminstaff/cartes-primaires/enregistrer/", "adminstaff/cartes-primaires/retirer/"):
             self.assertIn(f"path('{route}', guard(", source)
         self.assertIn("guard = staff_admin_site.admin_view", source)
+        # Sans current_app, le menu Jet vise le mauvais site d'admin (vu sur gala-test).
+        self.assertIn("request.current_app = staff_admin_site.name", source)
         # Étapes natives : carte depuis Fedow, membre, CarteMaitresse (signaux natifs → Fedow).
         for native in ("FedowAPI().NFCcard.retrieve(tag)", "Membre.objects.create(", "CarteMaitresse.objects.get_or_create(carte=card)",
                        "primary.points_de_vente.set(points)", "primary.delete()"):
