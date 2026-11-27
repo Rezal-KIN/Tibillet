@@ -333,3 +333,13 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
 - **Exception « sans sauvegarde »** : empreinte = SHA-256 du JSON canonique
   (`sort_keys`, séparateurs compacts) du manifeste ; pour Smoke, le manifeste se
   reproduit avec `create-smoke-manifest.py` (SMOKE_GALA_SLUG=gala-smoke-cawl).
+- **Historique carte (mode gérant)** : Fedow `GET /card_history/<tag>/` (cawl_fedow/history.py),
+  lecture seule, `HasKeyAndPlaceSignature`, carte du seul lieu émetteur. LaBoutik
+  `card_history_laboutik` ajoute `/gala/card_history/` au `ready()` et l'entrée de menu
+  via `accueil.html` (enveloppe `addPluginFunctionsToMenu`). Les heures sont formatées
+  en Python : le filtre `|date` reconvertirait en `TIME_ZONE` (UTC dans LaBoutik).
+- **Associer ma carte** (Lespass `/my_account/link_card/`) : liaison native Fedow
+  `linkwallet_card_number` par numéro imprimé, fusion des portefeuilles ; refusée si
+  une carte est déjà liée ou si l'e-mail n'est pas confirmé.
+- **Tests locaux** : ne pas utiliser `patch.dict(sys.modules)` dans deploy/tests ; il
+  retire aussi les modules importés pendant le test (casse `requests` ensuite).
