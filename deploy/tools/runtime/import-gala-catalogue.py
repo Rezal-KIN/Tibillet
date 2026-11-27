@@ -120,6 +120,18 @@ try:
                 pdv.articles.add(article)
                 report['points_de_vente'][pdv.name] = sorted(pdv.articles.values_list('name', flat=True))
 
+        # Couleurs et icônes des boutons de caisse (portées par la catégorie).
+        from APIcashless.models import Couleur
+        for name, style in (catalogue.get('categories_style') or {}).items():
+            category = Categorie.objects.filter(name=name).first()
+            if category is None:
+                continue
+            category.icon = style['icon']
+            category.couleur_backgr = Couleur.objects.get(name=style['fond'])
+            category.couleur_texte = Couleur.objects.get(name=style['texte'])
+            category.save()
+            report['updated'].append('style:' + name)
+
         # Happy hour : prix par article (champ vide = pas de happy hour) + plage horaire.
         from happy_hour_laboutik.models import HappyHour, HappyHourPrice
         happy = {}
