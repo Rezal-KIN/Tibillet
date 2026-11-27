@@ -321,3 +321,15 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
 - **Frais CAWL** : `REFILL_FEE_CENTS` (payment_providers/cawl.py) est la source unique ;
   `Checkout.fee` les mémorise ; CAWL encaisse amount + fee, le wallet reçoit amount,
   le remboursement est plafonné à amount (frais jamais remboursés).
+- **Django 2.2 dans LaBoutik** (2.2.28) : un `apps.py` n'est pas chargé sans
+  `default_app_config` dans `__init__.py` ; `ready()` ne s'exécute jamais. Constaté sur
+  `happy_hour_laboutik` (corrigé). `cawl_laboutik` n'a pas cette ligne non plus : son
+  `ready()` (catégorie de paiement `CW`) ne tourne probablement pas — à examiner.
+- **Garde-fou `verify-restored-code.py`** : `validate_articles` et `index` doivent rester
+  identiques à TiBillet ; brancher les personnalisations par enveloppement au `ready()`.
+- **Offre de sources AGPL** : le déploiement production vérifie la release GitHub
+  `sources-<release_id>-<fork_commit[:12]>` du **commit applicatif** (checkout de l'EC2),
+  pas du commit du manifeste. Construire l'offre depuis un worktree à `fork_commit`.
+- **Exception « sans sauvegarde »** : empreinte = SHA-256 du JSON canonique
+  (`sort_keys`, séparateurs compacts) du manifeste ; pour Smoke, le manifeste se
+  reproduit avec `create-smoke-manifest.py` (SMOKE_GALA_SLUG=gala-smoke-cawl).
