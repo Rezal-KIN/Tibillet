@@ -11,13 +11,23 @@ class CardHistoryLaboutikConfig(AppConfig):
     verbose_name = 'Historique carte'
 
     def ready(self):
+        import sys
         from django.urls import path
+        from administration.adminstaff import staff_admin_site
+        from card_history_laboutik.primary_cards import install as install_primary_cards
+
+        # Onglet « Cartes primaires (NFC) » : vues du site d'admin natif. Doit précéder
+        # l'import de l'URLconf racine, qui fige `staff_admin_site.urls`.
+        if 'Cashless.urls' in sys.modules:
+            # Jamais bloquer la caisse : seul l'onglet serait absent.
+            import logging
+            logging.getLogger(__name__).error("Cashless.urls importé trop tôt : onglet cartes primaires absent")
+        else:
+            install_primary_cards(staff_admin_site)
+
         from Cashless import urls as root_urls
         from card_history_laboutik.views import card_history
 
         if not any(getattr(p, 'name', None) == 'gala-card-history' for p in root_urls.urlpatterns):
-            # En tête : les motifs natifs `url('wv/')` cherchent aussi en milieu de chemin, et
-            # l'onglet admin doit passer avant l'include `adminstaff/`.
-            from card_history_laboutik.primary_cards import urls as primary_card_urls
-            root_urls.urlpatterns[0:0] = [path('gala/card_history/', card_history, name='gala-card-history'),
-                                          *primary_card_urls()]
+            # En tête : les motifs natifs `url('wv/')` cherchent aussi en milieu de chemin.
+            root_urls.urlpatterns.insert(0, path('gala/card_history/', card_history, name='gala-card-history'))

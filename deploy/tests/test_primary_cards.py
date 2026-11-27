@@ -30,17 +30,19 @@ class CandidateTagTests(unittest.TestCase):
 class PrimaryCardsWiringTests(unittest.TestCase):
     def test_native_admin_paths_and_guard(self):
         source = (APP / "primary_cards.py").read_text()
-        for route in ("adminstaff/cartes-primaires/", "adminstaff/cartes-primaires/carte/",
-                      "adminstaff/cartes-primaires/enregistrer/", "adminstaff/cartes-primaires/retirer/"):
+        for route in ("cartes-primaires/", "cartes-primaires/carte/",
+                      "cartes-primaires/enregistrer/", "cartes-primaires/retirer/"):
             self.assertIn(f"path('{route}', guard(", source)
-        self.assertIn("guard = staff_admin_site.admin_view", source)
-        # Sans current_app, le menu Jet vise le mauvais site d'admin (vu sur gala-test).
-        self.assertIn("request.current_app = staff_admin_site.name", source)
+        # Vues du site d'admin natif (get_urls) : espace de noms adminstaff, sinon le menu
+        # Jet vise le mauvais site (vu sur gala-test).
+        self.assertIn("guard = admin_site.admin_view", source)
+        self.assertIn("admin_site.get_urls = get_urls", source)
         # Étapes natives : carte depuis Fedow, membre, CarteMaitresse (signaux natifs → Fedow).
         for native in ("FedowAPI().NFCcard.retrieve(tag)", "Membre.objects.create(", "CarteMaitresse.objects.get_or_create(carte=card)",
                        "primary.points_de_vente.set(points)", "primary.delete()"):
             self.assertIn(native, source)
-        self.assertIn("primary_card_urls()", (APP / "apps.py").read_text())
+        apps = (APP / "apps.py").read_text()
+        self.assertLess(apps.index("install_primary_cards(staff_admin_site)"), apps.index("from Cashless import urls"))
 
     def test_side_menu_and_image(self):
         self.assertIn("{'url': '/adminstaff/cartes-primaires/', 'label': \"Cartes primaires (NFC)\"}",

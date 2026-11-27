@@ -100,8 +100,6 @@ def describe(card):
 def page(request):
     from APIcashless.models import PointDeVente
     from administration.adminstaff import staff_admin_site
-    # Comme les vues natives de l'admin : le menu Jet résout ses liens pour ce site.
-    request.current_app = staff_admin_site.name
     context = dict(staff_admin_site.each_context(request))
     context.update({
         'title': 'Cartes primaires (NFC)',
@@ -188,15 +186,25 @@ def remove(request):
     return JsonResponse({'ok': True, 'card': describe(card)})
 
 
-def urls():
-    """Routes de l'onglet, protégées par la connexion à l'admin LaBoutik."""
+def install(admin_site):
+    """
+    Vues ajoutées au site d'admin natif (méthode Django `get_urls`), donc sous
+    /adminstaff/cartes-primaires/ avec l'espace de noms et le menu Jet de l'admin.
+    À appeler avant le premier import de l'URLconf racine.
+    """
     from django.urls import path
-    from administration.adminstaff import staff_admin_site
-    guard = staff_admin_site.admin_view
-    return [
-        # Sous l'admin, comme les autres modules : /adminstaff/cartes-primaires/
-        path('adminstaff/cartes-primaires/', guard(page), name='gala-primary-cards'),
-        path('adminstaff/cartes-primaires/carte/', guard(lookup), name='gala-primary-cards-lookup'),
-        path('adminstaff/cartes-primaires/enregistrer/', guard(save), name='gala-primary-cards-save'),
-        path('adminstaff/cartes-primaires/retirer/', guard(remove), name='gala-primary-cards-remove'),
-    ]
+    if getattr(admin_site.get_urls, 'primary_cards', False):
+        return
+    native_get_urls = admin_site.get_urls
+
+    def get_urls():
+        guard = admin_site.admin_view
+        return [
+            path('cartes-primaires/', guard(page), name='gala-primary-cards'),
+            path('cartes-primaires/carte/', guard(lookup), name='gala-primary-cards-lookup'),
+            path('cartes-primaires/enregistrer/', guard(save), name='gala-primary-cards-save'),
+            path('cartes-primaires/retirer/', guard(remove), name='gala-primary-cards-remove'),
+        ] + native_get_urls()
+
+    get_urls.primary_cards = True
+    admin_site.get_urls = get_urls
