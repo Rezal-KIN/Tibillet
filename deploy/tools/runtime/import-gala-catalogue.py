@@ -80,7 +80,8 @@ try:
         for name, content in catalogue['points_de_vente'].items():
             pdv, created = PointDeVente.objects.get_or_create(name=name, defaults={
                 'comportement': PointDeVente.VENTE, 'service_direct': True, 'accepte_commandes': False,
-                'accepte_especes': True, 'accepte_carte_bancaire': True, 'afficher_les_prix': True,
+                # Gala : espèces et CB uniquement au point de vente Cashless (recharges).
+                'accepte_especes': False, 'accepte_carte_bancaire': False, 'afficher_les_prix': True,
                 'icon': ICONS.get(name, 'fa-beer'),
             })
             if created:
