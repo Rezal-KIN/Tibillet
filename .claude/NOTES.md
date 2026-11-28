@@ -349,3 +349,7 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   création (corrigé à la main sur bapts2026 et gala-test le 28/11/2026).
 - **Onglet admin « Cartes primaires (NFC) »** : vues ajoutées par `staff_admin_site.get_urls`
   (pas dans l'URLconf racine), sinon le menu Jet résout ses liens pour le mauvais site.
+- **Taille EC2 bapts2026** : passée en `t3.large` à la main le 28/11/2026 19h30 (stop/modify/start,
+  EIP conservée) pour la soirée du gala. Terraform/Foundation déclare encore `t3.medium` :
+  **ne pas lancer Foundation** avant d'aligner `instance_type` dans le catalogue ou de revenir
+  en `t3.medium`, sinon le plan voudra modifier (redémarrer) l'instance.
