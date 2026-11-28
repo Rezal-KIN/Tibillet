@@ -343,3 +343,9 @@ explicite de déploiement de l'utilisateur. Aucun changement IAM n'a été fait.
   une carte est déjà liée ou si l'e-mail n'est pas confirmé.
 - **Tests locaux** : ne pas utiliser `patch.dict(sys.modules)` dans deploy/tests ; il
   retire aussi les modules importés pendant le test (casse `requests` ensuite).
+- **Fuseau LaBoutik** : une base neuve reçoit `Configuration.fuseau_horaire = Indian/Reunion`
+  (ancienne migration TiBillet). Happy hour, tickets Z, journées et historique carte
+  utilisent ce fuseau. Pour un gala en métropole, le passer à `Europe/Paris` dès la
+  création (corrigé à la main sur bapts2026 et gala-test le 28/11/2026).
+- **Onglet admin « Cartes primaires (NFC) »** : vues ajoutées par `staff_admin_site.get_urls`
+  (pas dans l'URLconf racine), sinon le menu Jet résout ses liens pour le mauvais site.
